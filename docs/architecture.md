@@ -258,3 +258,21 @@ puertos independientes permite:
   cómo `CORRIDOR` se multiplica por planta, y abordar circulación
   vertical (escaleras, nivel edificio, fuera de alcance actual).
 
+## Infraestructura de desarrollo (añadido tras el DAFO)
+
+- **Control de versiones**: el proyecto no tenía `.git` -- confirmado
+  como amenaza real en el DAFO (cualquier cambio se sobrescribía sin
+  historial). `git init` con commit inicial del estado completo.
+- **Cobertura de tests real**: 86% → 95% (medido con `pytest-cov`, que
+  ya estaba instalado pero nunca se usaba activamente). Cuatro módulos
+  estaban al 0% -- nunca tuvieron un solo test, solo verificación manual
+  mía dentro de la conversación, invisible para cualquiera que audite el
+  repositorio: `graph_based_generator.py` (generador legacy, 40 líneas),
+  `json_layout_repository.py` (10 líneas), `interface/cli/main.py`
+  (33 líneas, ahora 61% -- el resto es `main()` en sí, ejecutado vía
+  subprocess real en el test de integración, invisible para la
+  herramienta de cobertura por estar en otro proceso, no un hueco real),
+  y `application/use_cases/validate_layout.py` (8 líneas) -- al
+  escribirle tests se encontró y corrigió una anotación de tipo
+  incorrecta (`-> List[str]` cuando en realidad devuelve
+  `ValidationResult`).
