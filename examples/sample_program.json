@@ -1,0 +1,20 @@
+{
+  "description": "Ejemplo de programa: vivienda unifamiliar de 2 dormitorios",
+  "rooms": [
+    { "id": "living",  "name": "Estar",              "type": "living_room",    "area_m2": 25 },
+    { "id": "dining",  "name": "Comedor",             "type": "dining_room",   "area_m2": 15 },
+    { "id": "kitchen", "name": "Cocina",              "type": "kitchen",       "area_m2": 12 },
+    { "id": "bed1",    "name": "Dormitorio principal","type": "master_bedroom","area_m2": 16 },
+    { "id": "bed2",    "name": "Dormitorio 2",        "type": "bedroom",      "area_m2": 12 },
+    { "id": "bath1",   "name": "Bano",                "type": "bathroom",     "area_m2": 6  },
+    { "id": "laundry", "name": "Lavadero",            "type": "laundry",      "area_m2": 6  },
+    { "id": "garage",  "name": "Garaje",              "type": "garage",       "area_m2": 18 }
+  ],
+  "adjacency_requirements": [
+    { "room_a": "living", "room_b": "dining",  "strength": "must_be_near" },
+    { "room_a": "dining", "room_b": "kitchen", "strength": "must_be_near" },
+    { "room_a": "bed1",   "room_b": "bath1",   "strength": "must_be_near" },
+    { "room_a": "living", "room_b": "garage",  "strength": "must_be_away" },
+    { "room_a": "bed1",   "room_b": "kitchen", "strength": "must_be_away" }
+  ]
+}

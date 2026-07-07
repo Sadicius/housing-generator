@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "housing-generator"
+version = "0.1.0"
+description = "Sistema generativo de viviendas con zonificacion dia/noche/servicio"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "shapely>=2.0",
+    "networkx>=3.0",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "black>=24.0",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+housing-generate = "housing_generator.interface.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
