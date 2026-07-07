@@ -45,12 +45,25 @@ def build_sample_lot() -> Lot:
 def main():
     parser = argparse.ArgumentParser(description="Generador de viviendas por zonificacion dia/noche/servicio")
     parser.add_argument("--output", default="layout.json", help="Ruta de salida del layout generado")
+    parser.add_argument(
+        "--seed", type=int, default=1,
+        help="Semilla del recocido simulado (por defecto 1, fija -- determinista). "
+             "Usa --seed 0 o cualquier otro valor para explorar variantes distintas. "
+             "DEBILIDAD CONOCIDA corregida aqui: antes seed=None por defecto, el CLI "
+             "podia fallar aleatoriamente (~1 de cada 4 ejecuciones, confirmado durante "
+             "el DAFO); con semilla fija el resultado es reproducible.",
+    )
+    parser.add_argument("--max-iterations", type=int, default=3000, help="Iteraciones del recocido simulado")
     args = parser.parse_args()
 
     program = build_sample_program()
     lot = build_sample_lot()
 
-    use_case = build_generate_layout_use_case(adjacency_requirements=program.adjacency_requirements)
+    use_case = build_generate_layout_use_case(
+        adjacency_requirements=program.adjacency_requirements,
+        seed=args.seed,
+        max_iterations=args.max_iterations,
+    )
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     JsonLayoutRepository().save(layout, args.output)

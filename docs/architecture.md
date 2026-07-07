@@ -276,3 +276,45 @@ puertos independientes permite:
   escribirle tests se encontró y corrigió una anotación de tipo
   incorrecta (`-> List[str]` cuando en realidad devuelve
   `ValidationResult`).
+
+## Auditoría sección por sección del Decreto 29/2010 (tras el DAFO)
+
+Barrido de las secciones nunca revisadas directamente (en vez de esperar
+a que un hueco se note por accidente, siguiendo el patrón que expuso el
+programa mínimo):
+
+- **A.2.1 (acceso e indivisibilidad)**: confirmado fuera de alcance --
+  nivel urbanístico/edificio (acceso desde vía pública, no ser paso
+  obligado a otra finca), coincide con el hueco de "acceso/puertas" ya
+  identificado. Nada que implementar.
+- **A.4 (dotación mínima de instalaciones)**: confirmado fuera de
+  alcance -- fontanería, calefacción, electricidad, telecomunicaciones,
+  hogar digital. No es geometría, no aplica a un generador de plantas.
+- **A.2.2 (composición y compartimentación)**: confirma que
+  `SpaceCategory` (estancia/servicio/circulación) coincide exactamente
+  con la estructura del decreto. **Hueco latente detectado, no
+  corregido todavía**: el cuadrado inscribible debe estar "en contacto
+  con la cara interior del cerramiento de la fachada"; `can_inscribe_square`
+  no verifica esto explícitamente -- funciona solo porque, para
+  estancias y parcelas rectangulares (todo lo que maneja este proyecto),
+  si el cuadrado cabe, siempre puede colocarse tocando cualquier lado.
+  Coincidencia geométrica, no verificación deliberada de la regla.
+- **Espacio de acceso interior (recibidor), cuadrado de 1,50m**:
+  **[RESUELTO]** `EspacioAccesoValidator`. Requisito nuevo encontrado en
+  este barrido, nunca implementado. "En contacto con la puerta de
+  entrada" NO se comprueba (sin modelo de puertas, mismo hueco de
+  siempre) -- documentado como alcance pendiente en el propio
+  validador, no como aviso repetido. Si no hay `ENTRANCE_HALL` en el
+  programa (acceso directo por la estancia mayor), el requisito no
+  aplica -- exención explícita de la propia norma.
+
+## Determinismo del CLI (corregido durante esta auditoría)
+
+El CLI usaba `seed=None` por defecto -- confirmado en el DAFO como
+debilidad real ("el CLI a veces falla aleatoriamente"). Al escribir un
+test de integración real para el CLI (antes 0% de cobertura), el nuevo
+test falló de forma intermitente (~1 de cada 4 ejecuciones) por este
+motivo exacto, no por ningún validador nuevo. Corregido: `--seed`
+(por defecto 1, fijo) y `--max-iterations` (por defecto 3000) ahora son
+argumentos del CLI. Confirmado estable en 6/6 ejecuciones tras el
+cambio.

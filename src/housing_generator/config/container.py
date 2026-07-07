@@ -54,6 +54,9 @@ from housing_generator.infrastructure.algorithms.constraints.cocina_integrada_va
 from housing_generator.infrastructure.algorithms.constraints.vivienda_minima_validator import (
     ViviendaMinimaValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.espacio_acceso_validator import (
+    EspacioAccesoValidator,
+)
 from housing_generator.infrastructure.algorithms.adjacency.geometry_adjacency_graph_builder import (
     GeometryAdjacencyGraphBuilder,
 )
@@ -100,6 +103,7 @@ def build_generate_layout_use_case(
         ExteriorContactValidator(),
         CocinaIntegradaValidator(),
         ViviendaMinimaValidator(),
+        EspacioAccesoValidator(),
     ]
     composite = CompositeConstraintValidator(validators)
 
