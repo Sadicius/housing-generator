@@ -179,11 +179,15 @@ def build_generate_building_use_case(
     mismo patron que build_generate_layout_use_case."""
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
-    def per_floor_validators_factory(level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank):
+    def per_floor_validators_factory(
+        level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank, floor_below_exists,
+    ):
         validators = build_per_floor_validators(
             level_adjacency, graph_builder, total_num_estancias, global_rank,
         ) + [
-            EscaleraAlineacionValidator(reference_boundary=reference_stair),
+            EscaleraAlineacionValidator(
+                reference_boundary=reference_stair, floor_below_exists=floor_below_exists,
+            ),
             NucleoHumedoVerticalValidator(reference_wet_boundaries=reference_wet),
         ]
         return CompositeConstraintValidator(validators)

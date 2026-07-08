@@ -27,7 +27,7 @@ from housing_generator.domain.value_objects.adjacency import AdjacencyRequiremen
 # real de esa regla durante la construccion de este caso de uso: la
 # primera version importaba directamente de config.container).
 PerFloorValidatorsFactory = Callable[
-    [List[AdjacencyRequirement], Optional[BaseGeometry], List[BaseGeometry], int, Dict[str, int]],
+    [List[AdjacencyRequirement], Optional[BaseGeometry], List[BaseGeometry], int, Dict[str, int], bool],
     ConstraintValidatorPort,
 ]
 LayoutGeneratorFactory = Callable[[ConstraintValidatorPort], LayoutGeneratorPort]
@@ -90,9 +90,11 @@ class GenerateBuildingUseCase:
 
             reference_stair = self._staircase_boundary(previous_layout)
             reference_wet = self._wet_boundaries(previous_layout)
+            floor_below_exists = previous_layout is not None
 
             composite = self._per_floor_validators_factory(
-                level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank
+                level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank,
+                floor_below_exists,
             )
             generator = self._layout_generator_factory(composite)
             zones = self._zoning_strategy.build_zones(level_program)

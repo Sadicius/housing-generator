@@ -477,3 +477,23 @@ programa + relaciones de adyacencia). Hallazgos:
   investigacion externa -- "copia exacta" en vez de "subconjunto mas
   pequeño"). Reducir el contorno planta a planta queda para un
   incremento posterior.
+
+## Auditoría posterior al incremento de multi-planta
+
+- **Código muerto encontrado y eliminado**: `split_box_horizontally`
+  (`shapely_utils.py`) -- definida, nunca usada en ningún sitio del
+  código, sin test. Probablemente resto de una iteración de diseño
+  anterior a la arquitectura de árbol de partición.
+- **[RESUELTO] Asimetría real en `EscaleraAlineacionValidator`**: antes,
+  "no hay planta inferior" (la mas baja del edificio) y "SI hay planta
+  inferior, pero no declara escalera" se trataban como el mismo caso
+  (`reference_boundary=None`) -- una escalera en la planta superior que
+  no arrancaba de ningún sitio en la planta inferior pasaba sin
+  detección. Corregido con `floor_below_exists: bool` explícito,
+  distinguiendo ambos casos. Confirmado con test que reproduce el
+  escenario exacto antes y después de la corrección.
+- **Tests añadidos para los tres caminos de fallo de
+  `GenerateBuildingUseCase`** (generación por planta, programa mínimo a
+  nivel de edificio, acceso de baño a nivel de edificio) -- ninguno
+  tenía cobertura de su camino de error real, solo del camino feliz.
+- Cobertura total: 96% → 97%.

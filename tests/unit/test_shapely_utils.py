@@ -49,3 +49,15 @@ def test_rectangle_does_not_fit_when_both_orientations_fail():
     from housing_generator.infrastructure.geometry.shapely_utils import can_fit_rectangle
     room = box(0, 0, 0.4, 3.0)  # demasiado estrecho en ambas orientaciones para 0.6 de fondo
     assert can_fit_rectangle(room, 1.5, 0.6) is False
+
+
+def test_degenerate_zero_area_polygon_is_never_a_rectangle():
+    # linea (area 0), no un poligono real -- rama defensiva de
+    # _is_axis_or_rotated_rectangle (mrr_area <= 0), sin cubrir hasta
+    # ahora. Al no ser un rectangulo real, el resultado correcto es
+    # None ("no verificable"), no False -- mismo patron de tres estados
+    # que usa el resto del proyecto para formas no rectangulares.
+    from housing_generator.infrastructure.geometry.shapely_utils import can_fit_rectangle
+    degenerate = Polygon([(0, 0), (5, 0), (0, 0)])  # colapsado a una linea
+    assert degenerate.area == 0
+    assert can_fit_rectangle(degenerate, 1.0, 1.0) is None

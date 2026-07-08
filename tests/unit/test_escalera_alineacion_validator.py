@@ -20,11 +20,37 @@ def _stair(room_id, polygon) -> Room:
     return r
 
 
-def test_no_reference_means_not_applicable():
+def test_no_floor_below_at_all_means_not_applicable():
+    # esta es la planta mas baja del edificio -- no hay nada con lo que alinear
     stair = _stair("s", box(0, 0, 1, 3))
     layout = Layout(lot=_dummy_lot(), rooms=[stair], zones=[])
 
-    result = EscaleraAlineacionValidator(reference_boundary=None).validate(layout)
+    result = EscaleraAlineacionValidator(reference_boundary=None, floor_below_exists=False).validate(layout)
+    assert result.violations == []
+
+
+def test_floor_below_exists_without_staircase_but_this_floor_has_one_fails():
+    # BUG REAL encontrado en auditoria: antes, este caso (SI hay planta
+    # inferior, pero no declara escalera) se trataba igual que "no hay
+    # planta inferior" -- dejaba pasar sin deteccion una escalera que no
+    # arranca de ningun sitio. Confirmado que ahora SI se detecta.
+    stair = _stair("s", box(0, 0, 1, 3))
+    layout = Layout(lot=_dummy_lot(), rooms=[stair], zones=[])
+
+    violations = EscaleraAlineacionValidator(
+        reference_boundary=None, floor_below_exists=True,
+    ).validate(layout).violations
+    assert len(violations) == 1
+    assert "no arranca" in violations[0]
+
+
+def test_floor_below_exists_without_staircase_and_this_floor_also_has_none_passes():
+    # ninguna de las dos plantas tiene escalera -- correcto, no es un error
+    living = Room(id="l", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living.boundary = Boundary(polygon=box(0, 0, 4, 5))
+    layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
+
+    result = EscaleraAlineacionValidator(reference_boundary=None, floor_below_exists=True).validate(layout)
     assert result.violations == []
 
 

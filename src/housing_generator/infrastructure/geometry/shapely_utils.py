@@ -9,20 +9,6 @@ from typing import Optional, Tuple
 from shapely.geometry import Polygon, box, LineString
 
 
-def split_box_horizontally(source: Polygon, ratios: list[float]) -> list[Polygon]:
-    """Divide una caja rectangular en franjas horizontales segun `ratios`
-    (deben sumar 1.0 aproximadamente)."""
-    minx, miny, maxx, maxy = source.bounds
-    height = maxy - miny
-    boxes = []
-    cursor_y = miny
-    for ratio in ratios:
-        h = height * ratio
-        boxes.append(box(minx, cursor_y, maxx, cursor_y + h))
-        cursor_y += h
-    return boxes
-
-
 def _is_axis_or_rotated_rectangle(polygon: Polygon, relative_tolerance: float = 0.01) -> bool:
     """Comprueba que `polygon` es (aproximadamente) un rectangulo, con
     cualquier rotacion -- no solo alineado a ejes. Compara el area real

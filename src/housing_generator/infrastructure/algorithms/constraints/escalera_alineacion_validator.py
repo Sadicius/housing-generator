@@ -24,18 +24,36 @@ class EscaleraAlineacionValidator(ConstraintValidatorPort):
     sustancialmente (>=90% del area de la mas pequena de las dos) con la
     huella YA RESUELTA de la escalera en la planta de abajo.
 
-    `reference_boundary=None` significa "no hay escalera que alinear en
-    la planta de abajo" (planta base del edificio, o esa planta no tiene
-    escalera) -- en ese caso este validador no aplica en absoluto."""
+    `floor_below_exists=False`: no hay ninguna planta inferior en el
+    edificio (esta es la planta mas baja) -- no aplica en absoluto, no
+    hay nada con lo que alinear.
 
-    def __init__(self, reference_boundary: Optional[Polygon]):
+    `floor_below_exists=True, reference_boundary=None`: SI hay planta
+    inferior, pero esa planta NO declara ninguna escalera -- si ESTA
+    planta si tiene una, es una escalera que no arranca de ningun sitio
+    (violacion). Bug real encontrado en auditoria: antes, este caso se
+    trataba igual que "no hay planta inferior" (mismo `None`), dejando
+    pasar sin deteccion una escalera que no conecta con la planta de
+    abajo. Confirmado con test que reproduce el caso exacto antes de
+    corregirlo."""
+
+    def __init__(self, reference_boundary: Optional[Polygon], floor_below_exists: bool = True):
         self._reference = reference_boundary
+        self._floor_below_exists = floor_below_exists
 
     def validate(self, layout: Layout) -> ValidationResult:
         staircases = [r for r in layout.rooms if r.room_type == RoomType.STAIRCASE and r.is_placed]
 
+        if not self._floor_below_exists:
+            return ValidationResult()  # planta mas baja del edificio -- nada que alinear
+
         if self._reference is None:
-            return ValidationResult()  # nada que alinear en esta pareja de plantas
+            if staircases:
+                return ValidationResult(violations=[
+                    "Esta planta declara escalera, pero la planta inferior no tiene ninguna "
+                    "-- la escalera no arranca de ningun sitio"
+                ])
+            return ValidationResult()  # ninguna de las dos plantas tiene escalera -- correcto
 
         if not staircases:
             return ValidationResult(violations=[

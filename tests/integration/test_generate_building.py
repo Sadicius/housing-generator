@@ -1,3 +1,4 @@
+import pytest
 from shapely.geometry import box
 from housing_generator.config.container import build_generate_building_use_case
 from housing_generator.domain.entities.program import Program
@@ -133,3 +134,55 @@ def test_rooms_without_explicit_level_default_to_planta_baja():
 
     assert set(building.floors.keys()) == {NivelPlanta.PLANTA_BAJA}
     assert building.is_complete
+
+
+def test_per_floor_generation_failure_raises_with_floor_name():
+    # planta imposible: parcela demasiado pequena para el programa --
+    # fuerza el camino de fallo real de generacion por planta, no solo
+    # el camino feliz (hueco de cobertura real encontrado en auditoria).
+    from housing_generator.domain.exceptions import LayoutGenerationError
+
+    rooms = [
+        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
+        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=8)),
+        Room(id="bath", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
+        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
+        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=1.5)),
+        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=1.5)),
+        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=1)),
+    ]
+    program = Program(rooms=rooms, adjacency_requirements=[])
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 3, 3)))  # imposiblemente pequena
+
+    use_case = build_generate_building_use_case(seed=1, max_iterations=50)
+
+    with pytest.raises(LayoutGenerationError, match="planta_baja"):
+        use_case.execute(program, lot)
+
+
+def test_building_wide_programa_minimo_failure_raises():
+    # edificio de 2 plantas al que le falta el tendedero y el
+    # almacenamiento en TODO el edificio -- fuerza el camino de fallo
+    # del programa minimo a nivel de edificio, no solo el camino feliz.
+    from housing_generator.domain.exceptions import LayoutGenerationError
+
+    rooms = [
+        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM,
+             dimensions=Dimensions(area_m2=25), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
+             dimensions=Dimensions(area_m2=8), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY,
+             dimensions=Dimensions(area_m2=1.5), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="bed", name="Dormitorio", room_type=RoomType.BEDROOM,
+             dimensions=Dimensions(area_m2=12), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="bath", name="Bano", room_type=RoomType.BATHROOM,
+             dimensions=Dimensions(area_m2=5), level=NivelPlanta.PLANTA_SUPERIOR),
+        # falta DRYING_AREA y STORAGE en todo el edificio -- programa minimo incompleto
+    ]
+    program = Program(rooms=rooms, adjacency_requirements=[])
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 14)))
+
+    use_case = build_generate_building_use_case(seed=1, max_iterations=3000)
+
+    with pytest.raises(LayoutGenerationError, match="programa minimo"):
+        use_case.execute(program, lot)
