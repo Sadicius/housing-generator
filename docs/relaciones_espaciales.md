@@ -271,8 +271,9 @@ CORRIDOR (Preferencia cerca).
   (penalización ponderada sumada a la puntuación de violaciones duras,
   siempre subordinada a estas). Deliberadamente separado como paso
   aparte de la reclasificación del catálogo.
-- Implementar la regla `Condicional` (acceso de baño según nº de baños)
-  como lógica evaluada contra el `Program`, no como entrada de catálogo.
+- **[RESUELTO]** Implementar la regla `Condicional` (acceso de baño
+  según nº de baños) como lógica evaluada contra el `Program`, no como
+  entrada de catálogo -- `BanoAccesoGeneralValidator`.
 - Resolver los tres huecos de modelo antes de formalizar del todo,
   para no heredar una estructura de datos que no pueda expresarlos.
 - **Paso intermedio ya disponible**: el "grafo de burbujas" del
