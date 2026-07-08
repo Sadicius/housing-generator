@@ -497,3 +497,40 @@ programa + relaciones de adyacencia). Hallazgos:
   nivel de edificio, acceso de baño a nivel de edificio) -- ninguno
   tenía cobertura de su camino de error real, solo del camino feliz.
 - Cobertura total: 96% → 97%.
+
+## Ronda de pruebas de casos límite (tras resolver los tres huecos de modelo)
+
+Batería exploratoria sistemática sobre el estado completo del proyecto,
+antes de continuar con más funcionalidad. Todos los casos límite
+probados se comportan correctamente; ninguno reveló un bug de código
+nuevo (dos de mis propios datos de prueba tenían áreas insuficientes
+para Tabla 1/2, detectados y corregidos como parte de la propia prueba,
+no como hallazgos del sistema):
+
+- Edificio con hueco de nivel (SOTANO + PLANTA_SUPERIOR, sin PLANTA_BAJA
+  ni SEMISOTANO): `level_below` salta correctamente los niveles ausentes.
+- Edificio de 3 plantas: escalera encadenada correctamente en las DOS
+  uniones consecutivas (sótano-planta baja, planta baja-planta
+  superior), no solo en una.
+- Dos escaleras en la misma planta: cada una se valida por separado
+  contra la referencia, sin falsos positivos cruzados.
+- Múltiples estancias de circulación conectadas a una misma estancia
+  protegida: `PasilloTopologiaValidator` no marca la estancia por sí
+  misma si tiene redundancia, solo marca lo que de verdad queda aislado.
+- Más de 5 estancias (fila `TABLA_1_MAS_DE_CINCO`/`TABLA_2_MAS_DE_CINCO`)
+  combinado con multi-planta: ranking global y conteo total correctos.
+- `Program` con ids de estancia duplicados: detectado por
+  `InvalidProgramError` ya existente.
+- Parcela degenerada (área casi nula) y retranqueo que colapsa el área
+  edificable a 0: fallo controlado con mensaje claro, sin excepción
+  inesperada.
+- Exportación JSON con estancias sin colocar + puertas: sin reventar,
+  excluidas correctamente de la lista de puertas.
+- Baño completamente aislado (sin ninguna otra estancia): detectado
+  como violación, sin caso especial roto.
+
+**Dos de estos casos (3 plantas encadenadas, hueco de nivel) se
+incorporaron como tests permanentes** (`test_three_floor_building_chains_staircase_alignment_at_both_junctions`,
+`test_building_with_level_gap_skips_absent_intermediate_levels`), no
+solo como exploración puntual -- eran escenarios genuinamente nuevos,
+no cubiertos por los tests existentes.

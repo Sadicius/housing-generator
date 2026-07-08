@@ -186,3 +186,102 @@ def test_building_wide_programa_minimo_failure_raises():
 
     with pytest.raises(LayoutGenerationError, match="programa minimo"):
         use_case.execute(program, lot)
+
+
+def test_three_floor_building_chains_staircase_alignment_at_both_junctions():
+    # caso limite encontrado en auditoria posterior a multi-planta:
+    # sotano + planta_baja + planta_superior, comprobando que la
+    # escalera se alinea correctamente en las DOS uniones consecutivas,
+    # no solo en una (riesgo real de que la segunda union se relajara
+    # por error al encadenar referencias).
+    rooms = [
+        Room(id="garage", name="Garaje", room_type=RoomType.GARAGE,
+             dimensions=Dimensions(area_m2=15), level=NivelPlanta.SOTANO),
+        Room(id="stair_s", name="Escalera", room_type=RoomType.STAIRCASE,
+             dimensions=Dimensions(area_m2=4), level=NivelPlanta.SOTANO),
+        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM,
+             dimensions=Dimensions(area_m2=22), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
+             dimensions=Dimensions(area_m2=8), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL,
+             dimensions=Dimensions(area_m2=4), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY,
+             dimensions=Dimensions(area_m2=1.5), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA,
+             dimensions=Dimensions(area_m2=1.5), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE,
+             dimensions=Dimensions(area_m2=3), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="stair_pb", name="Escalera", room_type=RoomType.STAIRCASE,
+             dimensions=Dimensions(area_m2=4), level=NivelPlanta.PLANTA_BAJA),
+        Room(id="bed", name="Dormitorio", room_type=RoomType.BEDROOM,
+             dimensions=Dimensions(area_m2=12), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="bath", name="Bano", room_type=RoomType.BATHROOM,
+             dimensions=Dimensions(area_m2=5), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="stair_ps", name="Escalera", room_type=RoomType.STAIRCASE,
+             dimensions=Dimensions(area_m2=4), level=NivelPlanta.PLANTA_SUPERIOR),
+    ]
+    adjacency = [AdjacencyRequirement("living", "entrance", AdjacencyStrength.MUST_BE_NEAR)]
+    program = Program(rooms=rooms, adjacency_requirements=adjacency)
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 16, 16)))
+
+    use_case = build_generate_building_use_case(
+        adjacency_requirements=adjacency, seed=1, max_iterations=3000,
+    )
+    building = use_case.execute(program, lot)
+
+    assert set(building.floors.keys()) == {
+        NivelPlanta.SOTANO, NivelPlanta.PLANTA_BAJA, NivelPlanta.PLANTA_SUPERIOR
+    }
+
+    def overlap_ratio(a, b):
+        inter = a.boundary.polygon.intersection(b.boundary.polygon).area
+        return inter / min(a.boundary.polygon.area, b.boundary.polygon.area)
+
+    s_s = next(r for r in building.floors[NivelPlanta.SOTANO].rooms if r.id == "stair_s")
+    s_pb = next(r for r in building.floors[NivelPlanta.PLANTA_BAJA].rooms if r.id == "stair_pb")
+    s_ps = next(r for r in building.floors[NivelPlanta.PLANTA_SUPERIOR].rooms if r.id == "stair_ps")
+
+    assert overlap_ratio(s_s, s_pb) >= 0.90
+    assert overlap_ratio(s_pb, s_ps) >= 0.90
+
+
+def test_building_with_level_gap_skips_absent_intermediate_levels():
+    # caso limite encontrado en auditoria: SOTANO + PLANTA_SUPERIOR,
+    # sin PLANTA_BAJA ni SEMISOTANO -- la escalera debe alinearse
+    # contra SOTANO (el nivel presente inmediatamente inferior), no
+    # fallar ni tratarlo como si no hubiera planta inferior.
+    rooms = [
+        Room(id="garage", name="Garaje", room_type=RoomType.GARAGE,
+             dimensions=Dimensions(area_m2=15), level=NivelPlanta.SOTANO),
+        Room(id="storage_r", name="Trastero", room_type=RoomType.STORAGE_ROOM,
+             dimensions=Dimensions(area_m2=4), level=NivelPlanta.SOTANO),
+        Room(id="stair_s", name="Escalera", room_type=RoomType.STAIRCASE,
+             dimensions=Dimensions(area_m2=4), level=NivelPlanta.SOTANO),
+        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM,
+             dimensions=Dimensions(area_m2=25), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
+             dimensions=Dimensions(area_m2=8), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="bath", name="Bano", room_type=RoomType.BATHROOM,
+             dimensions=Dimensions(area_m2=5), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY,
+             dimensions=Dimensions(area_m2=1.5), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA,
+             dimensions=Dimensions(area_m2=1.5), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE,
+             dimensions=Dimensions(area_m2=2), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="corridor", name="Pasillo", room_type=RoomType.CORRIDOR,
+             dimensions=Dimensions(area_m2=3), level=NivelPlanta.PLANTA_SUPERIOR),
+        Room(id="stair_ps", name="Escalera", room_type=RoomType.STAIRCASE,
+             dimensions=Dimensions(area_m2=4), level=NivelPlanta.PLANTA_SUPERIOR),
+    ]
+    adjacency = [AdjacencyRequirement("bath", "corridor", AdjacencyStrength.MUST_BE_NEAR)]
+    program = Program(rooms=rooms, adjacency_requirements=adjacency)
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 16, 16)))
+
+    use_case = build_generate_building_use_case(
+        adjacency_requirements=adjacency, seed=1, max_iterations=3000,
+    )
+    building = use_case.execute(program, lot)
+
+    assert set(building.floors.keys()) == {NivelPlanta.SOTANO, NivelPlanta.PLANTA_SUPERIOR}
+    assert building.level_below(NivelPlanta.PLANTA_SUPERIOR) == NivelPlanta.SOTANO
