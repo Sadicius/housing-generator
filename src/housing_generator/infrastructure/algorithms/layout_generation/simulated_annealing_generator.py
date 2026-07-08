@@ -55,9 +55,22 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
         self._max_iterations = max_iterations
         self._initial_temperature = initial_temperature
         self._cooling_rate = cooling_rate
-        self._rng = random.Random(seed)
+        self._seed = seed
 
     def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout:
+        # BUG REAL encontrado en auditoria: antes, `self._rng` se creaba
+        # UNA sola vez en __init__ y esta misma instancia se reutilizaba
+        # entre llamadas -- `seed` solo garantizaba un resultado
+        # reproducible en la PRIMERA llamada a generate(); cualquier
+        # llamada posterior sobre el MISMO generador continuaba desde
+        # donde quedo la secuencia aleatoria anterior, no desde la
+        # semilla, rompiendo el determinismo que el resto del proyecto
+        # da por hecho (confirmado: llamar generate() dos veces seguidas
+        # con seed=1 daba resultados distintos la segunda vez). Reiniciar
+        # aqui, en cada llamada, hace que la semilla sea reproducible
+        # SIEMPRE, no solo la primera vez.
+        self._rng = random.Random(self._seed)
+
         room_ids = [r.id for r in program.rooms]
         areas = {r.id: r.dimensions.area_m2 for r in program.rooms}
 

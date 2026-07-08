@@ -534,3 +534,67 @@ incorporaron como tests permanentes** (`test_three_floor_building_chains_stairca
 `test_building_with_level_gap_skips_absent_intermediate_levels`), no
 solo como exploración puntual -- eran escenarios genuinamente nuevos,
 no cubiertos por los tests existentes.
+
+## Auditoría profunda: algoritmos, rendimiento y concurrencia
+
+Por petición explícita del usuario, auditoría dirigida a clases de
+problemas concretas (recursión, grafos, cuellos de botella,
+vulnerabilidades) en vez de solo casos límite de dominio. Resultado:
+**tres bugs reales encontrados y corregidos**, no solo confirmaciones.
+
+1. **[RESUELTO] Reconstrucción redundante del grafo de adyacencia
+   (cuello de botella real, medido, no estimado)**: 5 validadores
+   distintos (núcleo húmedo, zonificación día/noche/servicio, topología
+   de pasillo) comparten la misma instancia de
+   `GeometryAdjacencyGraphBuilder` pero cada uno reconstruía el grafo
+   completo (`O(n²)` intersecciones geométricas) de forma independiente
+   sobre el mismo `Layout`, dentro de una única llamada a
+   `CompositeConstraintValidator.validate()` -- 5 veces por iteración
+   del recocido simulado. Medido con el programa de ejemplo del CLI:
+   **9.35s → 4.52s** (más del doble de rápido) añadiendo una caché de
+   una sola entrada.
+2. **[RESUELTO] Bug real en la propia caché, encontrado antes de
+   entregarla**: la primera versión cacheaba por `id(layout)` (un
+   entero). Confirmado con un experimento directo: en un bucle de
+   creación/descarte de `Layout` como el que hace el recocido simulado,
+   de 1000 objetos creados solo 6 `id()` distintos aparecieron --
+   Python reutiliza agresivamente direcciones de memoria de objetos ya
+   liberados. Cachear solo por `id()` podía devolver resultados de un
+   `Layout` completamente distinto que reutilizara la misma dirección,
+   silenciosamente. Corregido guardando una referencia real al objeto
+   (`is`, no `id()`), que impide que Python libere esa memoria mientras
+   la caché siga vigente.
+3. **[RESUELTO] El generador aleatorio no se reiniciaba entre llamadas
+   a `generate()`**: `self._rng` se creaba una sola vez en `__init__` y
+   se reutilizaba entre llamadas -- `seed` solo garantizaba un
+   resultado reproducible en la PRIMERA llamada; una segunda llamada al
+   mismo generador continuaba la secuencia aleatoria anterior, no
+   reiniciaba desde la semilla. Confirmado que esto rompía incluso la
+   generación real del CLI en la tercera llamada repetida al mismo
+   objeto. Corregido reiniciando `self._rng = random.Random(self._seed)`
+   al principio de cada `generate()`. Contrapartida documentada: si en
+   el futuro se usa `max_attempts > 1` con semilla fija, cada intento
+   dará el MISMO resultado (los reintentos ya no aportan variedad por
+   accidente) -- `max_attempts` no se usa con valor >1 en ningún sitio
+   del proyecto actual, así que esto no afecta a nada ya construido.
+4. **Riesgo de profundidad de recursión, latente pero de baja
+   probabilidad práctica**: `PartitionNode.leaves()`, `internal_nodes()`
+   y `place_tree()` son recursivas, sin balanceo garantizado del árbol
+   (`build_random_tree` elige el punto de corte con `rng.randint`,
+   pudiendo degenerar en una cadena lineal de profundidad N-1 en el
+   peor caso). Medido empíricamente: hasta n=200 estancias, profundidad
+   máxima observada en 50 semillas fue 22 -- muy lejos del límite de
+   recursión de Python (1000). No es una amenaza práctica para tamaños
+   de vivienda unifamiliar reales, pero tampoco está protegido por
+   construcción; documentado como fragilidad teórica, no crítica.
+5. **Revisión de seguridad**: sin `eval`/`exec`/`pickle`/`shell=True` en
+   todo el código fuente. Único `open()` de escritura (exportación
+   JSON) usa una ruta que en el CLI viene de `--output` (usuario local,
+   mismo nivel de confianza que cualquier CLI que ya pueda escribir en
+   su propio sistema de archivos) -- no es una vulnerabilidad real en
+   este contexto (herramienta local, sin exposición de red ni entrada
+   no confiable).
+
+**Suite completa tras las tres correcciones**: 233/233, ~24s (antes
+~30-47s) -- la mejora de rendimiento se nota en el conjunto de tests,
+no solo en el CLI aislado.
