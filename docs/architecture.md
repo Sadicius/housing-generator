@@ -342,3 +342,51 @@ cambio.
   integración de retranqueo/colocación nunca habían fijado semilla
   (usaban el `None` por defecto) -- eran no deterministas por su cuenta
   desde antes de esta sesión; corregido de paso.
+
+## Investigación externa: cómo resuelven esto otros proyectos generativos
+
+Por petición del usuario, se investigó cómo aborda el campo académico el
+mismo problema (generación de plantas residenciales a partir de un
+programa + relaciones de adyacencia). Hallazgos:
+
+- **Nuestro pipeline (catálogo de relaciones → generador → validación)
+  coincide con el paper clásico más citado del campo**: Merrell,
+  Schkufza & Koltun, *"Computer-Generated Residential Building
+  Layouts"* (ACM TOG, 2010) -- mismo patrón "bubble diagram → floor
+  plan optimization → modelo 3D". Confirma que el enfoque general no es
+  una reinvención, sino una via ya validada.
+- **Divergencia deliberada y justificada respecto al estado del arte
+  reciente** (House-GAN, Graph2Plan, GFLAN): esos trabajos son
+  aprendizaje profundo entrenado sobre datasets masivos (RPLAN,
+  LIFULL HOME'S) que reflejan convenciones de diseño de su país de
+  origen (China, Japón), no el Decreto 29/2010 de Galicia. Un paper
+  reciente (2026) confirma que los modelos entrenados con datos
+  "under-emphasize critical architectural priors such as the
+  configurational dominance and connectivity of domestic public spaces"
+  -- exactamente lo que este proyecto ya fuerza explícitamente como
+  regla dura (`LIVING_ROOM`↔`ENTRANCE_HALL` obligatorio cerca,
+  `BanoAccesoGeneralValidator`). El enfoque basado en reglas explícitas,
+  aunque menos "de moda", es la elección correcta para el objetivo
+  concreto de este proyecto (cumplimiento normativo verificable, no
+  imitación estadística de un dataset ajeno).
+- **[RESUELTO] Movimiento "deslizar pared" (`slide_wall`)** añadido al
+  recocido simulado, inspirado directamente en el "Sliding a wall"
+  de Merrell et al. 2010 (confirmado con más detalle de implementación
+  en Infinigen Indoors, 2024: "extruding a wall segment inwards/outwards
+  by one grid size"). Hueco real que esto corrige: antes, la proporción
+  de cada corte del árbol de partición estaba SIEMPRE atada al área
+  declarada de cada estancia (`ratio = first_area/total`), sin ningún
+  grado de libertad independiente -- la única forma de corregir una
+  violación de forma/ancho libre era cambiar topología (qué estancia va
+  con cuál), nunca ajustar un corte ya bueno en sí mismo. Implementado
+  como `PartitionNode.ratio_override` (opcional, `None` preserva el
+  comportamiento anterior exacto) + cuarto tipo de movimiento en
+  `random_neighbor`, con límites [0.15, 0.85] para evitar cortes
+  degenerados y partiendo de la proporción efectiva actual (no de un
+  valor fijo -- confirmado con test dedicado).
+- **Efecto colateral real, no cosmético**: el cuarto movimiento cambia
+  el consumo de la secuencia aleatoria en cada iteración, así que la
+  semilla fija anterior (3) dejó de reproducir el mismo camino de
+  búsqueda. Vuelto a `seed=1` (que con el conjunto de movimientos
+  anterior había dejado de funcionar, y ahora vuelve a hacerlo) tras
+  confirmar 8/8 ejecuciones estables.

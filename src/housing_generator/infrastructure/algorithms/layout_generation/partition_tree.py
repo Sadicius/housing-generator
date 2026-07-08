@@ -20,11 +20,23 @@ from shapely.geometry import Polygon, box
 @dataclass
 class PartitionNode:
     """Nodo del arbol. Una hoja tiene `room_id`; un nodo interno tiene
-    `direction` ("h" | "v") y dos subarboles `first`/`second`."""
+    `direction` ("h" | "v") y dos subarboles `first`/`second`.
+
+    `ratio_override`: proporcion del corte FORZADA manualmente (0-1,
+    fraccion de `first`), en vez de derivarla siempre del area declarada
+    de las estancias. Inspirado en Merrell/Schkufza/Koltun 2010
+    ("Sliding a wall" como proposal move independiente de "swapping
+    rooms") -- investigacion externa confirmada, no una idea propia
+    inventada sin referencia. Sin esto, la proporcion de cada corte
+    quedaba SIEMPRE atada al area declarada de cada estancia, sin ningun
+    grado de libertad independiente para ajustar forma/ancho libre sin
+    cambiar topologia. `None` (por defecto) preserva el comportamiento
+    anterior exacto -- calculo derivado del area."""
     room_id: Optional[str] = None
     direction: Optional[str] = None
     first: Optional["PartitionNode"] = None
     second: Optional["PartitionNode"] = None
+    ratio_override: Optional[float] = None
 
     @property
     def is_leaf(self) -> bool:
@@ -67,7 +79,7 @@ def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float])
     first_area = sum(areas[leaf.room_id] for leaf in node.first.leaves())
     second_area = sum(areas[leaf.room_id] for leaf in node.second.leaves())
     total = first_area + second_area or 1.0
-    ratio = first_area / total
+    ratio = node.ratio_override if node.ratio_override is not None else (first_area / total)
 
     if node.direction == "v":  # corte vertical: reparte a lo largo de X
         split_x = minx + (maxx - minx) * ratio
@@ -84,15 +96,42 @@ def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float])
     return placements
 
 
-def random_neighbor(tree: PartitionNode, rng: random.Random) -> PartitionNode:
-    """Genera un arbol vecino mediante UNO de tres movimientos aleatorios,
-    los tres habituales en recocido simulado sobre slicing floorplans:
+SLIDE_WALL_STEP = 0.08          # perturbacion maxima por movimiento (+-8%)
+SLIDE_WALL_MIN_RATIO = 0.15      # limites para evitar cortes degenerados
+SLIDE_WALL_MAX_RATIO = 0.85
+
+
+def _current_ratio(node: PartitionNode, areas: Dict[str, float]) -> float:
+    """Proporcion EFECTIVA actual de un nodo interno: su `ratio_override`
+    si ya tiene uno, o la derivada de las areas declaradas si no -- es
+    el punto de partida real para "deslizar" desde ahi, no un valor fijo."""
+    if node.ratio_override is not None:
+        return node.ratio_override
+    first_area = sum(areas[leaf.room_id] for leaf in node.first.leaves())
+    second_area = sum(areas[leaf.room_id] for leaf in node.second.leaves())
+    total = first_area + second_area or 1.0
+    return first_area / total
+
+
+def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, float]) -> PartitionNode:
+    """Genera un arbol vecino mediante UNO de cuatro movimientos aleatorios:
     - intercambiar la estancia de dos hojas cualesquiera
     - invertir la direccion de corte (h<->v) de un nodo interno
     - intercambiar los dos subarboles de un nodo interno (efecto espejo)
+    - "deslizar pared": perturbar la proporcion de un corte existente,
+      independientemente de las areas declaradas (`ratio_override`) --
+      inspirado en Merrell/Schkufza/Koltun 2010 ("Sliding a wall" como
+      proposal move propio, distinto de "swapping rooms"). Los tres
+      primeros son los habituales en recocido simulado sobre slicing
+      floorplans; el cuarto cubre un grado de libertad que antes no
+      existia en absoluto: sin el, la unica forma de corregir una
+      violacion de forma/ancho libre era cambiar topologia (que
+      estancia va con cual), nunca ajustar un corte ya bueno en si mismo.
+      La perturbacion parte de la proporcion EFECTIVA actual (`_current_ratio`),
+      no de un valor fijo -- un deslizamiento real, no un salto.
     """
     new_tree = copy.deepcopy(tree)
-    move = rng.choice(("swap_leaves", "flip_direction", "swap_children"))
+    move = rng.choice(("swap_leaves", "flip_direction", "swap_children", "slide_wall"))
 
     if move == "swap_leaves":
         leaves = new_tree.leaves()
@@ -105,8 +144,13 @@ def random_neighbor(tree: PartitionNode, rng: random.Random) -> PartitionNode:
     if not internals:
         return new_tree
     target = rng.choice(internals)
+
     if move == "flip_direction":
         target.direction = "v" if target.direction == "h" else "h"
-    else:  # swap_children
+    elif move == "swap_children":
         target.first, target.second = target.second, target.first
+    else:  # slide_wall
+        current = _current_ratio(target, areas)
+        delta = rng.uniform(-SLIDE_WALL_STEP, SLIDE_WALL_STEP)
+        target.ratio_override = min(SLIDE_WALL_MAX_RATIO, max(SLIDE_WALL_MIN_RATIO, current + delta))
     return new_tree

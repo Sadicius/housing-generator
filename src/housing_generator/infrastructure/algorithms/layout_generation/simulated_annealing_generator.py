@@ -74,7 +74,7 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
             if best_score == 0:
                 break
 
-            candidate_tree = random_neighbor(current_tree, self._rng)
+            candidate_tree = random_neighbor(current_tree, self._rng, areas)
             candidate_layout = self._materialize(candidate_tree, program, lot, areas)
             candidate_score = self._score(candidate_layout)
 

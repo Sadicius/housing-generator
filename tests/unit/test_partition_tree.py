@@ -1,4 +1,5 @@
 import random
+import pytest
 from shapely.geometry import box
 from housing_generator.infrastructure.algorithms.layout_generation.partition_tree import (
     PartitionNode,
@@ -105,19 +106,104 @@ def test_place_tree_preserves_proportions_through_mixed_deep_tree():
 
 def test_random_neighbor_preserves_all_room_ids():
     room_ids = ["a", "b", "c", "d", "e", "f"]
+    areas = {r: 10.0 for r in room_ids}
     tree = build_random_tree(room_ids, random.Random(3))
 
     for i in range(20):
-        tree = random_neighbor(tree, random.Random(i))
+        tree = random_neighbor(tree, random.Random(i), areas)
         assert sorted(leaf.room_id for leaf in tree.leaves()) == sorted(room_ids)
 
 
 def test_random_neighbor_does_not_mutate_original_tree():
     room_ids = ["a", "b", "c"]
+    areas = {r: 10.0 for r in room_ids}
     tree = build_random_tree(room_ids, random.Random(5))
     original_leaf_ids = [leaf.room_id for leaf in tree.leaves()]
 
     for i in range(10):
-        random_neighbor(tree, random.Random(i))
+        random_neighbor(tree, random.Random(i), areas)
 
     assert [leaf.room_id for leaf in tree.leaves()] == original_leaf_ids
+
+
+def test_place_tree_respects_ratio_override_instead_of_area():
+    # a=90% del area declarada, pero ratio_override fuerza 30% -- debe
+    # ganar el override, no el area (comportamiento nuevo: "deslizar
+    # pared" independiente de las areas declaradas).
+    tree = PartitionNode(
+        direction="v",
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+        ratio_override=0.3,
+    )
+    areas = {"a": 90.0, "b": 10.0}
+    rectangle = box(0, 0, 10, 10)
+
+    placements = place_tree(tree, rectangle, areas)
+
+    assert placements["a"].area == pytest.approx(30.0, rel=0.01)
+    assert placements["b"].area == pytest.approx(70.0, rel=0.01)
+
+
+def test_place_tree_falls_back_to_area_when_no_override():
+    # sin ratio_override (None, por defecto) -- comportamiento identico
+    # al que ya existia antes de anadir este campo (regresion).
+    tree = PartitionNode(
+        direction="v",
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 30.0, "b": 70.0}
+    rectangle = box(0, 0, 10, 10)
+
+    placements = place_tree(tree, rectangle, areas)
+
+    assert placements["a"].area == pytest.approx(30.0, rel=0.01)
+    assert placements["b"].area == pytest.approx(70.0, rel=0.01)
+
+
+def test_slide_wall_move_sets_ratio_override_within_bounds():
+    tree = PartitionNode(
+        direction="v",
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 50.0, "b": 50.0}
+
+    # forzar la eleccion del movimiento slide_wall: rng.choice devuelve
+    # el 4o elemento de la tupla ("swap_leaves","flip_direction",
+    # "swap_children","slide_wall") -- se prueba indirectamente con
+    # muchas semillas y se filtra por la que realmente activa el override,
+    # en vez de mockear rng.choice (mas fragil ante reordenar la tupla).
+    found_override = False
+    for seed in range(200):
+        new_tree = random_neighbor(tree, random.Random(seed), areas)
+        if new_tree.ratio_override is not None:
+            found_override = True
+            assert 0.15 <= new_tree.ratio_override <= 0.85
+    assert found_override, "ningun seed de los probados activo slide_wall -- revisar"
+
+
+def test_slide_wall_starts_from_current_effective_ratio_not_fixed_value():
+    # con areas muy desiguales (90/10 -> ratio base 0.9), el resultado de
+    # un deslizamiento debe quedar cerca de 0.9 (clamped a 0.85 maximo),
+    # NO cerca de 0.5 -- confirma que parte de la proporcion real actual.
+    tree = PartitionNode(
+        direction="v",
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 90.0, "b": 10.0}
+
+    for seed in range(200):
+        new_tree = random_neighbor(tree, random.Random(seed), areas)
+        if new_tree.ratio_override is not None:
+            # el maximo permitido es 0.85 -- el override debe quedar
+            # pegado a ese limite (proximo a 0.9 real, clamped), no
+            # flotando libremente cerca de 0.5
+            assert new_tree.ratio_override >= 0.7, (
+                f"seed={seed}: override {new_tree.ratio_override} demasiado lejos "
+                f"de la proporcion real (0.9) -- parece partir de un valor fijo"
+            )
+            return
+    pytest.fail("ningun seed activo slide_wall en el rango probado")
