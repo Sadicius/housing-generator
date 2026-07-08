@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
@@ -43,10 +43,19 @@ class ServicioMinimumAreaValidator(ConstraintValidatorPort):
     ver `validarCocinaIntegrada` en nhv.lua) ni "trastero" B.2.5 (regla
     fija de 4.00m2, distinta de "almacenamiento"). Ambos quedan fuera de
     este validador hasta que se aborden como piezas propias.
+
+    `total_num_estancias_override`: mismo motivo que en
+    `EstanciaMinimumAreaValidator` -- para vivienda MULTI-PLANTA, Tabla 2
+    depende del numero de estancias del EDIFICIO COMPLETO, no solo de
+    las de esta planta.
     """
 
+    def __init__(self, total_num_estancias_override: Optional[int] = None):
+        self._total_override = total_num_estancias_override
+
     def validate(self, layout: Layout) -> ValidationResult:
-        num_estancias = sum(1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA)
+        local_count = sum(1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA)
+        num_estancias = self._total_override if self._total_override is not None else local_count
         tabla = tabla_servicios_para(num_estancias)
 
         violations: List[str] = []

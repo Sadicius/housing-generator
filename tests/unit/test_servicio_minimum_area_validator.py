@@ -95,3 +95,19 @@ def test_integrated_kitchen_is_excluded_from_tabla_2_own_check():
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living, bed, kitchen], zones=[])
     assert ServicioMinimumAreaValidator().validate(layout).violations == []
+
+
+def test_total_num_estancias_override_uses_building_wide_row_not_local_count():
+    # multi-planta: esta planta no tiene NINGUNA estancia local (solo la
+    # cocina), pero el edificio completo tiene 3 -- sin el override,
+    # local_count=0 caeria en la fila de 1 estancia (TABLA_2[1],
+    # cocina=5m2); con el override, la fila real de 3 (cocina=7m2).
+    kitchen = _room("kitchen", RoomType.KITCHEN, 6)
+    kitchen.service_subtype = "cocina"
+    layout = Layout(lot=_dummy_lot(), rooms=[kitchen], zones=[])
+
+    sin_override = ServicioMinimumAreaValidator().validate(layout)
+    assert sin_override.violations == []  # 6m2 >= 5m2 (fila de 1 estancia, local_count=0 -> TABLA_2[1])
+
+    con_override = ServicioMinimumAreaValidator(total_num_estancias_override=3).validate(layout)
+    assert len(con_override.violations) == 1  # 6m2 < 7m2 (fila real de 3 estancias)

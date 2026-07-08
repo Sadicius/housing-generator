@@ -154,3 +154,39 @@ def test_fallback_to_largest_area_when_no_living_room_is_declared_and_warns():
 
     assert len(result.warnings) == 1
     assert "bed1" in result.warnings[0] and "living_room" in result.warnings[0]
+
+
+def test_total_num_estancias_override_uses_building_wide_row_not_local_count():
+    # multi-planta (GenerateBuildingUseCase): esta "planta" solo tiene 1
+    # estancia local, pero el EDIFICIO completo tiene 3 -- sin el
+    # override, se aplicaria la fila de "vivienda de 1 estancia" (25m2);
+    # con el override, la fila correcta de 3 estancias (18m2 para puesto 1).
+    bed = _room("bed", RoomType.BEDROOM, 20)  # pasaria fila-3 (18m2) pero no fila-1 (25m2)
+    layout = Layout(lot=_dummy_lot(), rooms=[bed], zones=[])
+
+    sin_override = EstanciaMinimumAreaValidator().validate(layout)
+    assert len(sin_override.violations) == 1  # 20m2 < 25m2 (fila de 1 estancia)
+
+    con_override = EstanciaMinimumAreaValidator(total_num_estancias_override=3).validate(layout)
+    assert con_override.violations == []  # 20m2 >= 18m2 (fila de 3 estancias)
+
+
+def test_known_limitation_ranking_stays_local_even_with_override():
+    # LIMITACION DOCUMENTADA (no resuelta en este incremento, ver
+    # docstring del validador): el override corrige la FILA de Tabla 1
+    # (numero de estancias del edificio), pero el PUESTO (1o, 2o...)
+    # sigue calculandose solo entre las estancias de ESTA planta, no
+    # globalmente. Este test existe para que, si algun dia se corrige
+    # el ranking global, ESTE test falle y avise de que hay que
+    # actualizar tambien esta documentacion -- no para "proteger" la
+    # limitacion, sino para no perderla de vista sin darnos cuenta.
+    small_room = _room("small", RoomType.BEDROOM, 15)  # unica estancia de esta planta
+    layout = Layout(lot=_dummy_lot(), rooms=[small_room], zones=[])
+
+    # edificio de 3 estancias en total, pero esta planta solo ve 1 ->
+    # se le exige el minimo de PUESTO 1 (18m2, fila de 3 estancias),
+    # aunque globalmente esta estancia pudiera no ser realmente la mayor
+    # del edificio completo (eso requeriria saber el ranking global).
+    result = EstanciaMinimumAreaValidator(total_num_estancias_override=3).validate(layout)
+    assert len(result.violations) == 1
+    assert "puesto 1" in result.violations[0]

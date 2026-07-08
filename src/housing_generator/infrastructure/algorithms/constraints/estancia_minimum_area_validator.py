@@ -53,7 +53,24 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
       rectangular, se verifica el cuadrado inscribible de forma exacta.
     - Si esta colocada pero NO es rectangular: AVISO, nunca violacion.
     - Si no esta colocada todavia: no se comprueba aqui.
+
+    `total_num_estancias_override`: para vivienda MULTI-PLANTA (ver
+    GenerateBuildingUseCase) -- este validador se aplica UNA planta a la
+    vez, pero Tabla 1 depende del numero de estancias del EDIFICIO
+    COMPLETO, no solo de las de esta planta (bug real encontrado al
+    construir el primer edificio de 2 plantas de prueba: una planta con
+    1 sola estancia aplicaba la fila de "vivienda de 1 estancia" (25m2)
+    en vez de la fila real del edificio). Si se declara, sustituye
+    `len(ordenadas)` para elegir la FILA de Tabla 1 correcta.
+    LIMITACION que SIGUE sin resolver aqui (documentada, no oculta): el
+    PUESTO (ranking 1..N) de cada estancia sigue calculandose solo
+    entre las de esta planta, no globalmente entre todas las del
+    edificio -- puede dar un puesto distinto del que correspondería si
+    se comparasen todas las estancias del edificio a la vez.
     """
+
+    def __init__(self, total_num_estancias_override: Optional[int] = None):
+        self._total_override = total_num_estancias_override
 
     def validate(self, layout: Layout) -> ValidationResult:
         estancias = [r for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA]
@@ -61,15 +78,16 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
             return ValidationResult()
 
         ordenadas = sorted(estancias, key=lambda r: r.dimensions.area_m2, reverse=True)
+        num_estancias = self._total_override if self._total_override is not None else len(ordenadas)
         violations: List[str] = []
         warnings: List[str] = []
 
         for i, room in enumerate(ordenadas, start=1):
-            minimo = minimo_estancia(len(ordenadas), i)
+            minimo = minimo_estancia(num_estancias, i)
             if minimo is not None and room.dimensions.area_m2 < minimo:
                 violations.append(
                     f"'{room.id}': {room.dimensions.area_m2:.1f}m2, por debajo del minimo de "
-                    f"Tabla 1 para el puesto {i} de {len(ordenadas)} estancias ({minimo:.1f}m2)"
+                    f"Tabla 1 para el puesto {i} de {num_estancias} estancias ({minimo:.1f}m2)"
                 )
 
         mayor = next((r for r in estancias if r.room_type == RoomType.LIVING_ROOM), None)

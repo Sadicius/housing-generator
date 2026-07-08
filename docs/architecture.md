@@ -408,3 +408,67 @@ programa + relaciones de adyacencia). Hallazgos:
   Conectado a `JsonLayoutRepository` (nuevo campo `"doors"` en la
   exportación) y al CLI. Confirmado con el CLI real: exporta exactamente
   los 4 pares `Obligatorio cerca` declarados en el programa de ejemplo.
+
+## Multi-planta: primer incremento real (con escalera incluida)
+
+- **[RESUELTO, primer incremento]** `GenerateBuildingUseCase` +
+  `Building` (entidad nueva, agrupa varias `Layout`, una por planta) +
+  `Room.level` (`NivelPlanta`, enum nuevo que formaliza lo que antes
+  solo vivia como texto en el dashboard). Cada planta se genera de
+  forma INDEPENDIENTE con el `SimulatedAnnealingLayoutGenerator` ya
+  existente (no busqueda conjunta -- ver Infinigen Indoors en la
+  seccion de investigacion externa), de abajo a arriba, encadenando dos
+  restricciones nuevas entre plantas consecutivas:
+  - `EscaleraAlineacionValidator`: huella de `RoomType.STAIRCASE`
+    (nuevo tipo) con >=90% de solape respecto a la de la planta
+    inferior YA RESUELTA, pasada como referencia fija -- inspirado en
+    Infinigen Indoors (apendice D.5), adaptado a nuestra arquitectura de
+    arbol de particion (sin necesitar un "hueco" compartido durante la
+    busqueda ni un tipo de movimiento nuevo).
+  - `NucleoHumedoVerticalValidator`: cada estancia humeda solapa con
+    alguna humeda de la planta inferior (continuidad de bajantes, regla
+    documentada en `niveles_plantas.md` desde hace tiempo, nunca
+    implementable hasta ahora).
+  - `EscaleraAnchoLibreValidator`: 0.80m, uso restringido CTE DB-SUA 1
+    (ya confirmado por investigacion independiente en su momento).
+- **Violacion de arquitectura real encontrada y corregida durante la
+  construccion**: la primera version de `GenerateBuildingUseCase`
+  (capa `application`) importaba directamente de `config.container` --
+  rompe la regla ya establecida de que `application` nunca debe conocer
+  infraestructura concreta. Corregido con inyeccion de fabricas
+  (`per_floor_validators_factory`, `layout_generator_factory`), mismo
+  patron que ya usaba `GenerateLayoutUseCase`.
+- **Bug real encontrado y corregido al generar el primer edificio de
+  prueba**: `EstanciaMinimumAreaValidator`/`ServicioMinimumAreaValidator`
+  (Tabla 1/2) contaban el numero de estancias SOLO de la planta que
+  recibian -- una planta con 1 sola estancia aplicaba la fila de
+  "vivienda de 1 estancia" (25m2) en vez de la fila real del edificio
+  completo. Corregido con `total_num_estancias_override` (opcional,
+  `None` preserva el comportamiento de una sola planta sin cambios).
+- **Limitacion que SIGUE sin resolver, documentada explicitamente (con
+  test propio que lo deja constancia, `test_known_limitation_ranking_stays_local_even_with_override`)**:
+  el `total_num_estancias_override` corrige la FILA de Tabla 1 (numero
+  total), pero el PUESTO (ranking 1o, 2o...) de cada estancia se sigue
+  calculando solo entre las de su propia planta, no globalmente contra
+  todas las del edificio. Puede exigir un minimo mas estricto del que
+  correspondería con el ranking real. Requeriria pasar el ranking
+  global precalculado desde `GenerateBuildingUseCase`, no solo el conteo.
+- **`ViviendaMinimaValidator` y `BanoAccesoGeneralValidator` excluidos
+  del validador por planta** (`build_per_floor_validators`), son de
+  ambito de EDIFICIO: el programa minimo se comprueba UNA vez, uniendo
+  los tipos de estancia de todas las plantas (una vivienda de dos
+  plantas con salon abajo y bano arriba SI cumple el programa minimo,
+  aunque ninguna planta por separado lo cumpla -- confirmado con test
+  dedicado). `BanoAccesoGeneralValidator` queda **temporalmente sin
+  comprobar en absoluto en modo multi-planta** (ni por planta ni a nivel
+  de edificio) -- comprobarlo correctamente a nivel de edificio
+  requeriria un grafo de adyacencia que abarque varias plantas
+  (conectividad a traves de la escalera), fuera de alcance de este
+  incremento. Riesgo real: una vivienda multi-planta podria generarse
+  con TODOS los banos en-suite, sin ninguno de acceso general, sin que
+  el sistema lo detecte.
+- **Simplificacion deliberada**: TODAS las plantas comparten el mismo
+  `lot.buildable_area` (la opcion mas simple de las dos confirmadas por
+  investigacion externa -- "copia exacta" en vez de "subconjunto mas
+  pequeño"). Reducir el contorno planta a planta queda para un
+  incremento posterior.

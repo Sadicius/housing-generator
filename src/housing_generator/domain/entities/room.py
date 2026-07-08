@@ -4,6 +4,7 @@ from housing_generator.domain.enums import (
     RoomType,
     ZoneType,
     SpaceCategory,
+    NivelPlanta,
     DEFAULT_ROOM_ZONE,
     DEFAULT_WET_ROOMS,
     DEFAULT_SPACE_CATEGORY,
@@ -39,6 +40,11 @@ class Room:
     boundary: Optional[Boundary] = None
     requires_natural_light: bool = True
     requires_direct_access_exterior: bool = False
+    # Planta a la que pertenece esta estancia (multi-planta). `None` =
+    # vivienda de una sola planta (comportamiento previo sin cambios) --
+    # se asume PLANTA_BAJA implicitamente en ese caso por el resto del
+    # sistema, sin necesidad de declararlo.
+    level: Optional[NivelPlanta] = None
 
     def __post_init__(self):
         if self.zone is None:

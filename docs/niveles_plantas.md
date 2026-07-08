@@ -81,26 +81,20 @@ recorrido en zigzag por la vivienda.
   sistema de coordenadas (mismo `Lot` en planta, o una transformación
   conocida entre plantas).
 
-**No implementado en código de generación.** Depende por completo de la
-extensión de `Lot`/`Layout` a multi-planta ya señalada como pendiente
-arriba; no hay generador que produzca varias plantas sobre las que
-aplicar esta regla como restricción real.
+**[RESUELTO, primer incremento multi-planta]** `NucleoHumedoVerticalValidator`,
+conectado a `GenerateBuildingUseCase`. Comprueba solape en planta con
+alguna húmeda de la planta inmediatamente inferior YA RESUELTA (pasada
+como referencia fija a la búsqueda de la planta actual). Ver
+`docs/architecture.md`, sección "Multi-planta: primer incremento real".
 
-**Sí explorable visualmente**: el "grafo de burbujas" del dashboard
-(`docs/visualizador/relaciones_espaciales.html`) tiene una referencia
-fantasma que muestra, al cambiar de planta, dónde quedaron las
-estancias húmedas de la planta inmediatamente inferior, con una línea
-de alineación verde/ámbar según lo cerca que quede la húmeda de la
-planta actual — una forma manual e ilustrativa de razonar esta
-continuidad mientras no exista la restricción real en el generador.
+## Escalera (conexión entre plantas)
 
-## Elemento pendiente: escalera (conexión entre plantas)
-
-A diferencia de todos los `RoomType` existentes, la escalera **no vive
-en una sola planta** — conecta dos plantas contiguas a la vez (un tramo
-entre planta baja y planta superior, por ejemplo). Es un elemento
-distinto incluso de `CORRIDOR` (que se multiplica por planta, pero cada
-instancia vive en una sola).
+**[RESUELTO, primer incremento multi-planta]** `RoomType.STAIRCASE`
+añadido al dominio + `EscaleraAlineacionValidator` (huella con >=90% de
+solape entre plantas consecutivas, referencia fija a la planta inferior
+ya resuelta) + `EscaleraAnchoLibreValidator` (0.80m, ancho libre uso
+restringido). Ver `docs/architecture.md`, sección "Multi-planta: primer
+incremento real".
 
 **Dimensiones — CONFIRMADO por CTE DB-SUA 1** (investigación
 independiente, no solo `nhv.lua`): una escalera privada interior de una
@@ -116,31 +110,25 @@ de bloque, un caso distinto al nuestro.
 
 | | Uso restringido (nuestro caso) | Uso general (edificio, NO aplica) |
 |---|---|---|
-| Ancho libre mínimo | **0.80 m** | 1.00–1.20 m (según evacuación) |
-| Huella mínima | **22 cm** | 28 cm |
-| Contrahuella máxima | **20 cm** | 13–18.5 cm |
+| Ancho libre mínimo | **0.80 m** — implementado | 1.00–1.20 m (según evacuación) |
+| Huella mínima | 22 cm — NO implementado | 28 cm |
+| Contrahuella máxima | 20 cm — NO implementado | 13–18.5 cm |
 | Fórmula 2C+H (60-64cm) | No exigida | Exigida |
 
 Altura libre de paso: 2.20 m (cifra citada de forma consistente en
 varias fuentes secundarias para ambos usos, no encontrada desglosada
 por tipo de uso en el texto oficial revisado -- tratarla con algo más
-de cautela que el resto de esta tabla).
+de cautela que el resto de esta tabla). **NO implementado** (la
+escalera es un `RoomType` con área/ancho declarados, como cualquier
+otro -- no se modela como volumen 3D con altura de paso propia).
 
-**Pendiente de resolver** (antes de añadir `RoomType` real):
-- La escalera necesita **alineación exacta de huella (x, y)** entre las
-  dos plantas que conecta -- más estricto que la continuidad de
-  bajantes húmedas (que solo exige solape parcial con cualquier
-  húmeda): el hueco de escalera debe coincidir en la misma posición en
-  ambas plantas, o el tramo no tiene sentido físico.
-- Decidir cómo se referencia en el `Program`: ¿una única entidad que
-  declara "conecta planta X con planta Y", o dos `Room` (uno por planta)
-  con una relación de igualdad de huella entre ambos?
-- Ancho de escalón (huella/contrahuella) requiere modelar geometría de
-  peldaños, no solo un rectángulo en planta -- más detallado que
+**Pendiente de resolver, sin implementar todavía**:
+- Huella/contrahuella de peldaños: requiere modelar geometría de
+  escalones, no solo un rectángulo en planta -- más detallado que
   cualquier otra pieza modelada hasta ahora.
-
-**No implementado en código**, alcance decidido explícitamente: solo
-documentación por ahora, igual que el resto de lo multi-planta.
+- El sistema no comprueba que el número de peldaños sea físicamente
+  coherente con la altura libre entre plantas (altura de planta a
+  planta ÷ contrahuella máxima).
 
 ## Auditoría de coherencia entre documentos (encontrado, sin resolver)
 

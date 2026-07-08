@@ -60,6 +60,16 @@ from housing_generator.infrastructure.algorithms.constraints.espacio_acceso_vali
 from housing_generator.infrastructure.algorithms.constraints.bano_acceso_validator import (
     BanoAccesoGeneralValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.escalera_ancho_libre_validator import (
+    EscaleraAnchoLibreValidator,
+)
+from housing_generator.infrastructure.algorithms.constraints.escalera_alineacion_validator import (
+    EscaleraAlineacionValidator,
+)
+from housing_generator.infrastructure.algorithms.constraints.nucleo_humedo_vertical_validator import (
+    NucleoHumedoVerticalValidator,
+)
+from housing_generator.application.use_cases.generate_building import GenerateBuildingUseCase
 from housing_generator.infrastructure.algorithms.adjacency.geometry_adjacency_graph_builder import (
     GeometryAdjacencyGraphBuilder,
 )
@@ -67,6 +77,45 @@ from housing_generator.infrastructure.algorithms.adjacency.geometry_adjacency_gr
 # Umbral de adyacencia interior (pared compartida entre estancias),
 # confirmado por el usuario para el grafo de adyacencia real.
 ADJACENCY_MIN_SHARED_EDGE_M = 0.1
+
+
+def build_per_floor_validators(adjacency_requirements, graph_builder, total_num_estancias=None) -> List:
+    """Validadores que tiene sentido aplicar a UNA SOLA planta (Layout).
+
+    IMPORTANTE (encontrado al construir GenerateBuildingUseCase):
+    `ViviendaMinimaValidator` (necesita ver las 6 piezas del programa
+    minimo juntas) y `BanoAccesoGeneralValidator` (podria depender de un
+    bano en OTRA planta) son de ambito de EDIFICIO, no de planta -- se
+    excluyen aqui deliberadamente y se comprueban aparte, a nivel de
+    `Building` completo (ver `generate_building.py`).
+
+    `total_num_estancias`: numero de estancias del EDIFICIO COMPLETO
+    (no solo de esta planta), para que Tabla 1/2 elijan la fila
+    correcta -- bug real encontrado al generar el primer edificio de 2
+    plantas de prueba (una planta con 1 sola estancia aplicaba la fila
+    de "vivienda de 1 estancia" en vez de la fila real del edificio).
+    `None` (por defecto, caso de una sola planta) preserva el
+    comportamiento anterior: se cuenta localmente, que en ese caso
+    coincide exactamente con el total del edificio.
+    """
+    return [
+        AdjacencyConstraintValidator(adjacency_requirements),
+        build_wet_core_validator(graph_builder),
+        build_day_zone_grouping_validator(graph_builder),
+        build_night_zone_grouping_validator(graph_builder),
+        build_service_zone_grouping_validator(graph_builder),
+        EstanciaMinimumAreaValidator(total_num_estancias_override=total_num_estancias),
+        ServicioMinimumAreaValidator(total_num_estancias_override=total_num_estancias),
+        DormitorioArmarioValidator(),
+        TrasteroMinimumAreaValidator(),
+        AnchoLibreEstanciaValidator(),
+        AnchoLibrePasilloValidator(),
+        AlturaLibreValidator(),
+        ExteriorContactValidator(),
+        CocinaIntegradaValidator(),
+        EspacioAccesoValidator(),
+        EscaleraAnchoLibreValidator(),
+    ]
 
 
 def build_generate_layout_use_case(
@@ -82,6 +131,12 @@ def build_generate_layout_use_case(
     estancia (A.3.2.1), ancho libre de pasillo (A.3.2.3) y altura libre
     (A.3.1.1).
 
+    Para vivienda de UNA sola planta (caso de uso original, sin cambios
+    de comportamiento): usa `build_per_floor_validators` + los dos que
+    son de ambito de edificio (`ViviendaMinimaValidator`,
+    `BanoAccesoGeneralValidator`) -- con una unica planta, "edificio" y
+    "planta" son lo mismo, asi que aplicarlos aqui sigue siendo correcto.
+
     El generador es SimulatedAnnealingLayoutGenerator: construye un unico
     arbol de particion sobre TODAS las estancias (sin fase previa de
     zonificacion geometrica) y busca la mejor topologia minimizando el
@@ -90,23 +145,8 @@ def build_generate_layout_use_case(
     """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
-    validators = [
-        AdjacencyConstraintValidator(adjacency_requirements),
-        build_wet_core_validator(graph_builder),
-        build_day_zone_grouping_validator(graph_builder),
-        build_night_zone_grouping_validator(graph_builder),
-        build_service_zone_grouping_validator(graph_builder),
-        EstanciaMinimumAreaValidator(),
-        ServicioMinimumAreaValidator(),
-        DormitorioArmarioValidator(),
-        TrasteroMinimumAreaValidator(),
-        AnchoLibreEstanciaValidator(),
-        AnchoLibrePasilloValidator(),
-        AlturaLibreValidator(),
-        ExteriorContactValidator(),
-        CocinaIntegradaValidator(),
+    validators = build_per_floor_validators(adjacency_requirements, graph_builder) + [
         ViviendaMinimaValidator(),
-        EspacioAccesoValidator(),
         BanoAccesoGeneralValidator(graph_builder),
     ]
     composite = CompositeConstraintValidator(validators)
@@ -121,4 +161,39 @@ def build_generate_layout_use_case(
         zoning_strategy=TreemapZoningStrategy(),
         layout_generator=layout_generator,
         constraint_validator=composite,
+    )
+
+
+def build_generate_building_use_case(
+    adjacency_requirements: Optional[List] = None,
+    max_iterations: int = 2000,
+    seed: Optional[int] = None,
+) -> GenerateBuildingUseCase:
+    """Fabrica GenerateBuildingUseCase con las fabricas concretas
+    (per_floor_validators_factory, layout_generator_factory) ya
+    resueltas -- unico punto del sistema que conecta el caso de uso
+    multi-planta con las clases de infraestructura reales, siguiendo el
+    mismo patron que build_generate_layout_use_case."""
+    graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
+
+    def per_floor_validators_factory(level_adjacency, reference_stair, reference_wet, total_num_estancias):
+        validators = build_per_floor_validators(level_adjacency, graph_builder, total_num_estancias) + [
+            EscaleraAlineacionValidator(reference_boundary=reference_stair),
+            NucleoHumedoVerticalValidator(reference_wet_boundaries=reference_wet),
+        ]
+        return CompositeConstraintValidator(validators)
+
+    def layout_generator_factory(composite):
+        return SimulatedAnnealingLayoutGenerator(
+            constraint_validator=composite,
+            max_iterations=max_iterations,
+            seed=seed,
+        )
+
+    return GenerateBuildingUseCase(
+        per_floor_validators_factory=per_floor_validators_factory,
+        layout_generator_factory=layout_generator_factory,
+        zoning_strategy=TreemapZoningStrategy(),
+        programa_minimo_validator=ViviendaMinimaValidator(),
+        adjacency_requirements=adjacency_requirements,
     )

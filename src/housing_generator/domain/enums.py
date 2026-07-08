@@ -37,6 +37,7 @@ class RoomType(str, Enum):
     GARAGE = "garage"
     TECHNICAL_ROOM = "technical_room"
     CORRIDOR = "corridor"
+    STAIRCASE = "staircase"        # escalera interior -- conecta dos plantas, huella debe alinearse entre ambas
 
 
 class AdjacencyStrength(str, Enum):
@@ -62,6 +63,7 @@ DEFAULT_ROOM_ZONE = {
     RoomType.ENTRANCE_HALL: ZoneType.CIRCULATION,
     RoomType.STUDY: ZoneType.DAY,
     RoomType.CORRIDOR: ZoneType.CIRCULATION,
+    RoomType.STAIRCASE: ZoneType.CIRCULATION,
     RoomType.TOILET: ZoneType.DAY,
     RoomType.BEDROOM: ZoneType.NIGHT,
     RoomType.MASTER_BEDROOM: ZoneType.NIGHT,
@@ -122,6 +124,7 @@ DEFAULT_SPACE_CATEGORY = {
     RoomType.STORAGE_ROOM: SpaceCategory.SERVICIO,  # "trastero" (B.2.5, regla fija -- NO Tabla 2)
     RoomType.ENTRANCE_HALL: SpaceCategory.CIRCULACION,
     RoomType.CORRIDOR: SpaceCategory.CIRCULACION,
+    RoomType.STAIRCASE: SpaceCategory.CIRCULACION,
     RoomType.GARAGE: SpaceCategory.OTROS,        # regla propia B.2.6, no Tabla 1/2
     RoomType.TECHNICAL_ROOM: SpaceCategory.OTROS,
 }
@@ -165,4 +168,29 @@ DEFAULT_MIN_EXTERIOR_SIDES = {
     RoomType.GARAGE: 1,
     RoomType.TECHNICAL_ROOM: 0,
     RoomType.CORRIDOR: 0,
+    RoomType.STAIRCASE: 0,
 }
+
+
+# Niveles/plantas de una vivienda -- formaliza como enum lo que hasta
+# ahora solo vivia como texto en docs/niveles_plantas.md y en el
+# dashboard (JS). SOTANO=-2 ... BAJO_CUBIERTA=4 permite comparar
+# "por encima/por debajo de" con < > directamente sobre el valor.
+class NivelPlanta(str, Enum):
+    SOTANO = "sotano"
+    SEMISOTANO = "semisotano"
+    PLANTA_BAJA = "planta_baja"
+    PLANTA_SUPERIOR = "planta_superior"
+    BAJO_CUBIERTA = "bajo_cubierta"
+
+
+# Orden vertical de abajo a arriba -- indice = posicion relativa, no un
+# numero de planta real (SEMISOTANO no siempre existe entre SOTANO y
+# PLANTA_BAJA, pero cuando ambos existen este es su orden correcto).
+NIVEL_PLANTA_ORDEN = [
+    NivelPlanta.SOTANO,
+    NivelPlanta.SEMISOTANO,
+    NivelPlanta.PLANTA_BAJA,
+    NivelPlanta.PLANTA_SUPERIOR,
+    NivelPlanta.BAJO_CUBIERTA,
+]
