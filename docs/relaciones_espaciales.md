@@ -9,18 +9,58 @@ cómo formalizarlo (ver "Próximos pasos" al final).
 
 ## Terminología (importante, no confundir)
 
+**Reclasificado tras auditoría** (antes había 7 etiquetas: Obligatorio
+cerca/lejos, Preferencia muy cerca/cerca/alejar, Neutro, Condicional —
+se detectó que "muy cerca" y "cerca" no tenían una distinción operativa
+real, y que "Condicional" no es un valor estático de tabla sino una
+regla evaluada en tiempo real. Los matices que llevaban esas etiquetas
+("con barrera", "filtrada", "limitada por ruido"...) no se han perdido:
+siguen en la columna "motivo" de cada par).
+
 - **Obligatorio cerca / Obligatorio lejos** → mapean directamente a
-  `AdjacencyStrength.MUST_BE_NEAR` / `MUST_BE_AWAY`. Tienen validador
-  real hoy: `AdjacencyConstraintValidator` (`MUST_BE_NEAR` exige un borde
-  compartido de al menos 1.0m, para que quepa una puerta; `MUST_BE_AWAY`
-  exige que no se toquen).
-- **Preferencia de diseño (cerca / muy cerca / alejar)** → término
-  elegido deliberadamente distinto de `AdjacencyStrength.SHOULD_BE_NEAR`
-  para no sugerir que ya tiene efecto. **Hoy no influye en el generador
-  en absoluto** — es documentación de intención, pendiente de que se
-  implemente algún mecanismo de restricciones blandas (penalización en
-  la función objetivo del recocido simulado, no violación dura).
-- **Neutro** → no hay relación relevante que capturar entre ese par.
+  `AdjacencyStrength.MUST_BE_NEAR` / `MUST_BE_AWAY`. Validador real hoy:
+  `AdjacencyConstraintValidator`. Métrica **geométrica precisa**, no
+  saltos de grafo: `MUST_BE_NEAR` exige un borde compartido de al menos
+  1.0m (ancho de puerta); `MUST_BE_AWAY` exige que no se toquen
+  (tolerancia 0.05m). Se decidió deliberadamente NO unificar esta
+  métrica con la de las preferencias blandas (ver más abajo) para no
+  perder la precisión de "ancho de puerta" en una regla ya probada y
+  estable.
+- **Preferencia (cerca) / Preferencia (alejar)** → término elegido
+  deliberadamente distinto de `AdjacencyStrength.SHOULD_BE_NEAR` para no
+  sugerir que ya tiene efecto. **Hoy no influye en el generador en
+  absoluto** — pendiente de conectarse a la función objetivo del
+  recocido simulado, en un paso aparte ya decidido. Diseño ya acordado
+  para cuando se conecte (métrica: saltos en el grafo de adyacencia,
+  igual que ya usan núcleo húmedo y zonificación -- no una métrica
+  nueva):
+  - `Preferencia (cerca)` → distancia de grafo objetivo ≤ 2 (mismo
+    umbral que ya usa y valida `GroupingConstraintValidator` para
+    agrupación de zona).
+  - `Preferencia (alejar)` → distancia de grafo objetivo ≥ 3
+    (deliberadamente más exigente que el mínimo de `Obligatorio lejos`,
+    que solo pide "no tocarse" -- esto es una preferencia de separar
+    más, no un mínimo legal).
+- **Condicional** → **ya NO es un valor de este catálogo** (2 pares que
+  antes lo llevaban -- `BEDROOM`/`MASTER_BEDROOM` × `BATHROOM` -- ahora
+  usan la etiqueta `Condicional` como marcador de "ver regla aparte",
+  no como valor autocontenido). La única regla condicional real
+  identificada hasta ahora: **acceso de baño según nº de baños de la
+  vivienda** -- si hay 1 solo baño, no puede quedar "capturado" dentro
+  de un dormitorio (acceso solo vía pasillo/circulación general); si
+  hay 2 o más, uno puede ser en-suite de un dormitorio (típicamente el
+  principal). No se puede expresar como `(TipoA, TipoB) → valor`
+  porque depende de cuántos `BATHROOM` tenga *ese* `Program` en
+  concreto -- necesita lógica evaluada contra el programa real, no una
+  entrada de tabla estática. Sin implementar todavía.
+- **Neutro** → no hay relación relevante que capturar entre ese par. No
+  es una categoría con peso ni efecto en código -- es, literalmente, la
+  ausencia de entrada. Se mantiene documentado en la tabla solo para
+  que se vea que el par fue considerado y no simplemente olvidado.
+- **Ya cubierto (núcleo húmedo)** → 1 caso (`KITCHEN`-`BATHROOM`): hay
+  relación real de cercanía, pero ya la exige el validador de núcleo
+  húmedo (ambas son `is_wet`); no necesita entrada propia en este
+  catálogo para no duplicar la misma exigencia por dos caminos distintos.
 
 ## Catálogo completo (120 pares)
 
@@ -34,10 +74,10 @@ cómo formalizarlo (ver "Próximos pasos" al final).
 | BATHROOM | Preferencia (alejar) | Normativo de acceso (no directo sin distribuidor) |
 | TOILET | Preferencia (cerca) | Aseo de cortesía para visitas |
 | ENTRANCE_HALL | Obligatorio cerca | El recibidor es el distribuidor principal |
-| STUDY | Preferencia (cerca), débil | Condicional según modelo de vida (teletrabajo) |
+| STUDY | Preferencia (cerca) | Condicional según modelo de vida (teletrabajo) |
 | LAUNDRY | Preferencia (alejar) | Ruido/visual de zona de servicio |
 | DRYING_AREA | Preferencia (alejar) | Mismo motivo que LAUNDRY |
-| STORAGE | Preferencia (muy cerca) | "Tejido conectivo" del salón |
+| STORAGE | Preferencia (cerca) | "Tejido conectivo" del salón |
 | STORAGE_ROOM | Preferencia (alejar) | Trastos exiliados a zona menos noble |
 | GARAGE | Obligatorio lejos | Zona sucia/de riesgo, sin relación social |
 | TECHNICAL_ROOM | Preferencia (alejar) | Ruido de maquinaria |
@@ -55,7 +95,7 @@ cómo formalizarlo (ver "Próximos pasos" al final).
 | STUDY | Neutro | Usos independientes |
 | LAUNDRY | Preferencia (alejar) | Ruido/humedad |
 | DRYING_AREA | Preferencia (alejar) | Mismo motivo |
-| STORAGE | Preferencia (muy cerca) | Vajilla, mantelería |
+| STORAGE | Preferencia (cerca) | Vajilla, mantelería |
 | STORAGE_ROOM | Preferencia (alejar) | Exilio a zona menos noble |
 | GARAGE | Preferencia (alejar) | Menos estricto que LIVING_ROOM (no obligatorio) |
 | TECHNICAL_ROOM | Preferencia (alejar) | Ruido |
@@ -66,28 +106,28 @@ cómo formalizarlo (ver "Próximos pasos" al final).
 |---|---|---|
 | BEDROOM | Preferencia (alejar) | Olores/ruido/horarios |
 | MASTER_BEDROOM | Preferencia (alejar) | Mismo motivo |
-| BATHROOM | *(ya exigido por núcleo húmedo)* + matiz | Higiene: evitar puerta directa sobre zona de preparación |
+| BATHROOM | Ya cubierto (núcleo húmedo) | Higiene: evitar puerta directa sobre zona de preparación |
 | TOILET | Neutro | Ya cubierto por núcleo húmedo, sin matiz adicional |
-| ENTRANCE_HALL | Preferencia (muy cerca) | Logística de compras/residuos, con transición visual filtrada |
+| ENTRANCE_HALL | Preferencia (cerca) | Logística de compras/residuos, con transición visual filtrada |
 | STUDY | Neutro | Sin relación funcional |
-| LAUNDRY | Preferencia (muy cerca), con barrera | Coincide con núcleo húmedo; nunca separadas por zona seca, pero con puerta |
-| DRYING_AREA | Preferencia (muy cerca), con barrera | Mismo motivo que LAUNDRY |
-| STORAGE | Preferencia (muy cerca) | Despensa, extensión funcional directa |
+| LAUNDRY | Preferencia (cerca) | Coincide con núcleo húmedo; nunca separadas por zona seca, pero con puerta |
+| DRYING_AREA | Preferencia (cerca) | Mismo motivo que LAUNDRY |
+| STORAGE | Preferencia (cerca) | Despensa, extensión funcional directa |
 | STORAGE_ROOM | Preferencia (alejar) | Sin vínculo funcional, exilio |
-| GARAGE | Preferencia (muy cerca, con barrera) | Logística de cargas; exige "mudroom" intermedio por seguridad/salubridad |
-| TECHNICAL_ROOM | Preferencia (muy cerca, con barrera) | Instalaciones compartidas |
-| CORRIDOR | Preferencia (cerca), filtrada | El pasillo debe *llevar a* la cocina, no atravesarla |
+| GARAGE | Preferencia (cerca) | Logística de cargas; exige "mudroom" intermedio por seguridad/salubridad |
+| TECHNICAL_ROOM | Preferencia (cerca) | Instalaciones compartidas |
+| CORRIDOR | Preferencia (cerca) | El pasillo debe *llevar a* la cocina, no atravesarla |
 
 ### BEDROOM
 | Con | Relación | Motivo |
 |---|---|---|
 | MASTER_BEDROOM | Neutro | Agrupación ya cubierta por zonificación noche |
-| BATHROOM | Condicional según nº de baños | 1 baño → acceso solo vía pasillo; ≥2 baños → uno puede ser en-suite |
+| BATHROOM | Condicional | 1 baño → acceso solo vía pasillo; ≥2 baños → uno puede ser en-suite |
 | TOILET | Neutro | Sin vínculo con descanso nocturno |
 | ENTRANCE_HALL | Preferencia (alejar) | Privacidad de acceso (no acústica) |
-| STUDY | Preferencia (cerca), débil/condicional | Según modelo de vida |
-| LAUNDRY | Preferencia (cerca), limitada por ruido | Circulación de ropa sucia, pero sin pegarse por ruido |
-| DRYING_AREA | Preferencia (cerca), limitada por ruido | Mismo motivo |
+| STUDY | Preferencia (cerca) | Según modelo de vida |
+| LAUNDRY | Preferencia (cerca) | Circulación de ropa sucia, pero sin pegarse por ruido |
+| DRYING_AREA | Preferencia (cerca) | Mismo motivo |
 | STORAGE | Preferencia (cerca) | Ropa de cama/mantas (distinto del armario propio ya cubierto) |
 | STORAGE_ROOM | Preferencia (alejar) | Exilio |
 | GARAGE | Preferencia (alejar) | Ruido de motor/portón |
@@ -107,8 +147,8 @@ GARAGE (alejar), TECHNICAL_ROOM (alejar), CORRIDOR (cerca).
 | TOILET | Neutro | Agrupación ya cubierta por núcleo húmedo |
 | ENTRANCE_HALL | Preferencia (alejar) | Privacidad/higiene, acceso vía distribuidor |
 | STUDY | Neutro | Sin relación |
-| LAUNDRY | Preferencia (muy cerca) | Coincide con núcleo húmedo + barrera acústica/olfativa |
-| DRYING_AREA | Preferencia (muy cerca) | Mismo motivo |
+| LAUNDRY | Preferencia (cerca) | Coincide con núcleo húmedo + barrera acústica/olfativa |
+| DRYING_AREA | Preferencia (cerca) | Mismo motivo |
 | STORAGE | Preferencia (cerca) | Toallas/productos de higiene |
 | STORAGE_ROOM | Preferencia (alejar) | Exilio |
 | GARAGE | Preferencia (alejar) | Zona sucia vs. aseo personal |
@@ -223,9 +263,16 @@ CORRIDOR (Preferencia cerca).
   por ejemplo `DEFAULT_TYPE_ADJACENCY: Dict[Tuple[RoomType, RoomType], ...]`,
   generando `AdjacencyRequirement` sugeridos automáticamente para un
   `Program` según los tipos que contenga.
-- Decidir el mecanismo de restricciones blandas ("Preferencia de
-  diseño") en la función objetivo del recocido simulado -- hoy el
-  generador solo minimiza violaciones duras.
+- **[DISEÑO DECIDIDO, sin conectar todavía]** Mecanismo de restricciones
+  blandas ("Preferencia cerca/alejar") en la función objetivo del
+  recocido simulado -- hoy el generador solo minimiza violaciones
+  duras. Métrica y umbrales ya acordados (ver "Terminología" arriba:
+  saltos de grafo, cerca ≤2, alejar ≥3); falta la implementación en sí
+  (penalización ponderada sumada a la puntuación de violaciones duras,
+  siempre subordinada a estas). Deliberadamente separado como paso
+  aparte de la reclasificación del catálogo.
+- Implementar la regla `Condicional` (acceso de baño según nº de baños)
+  como lógica evaluada contra el `Program`, no como entrada de catálogo.
 - Resolver los tres huecos de modelo antes de formalizar del todo,
   para no heredar una estructura de datos que no pueda expresarlos.
 - **Paso intermedio ya disponible**: el "grafo de burbujas" del
