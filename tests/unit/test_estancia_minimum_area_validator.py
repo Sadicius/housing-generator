@@ -171,22 +171,23 @@ def test_total_num_estancias_override_uses_building_wide_row_not_local_count():
     assert con_override.violations == []  # 20m2 >= 18m2 (fila de 3 estancias)
 
 
-def test_known_limitation_ranking_stays_local_even_with_override():
-    # LIMITACION DOCUMENTADA (no resuelta en este incremento, ver
-    # docstring del validador): el override corrige la FILA de Tabla 1
-    # (numero de estancias del edificio), pero el PUESTO (1o, 2o...)
-    # sigue calculandose solo entre las estancias de ESTA planta, no
-    # globalmente. Este test existe para que, si algun dia se corrige
-    # el ranking global, ESTE test falle y avise de que hay que
-    # actualizar tambien esta documentacion -- no para "proteger" la
-    # limitacion, sino para no perderla de vista sin darnos cuenta.
+def test_global_rank_override_resolves_the_ranking_across_floors():
+    # RESUELTO: antes, esta estancia (unica en su planta) recibia
+    # siempre puesto 1 localmente. Con el ranking global precalculado
+    # por GenerateBuildingUseCase, puede recibir su puesto REAL en el
+    # edificio completo (p.ej. puesto 2, si hay otra estancia mayor en
+    # otra planta) -- exigiendole un minimo mas bajo, el correcto.
     small_room = _room("small", RoomType.BEDROOM, 15)  # unica estancia de esta planta
     layout = Layout(lot=_dummy_lot(), rooms=[small_room], zones=[])
 
-    # edificio de 3 estancias en total, pero esta planta solo ve 1 ->
-    # se le exige el minimo de PUESTO 1 (18m2, fila de 3 estancias),
-    # aunque globalmente esta estancia pudiera no ser realmente la mayor
-    # del edificio completo (eso requeriria saber el ranking global).
-    result = EstanciaMinimumAreaValidator(total_num_estancias_override=3).validate(layout)
-    assert len(result.violations) == 1
-    assert "puesto 1" in result.violations[0]
+    # sin ranking global: cae en el comportamiento anterior (puesto local = 1)
+    sin_ranking = EstanciaMinimumAreaValidator(total_num_estancias_override=3).validate(layout)
+    assert len(sin_ranking.violations) == 1
+    assert "puesto 1" in sin_ranking.violations[0]  # exige 18m2 (fila 3, puesto 1)
+
+    # con ranking global: esta estancia es realmente la puesto 2 del
+    # edificio (hay un salon mayor en otra planta) -> exige 12m2, no 18m2
+    con_ranking = EstanciaMinimumAreaValidator(
+        total_num_estancias_override=3, global_rank_override={"small": 2},
+    ).validate(layout)
+    assert con_ranking.violations == []  # 15m2 >= 12m2 (fila 3, puesto 2)

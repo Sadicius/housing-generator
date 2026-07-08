@@ -27,7 +27,7 @@ from housing_generator.domain.value_objects.adjacency import AdjacencyRequiremen
 # real de esa regla durante la construccion de este caso de uso: la
 # primera version importaba directamente de config.container).
 PerFloorValidatorsFactory = Callable[
-    [List[AdjacencyRequirement], Optional[BaseGeometry], List[BaseGeometry], int],
+    [List[AdjacencyRequirement], Optional[BaseGeometry], List[BaseGeometry], int, Dict[str, int]],
     ConstraintValidatorPort,
 ]
 LayoutGeneratorFactory = Callable[[ConstraintValidatorPort], LayoutGeneratorPort]
@@ -60,18 +60,21 @@ class GenerateBuildingUseCase:
         layout_generator_factory: LayoutGeneratorFactory,
         zoning_strategy: ZoningStrategyPort,
         programa_minimo_validator: ConstraintValidatorPort,
+        bano_acceso_validator: ConstraintValidatorPort,
         adjacency_requirements: Optional[List[AdjacencyRequirement]] = None,
     ):
         self._per_floor_validators_factory = per_floor_validators_factory
         self._layout_generator_factory = layout_generator_factory
         self._zoning_strategy = zoning_strategy
         self._programa_minimo_validator = programa_minimo_validator
+        self._bano_acceso_validator = bano_acceso_validator
         self._adjacency_requirements = adjacency_requirements or []
 
     def execute(self, program: Program, lot: Lot) -> Building:
         rooms_by_level = self._group_by_level(program.rooms)
         levels = [lvl for lvl in NIVEL_PLANTA_ORDEN if lvl in rooms_by_level]
         total_num_estancias = sum(1 for r in program.rooms if r.space_category == SpaceCategory.ESTANCIA)
+        global_rank = self._compute_global_rank(program.rooms)
 
         building = Building()
         previous_layout: Optional[Layout] = None
@@ -89,7 +92,7 @@ class GenerateBuildingUseCase:
             reference_wet = self._wet_boundaries(previous_layout)
 
             composite = self._per_floor_validators_factory(
-                level_adjacency, reference_stair, reference_wet, total_num_estancias
+                level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank
             )
             generator = self._layout_generator_factory(composite)
             zones = self._zoning_strategy.build_zones(level_program)
@@ -106,7 +109,18 @@ class GenerateBuildingUseCase:
             previous_layout = layout
 
         self._check_programa_minimo(building)
+        self._check_bano_acceso_general(building)
         return building
+
+    @staticmethod
+    def _compute_global_rank(rooms: List[Room]) -> Dict[str, int]:
+        """Puesto de Tabla 1 (1=mayor) de cada estancia entre TODAS las
+        del edificio, precalculado antes de generar ninguna planta --
+        las areas son DECLARADAS en el Program, no dependen de la
+        geometria ya colocada, asi que esto se puede saber de antemano."""
+        estancias = [r for r in rooms if r.space_category == SpaceCategory.ESTANCIA]
+        ordenadas = sorted(estancias, key=lambda r: r.dimensions.area_m2, reverse=True)
+        return {room.id: puesto for puesto, room in enumerate(ordenadas, start=1)}
 
     @staticmethod
     def _group_by_level(rooms: List[Room]) -> Dict[NivelPlanta, List[Room]]:
@@ -131,7 +145,52 @@ class GenerateBuildingUseCase:
             return []
         return [r.boundary.polygon for r in layout.rooms if r.is_wet and r.is_placed]
 
+    def _check_bano_acceso_general(self, building: Building) -> None:
+        """Reutiliza EL MISMO validador que ya existe para una sola
+        planta (`bano_acceso_validator`), ejecutandolo POR PLANTA con el
+        grafo de adyacencia real de esa planta -- la accesibilidad
+        general de un bano no se "hereda" magicamente de otra planta, se
+        necesita conexion directa a circulacion EN LA MISMA PLANTA. A
+        nivel de EDIFICIO basta con que UNA planta con banos tenga
+        alguno accesible; las demas pueden ser todo en-suite.
+
+        Corrige un hueco real senalado explicitamente en el incremento
+        anterior: antes, esta regla no se comprobaba EN ABSOLUTO en modo
+        multi-planta (ni por planta ni a nivel de edificio) -- una
+        vivienda podia generarse con todos los banos en-suite sin que
+        nada lo detectara."""
+        any_bathroom_anywhere = any(
+            r.room_type == RoomType.BATHROOM for layout in building.floors.values() for r in layout.rooms
+        )
+        if not any_bathroom_anywhere:
+            return  # ninguna planta tiene banos -- ViviendaMinimaValidator ya lo habria bloqueado antes
+
+        for layout in building.floors.values():
+            has_bathroom_here = any(r.room_type == RoomType.BATHROOM for r in layout.rooms)
+            if not has_bathroom_here:
+                continue
+            if self._bano_acceso_validator.validate(layout).is_valid:
+                return  # esta planta ya tiene al menos un bano con acceso general -- suficiente
+
+        raise LayoutGenerationError(
+            "Ninguna planta del edificio tiene un baño con acceso directo a circulación "
+            "general (CORRIDOR/ENTRANCE_HALL) -- con varias plantas, todos los baños "
+            "quedarían en-suite, sin ninguno de acceso general para el conjunto de la vivienda"
+        )
+
     def _check_programa_minimo(self, building: Building) -> None:
+        all_rooms = [room for layout in building.floors.values() for room in layout.rooms]
+        synthetic_layout = Layout(
+            lot=next(iter(building.floors.values())).lot,
+            rooms=all_rooms,
+            zones=[],
+        )
+        result = self._programa_minimo_validator.validate(synthetic_layout)
+        if not result.is_valid:
+            raise LayoutGenerationError(
+                f"El edificio completo no cumple el programa minimo de vivienda "
+                f"(comprobado uniendo todas las plantas): {result.violations}"
+            )
         all_rooms = [room for layout in building.floors.values() for room in layout.rooms]
         synthetic_layout = Layout(
             lot=next(iter(building.floors.values())).lot,

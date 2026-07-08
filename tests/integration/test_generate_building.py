@@ -27,16 +27,17 @@ def _two_floor_program() -> Program:
         Room(id="stair_pb", name="Escalera", room_type=RoomType.STAIRCASE,
              dimensions=Dimensions(area_m2=4), level=NivelPlanta.PLANTA_BAJA),
         # planta superior -- el bano SOLO existe aqui, no en planta baja.
-        # Areas ajustadas para satisfacer el RANKING LOCAL por planta
-        # (limitacion documentada y conocida, no resuelta en este
-        # incremento -- ver docstring de EstanciaMinimumAreaValidator):
-        # el "puesto" de Tabla 1 se calcula solo entre las estancias de
-        # ESTA planta (master=puesto1, bed2=puesto2 de 3 EN TOTAL en el
-        # edificio), no globalmente contra living (que es mayor).
+        # RESUELTO: con el ranking global (GenerateBuildingUseCase
+        # precalcula el puesto real de cada estancia en el EDIFICIO
+        # completo, no solo en su planta), estas areas realistas ya
+        # bastan -- antes de resolver esa limitacion, habia que inflar
+        # master a 18m2 y bed2 a 12m2 para satisfacer el ranking local
+        # (que las trataba como puesto 1/2 de esta planta, en vez de su
+        # puesto real 2/3 en el edificio completo, detras del salon).
         Room(id="master", name="Dorm. principal", room_type=RoomType.MASTER_BEDROOM,
-             dimensions=Dimensions(area_m2=18), level=NivelPlanta.PLANTA_SUPERIOR),
+             dimensions=Dimensions(area_m2=14), level=NivelPlanta.PLANTA_SUPERIOR),
         Room(id="bed2", name="Dormitorio 2", room_type=RoomType.BEDROOM,
-             dimensions=Dimensions(area_m2=12), level=NivelPlanta.PLANTA_SUPERIOR),
+             dimensions=Dimensions(area_m2=10), level=NivelPlanta.PLANTA_SUPERIOR),
         Room(id="bath", name="Bano", room_type=RoomType.BATHROOM,
              dimensions=Dimensions(area_m2=5), level=NivelPlanta.PLANTA_SUPERIOR),
         Room(id="stair_ps", name="Escalera", room_type=RoomType.STAIRCASE,

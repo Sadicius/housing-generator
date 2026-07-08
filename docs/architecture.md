@@ -445,28 +445,33 @@ programa + relaciones de adyacencia). Hallazgos:
   "vivienda de 1 estancia" (25m2) en vez de la fila real del edificio
   completo. Corregido con `total_num_estancias_override` (opcional,
   `None` preserva el comportamiento de una sola planta sin cambios).
-- **Limitacion que SIGUE sin resolver, documentada explicitamente (con
-  test propio que lo deja constancia, `test_known_limitation_ranking_stays_local_even_with_override`)**:
-  el `total_num_estancias_override` corrige la FILA de Tabla 1 (numero
-  total), pero el PUESTO (ranking 1o, 2o...) de cada estancia se sigue
-  calculando solo entre las de su propia planta, no globalmente contra
-  todas las del edificio. Puede exigir un minimo mas estricto del que
-  correspondería con el ranking real. Requeriria pasar el ranking
-  global precalculado desde `GenerateBuildingUseCase`, no solo el conteo.
-- **`ViviendaMinimaValidator` y `BanoAccesoGeneralValidator` excluidos
-  del validador por planta** (`build_per_floor_validators`), son de
-  ambito de EDIFICIO: el programa minimo se comprueba UNA vez, uniendo
-  los tipos de estancia de todas las plantas (una vivienda de dos
-  plantas con salon abajo y bano arriba SI cumple el programa minimo,
-  aunque ninguna planta por separado lo cumpla -- confirmado con test
-  dedicado). `BanoAccesoGeneralValidator` queda **temporalmente sin
-  comprobar en absoluto en modo multi-planta** (ni por planta ni a nivel
-  de edificio) -- comprobarlo correctamente a nivel de edificio
-  requeriria un grafo de adyacencia que abarque varias plantas
-  (conectividad a traves de la escalera), fuera de alcance de este
-  incremento. Riesgo real: una vivienda multi-planta podria generarse
-  con TODOS los banos en-suite, sin ninguno de acceso general, sin que
-  el sistema lo detecte.
+- **[RESUELTO]** Ranking global de Tabla 1 entre plantas:
+  `EstanciaMinimumAreaValidator` gana `global_rank_override` (dict
+  room_id -> puesto REAL en el edificio completo), precalculado por
+  `GenerateBuildingUseCase._compute_global_rank` antes de generar
+  ninguna planta (las areas son declaradas, no dependen de geometria ya
+  colocada). Antes de resolverlo: antes de esta correccion, el ranking
+  local SOLO podia ser igual de exigente o mas estricto que el real
+  (nunca mas permisivo, propiedad que se identifico antes de decidir la
+  prioridad de arreglo) -- confirmado en el propio test de integracion
+  de 2 plantas, que dejo de necesitar areas infladas artificialmente
+  (14/10m2 en vez de 18/12m2) tras la correccion.
+- **[RESUELTO]** `BanoAccesoGeneralValidator` a nivel de EDIFICIO:
+  `GenerateBuildingUseCase._check_bano_acceso_general` reutiliza EL
+  MISMO validador que ya existia para una sola planta, ejecutandolo por
+  planta (con el grafo de adyacencia real de esa planta -- la
+  accesibilidad no se "hereda" magicamente entre plantas) y exigiendo
+  que AL MENOS UNA planta con baños tenga uno con acceso a circulacion
+  general. Antes, este riesgo (vivienda generable con TODOS los baños
+  en-suite, sin ninguno de acceso general) no se comprobaba en absoluto
+  en modo multi-planta. Confirmado con test que fuerza el caso de fallo
+  real (todas las plantas con baños capturados) y no solo el caso feliz.
+- **`ViviendaMinimaValidator` excluido del validador por planta**
+  (`build_per_floor_validators`), es de ambito de EDIFICIO: el programa
+  minimo se comprueba UNA vez, uniendo los tipos de estancia de todas
+  las plantas (una vivienda de dos plantas con salon abajo y bano
+  arriba SI cumple el programa minimo, aunque ninguna planta por
+  separado lo cumpla -- confirmado con test dedicado).
 - **Simplificacion deliberada**: TODAS las plantas comparten el mismo
   `lot.buildable_area` (la opcion mas simple de las dos confirmadas por
   investigacion externa -- "copia exacta" en vez de "subconjunto mas

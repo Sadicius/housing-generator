@@ -62,15 +62,23 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
     1 sola estancia aplicaba la fila de "vivienda de 1 estancia" (25m2)
     en vez de la fila real del edificio). Si se declara, sustituye
     `len(ordenadas)` para elegir la FILA de Tabla 1 correcta.
-    LIMITACION que SIGUE sin resolver aqui (documentada, no oculta): el
-    PUESTO (ranking 1..N) de cada estancia sigue calculandose solo
-    entre las de esta planta, no globalmente entre todas las del
-    edificio -- puede dar un puesto distinto del que correspondería si
-    se comparasen todas las estancias del edificio a la vez.
+
+    `global_rank_override`: **[RESUELTO]** dict room_id -> puesto GLOBAL
+    (1=mayor del EDIFICIO completo, no solo de esta planta). Corrige la
+    limitacion senalada en el incremento anterior (el ranking quedaba
+    atado solo a las estancias de la planta local, podia exigir un
+    minimo mas estricto del que corresponderia). `GenerateBuildingUseCase`
+    lo precalcula una vez, antes de generar ninguna planta, porque las
+    areas son DECLARADAS (no dependen de la geometria ya colocada).
     """
 
-    def __init__(self, total_num_estancias_override: Optional[int] = None):
+    def __init__(
+        self,
+        total_num_estancias_override: Optional[int] = None,
+        global_rank_override: Optional[Dict[str, int]] = None,
+    ):
         self._total_override = total_num_estancias_override
+        self._global_rank = global_rank_override
 
     def validate(self, layout: Layout) -> ValidationResult:
         estancias = [r for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA]
@@ -82,12 +90,13 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
         violations: List[str] = []
         warnings: List[str] = []
 
-        for i, room in enumerate(ordenadas, start=1):
-            minimo = minimo_estancia(num_estancias, i)
+        for local_i, room in enumerate(ordenadas, start=1):
+            puesto = self._global_rank.get(room.id, local_i) if self._global_rank else local_i
+            minimo = minimo_estancia(num_estancias, puesto)
             if minimo is not None and room.dimensions.area_m2 < minimo:
                 violations.append(
                     f"'{room.id}': {room.dimensions.area_m2:.1f}m2, por debajo del minimo de "
-                    f"Tabla 1 para el puesto {i} de {num_estancias} estancias ({minimo:.1f}m2)"
+                    f"Tabla 1 para el puesto {puesto} de {num_estancias} estancias ({minimo:.1f}m2)"
                 )
 
         mayor = next((r for r in estancias if r.room_type == RoomType.LIVING_ROOM), None)

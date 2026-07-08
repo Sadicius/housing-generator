@@ -79,7 +79,9 @@ from housing_generator.infrastructure.algorithms.adjacency.geometry_adjacency_gr
 ADJACENCY_MIN_SHARED_EDGE_M = 0.1
 
 
-def build_per_floor_validators(adjacency_requirements, graph_builder, total_num_estancias=None) -> List:
+def build_per_floor_validators(
+    adjacency_requirements, graph_builder, total_num_estancias=None, global_rank=None,
+) -> List:
     """Validadores que tiene sentido aplicar a UNA SOLA planta (Layout).
 
     IMPORTANTE (encontrado al construir GenerateBuildingUseCase):
@@ -89,14 +91,13 @@ def build_per_floor_validators(adjacency_requirements, graph_builder, total_num_
     excluyen aqui deliberadamente y se comprueban aparte, a nivel de
     `Building` completo (ver `generate_building.py`).
 
-    `total_num_estancias`: numero de estancias del EDIFICIO COMPLETO
-    (no solo de esta planta), para que Tabla 1/2 elijan la fila
-    correcta -- bug real encontrado al generar el primer edificio de 2
-    plantas de prueba (una planta con 1 sola estancia aplicaba la fila
-    de "vivienda de 1 estancia" en vez de la fila real del edificio).
-    `None` (por defecto, caso de una sola planta) preserva el
-    comportamiento anterior: se cuenta localmente, que en ese caso
-    coincide exactamente con el total del edificio.
+    `total_num_estancias` / `global_rank`: numero y ranking de estancias
+    del EDIFICIO COMPLETO (no solo de esta planta), para que Tabla 1/2
+    elijan la fila Y el puesto correctos -- dos bugs reales encontrados
+    al generar el primer edificio de 2 plantas de prueba, ambos
+    [RESUELTOS] ahora. `None` (por defecto, caso de una sola planta)
+    preserva el comportamiento anterior: se calcula localmente, que en
+    ese caso coincide exactamente con el total/ranking del edificio.
     """
     return [
         AdjacencyConstraintValidator(adjacency_requirements),
@@ -104,7 +105,9 @@ def build_per_floor_validators(adjacency_requirements, graph_builder, total_num_
         build_day_zone_grouping_validator(graph_builder),
         build_night_zone_grouping_validator(graph_builder),
         build_service_zone_grouping_validator(graph_builder),
-        EstanciaMinimumAreaValidator(total_num_estancias_override=total_num_estancias),
+        EstanciaMinimumAreaValidator(
+            total_num_estancias_override=total_num_estancias, global_rank_override=global_rank,
+        ),
         ServicioMinimumAreaValidator(total_num_estancias_override=total_num_estancias),
         DormitorioArmarioValidator(),
         TrasteroMinimumAreaValidator(),
@@ -176,8 +179,10 @@ def build_generate_building_use_case(
     mismo patron que build_generate_layout_use_case."""
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
-    def per_floor_validators_factory(level_adjacency, reference_stair, reference_wet, total_num_estancias):
-        validators = build_per_floor_validators(level_adjacency, graph_builder, total_num_estancias) + [
+    def per_floor_validators_factory(level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank):
+        validators = build_per_floor_validators(
+            level_adjacency, graph_builder, total_num_estancias, global_rank,
+        ) + [
             EscaleraAlineacionValidator(reference_boundary=reference_stair),
             NucleoHumedoVerticalValidator(reference_wet_boundaries=reference_wet),
         ]
@@ -195,5 +200,6 @@ def build_generate_building_use_case(
         layout_generator_factory=layout_generator_factory,
         zoning_strategy=TreemapZoningStrategy(),
         programa_minimo_validator=ViviendaMinimaValidator(),
+        bano_acceso_validator=BanoAccesoGeneralValidator(graph_builder),
         adjacency_requirements=adjacency_requirements,
     )
