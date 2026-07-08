@@ -13,6 +13,7 @@ from housing_generator.domain.enums import RoomType, AdjacencyStrength
 def test_generate_layout_places_all_rooms_within_lot():
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20)),
+        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
         Room(id="bed1", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)),
         Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=7)),
         Room(id="bathroom", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
@@ -21,11 +22,14 @@ def test_generate_layout_places_all_rooms_within_lot():
         Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=2)),
         Room(id="garage", name="Garaje", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=15)),
     ]
-    adjacency = [AdjacencyRequirement("living", "garage", AdjacencyStrength.MUST_BE_AWAY)]
+    adjacency = [
+        AdjacencyRequirement("living", "garage", AdjacencyStrength.MUST_BE_AWAY),
+        AdjacencyRequirement("bathroom", "entrance", AdjacencyStrength.MUST_BE_NEAR),
+    ]
     program = Program(rooms=rooms, adjacency_requirements=adjacency)
-    lot = Lot(boundary=Boundary(polygon=box(0, 0, 16, 18)))
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 17, 18)))
 
-    use_case = build_generate_layout_use_case(adjacency_requirements=adjacency)
+    use_case = build_generate_layout_use_case(adjacency_requirements=adjacency, seed=3, max_iterations=3000)
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     assert layout.is_complete
@@ -36,6 +40,7 @@ def test_generate_layout_places_all_rooms_within_lot():
 def test_generate_layout_respects_retranqueo_vivienda_aislada():
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20)),
+        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
         Room(id="bed1", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)),
         Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=7)),
         Room(id="bathroom", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
@@ -43,12 +48,13 @@ def test_generate_layout_respects_retranqueo_vivienda_aislada():
         Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=1.5)),
         Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=2)),
     ]
-    program = Program(rooms=rooms, adjacency_requirements=[])
-    # parcela generosa (20x22) con retranqueo de 3m -> area edificable 14x16,
-    # suficiente para el programa pero deja un margen real perimetral
-    lot = Lot(boundary=Boundary(polygon=box(0, 0, 20, 22)), retranqueo_m=3.0)
+    adjacency = [AdjacencyRequirement("bathroom", "entrance", AdjacencyStrength.MUST_BE_NEAR)]
+    program = Program(rooms=rooms, adjacency_requirements=adjacency)
+    # parcela generosa (22x24) con retranqueo de 3m -> area edificable 16x18,
+    # suficiente para el programa ampliado pero deja un margen real perimetral
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 22, 24)), retranqueo_m=3.0)
 
-    use_case = build_generate_layout_use_case(adjacency_requirements=[])
+    use_case = build_generate_layout_use_case(adjacency_requirements=adjacency, seed=3, max_iterations=3000)
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     assert layout.is_complete

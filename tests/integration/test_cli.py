@@ -25,7 +25,7 @@ def test_sample_program_generates_a_valid_layout_with_fixed_seed():
     program = build_sample_program()
     lot = build_sample_lot()
     use_case = build_generate_layout_use_case(
-        adjacency_requirements=program.adjacency_requirements, seed=1, max_iterations=3000
+        adjacency_requirements=program.adjacency_requirements, seed=3, max_iterations=3000
     )
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 

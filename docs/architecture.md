@@ -318,3 +318,27 @@ motivo exacto, no por ningún validador nuevo. Corregido: `--seed`
 (por defecto 1, fijo) y `--max-iterations` (por defecto 3000) ahora son
 argumentos del CLI. Confirmado estable en 6/6 ejecuciones tras el
 cambio.
+
+## Regla `Condicional` implementada: acceso general de baño
+
+- **[RESUELTO]** `BanoAccesoGeneralValidator`. Primera regla `Condicional`
+  del catálogo de relaciones (`BEDROOM`/`MASTER_BEDROOM` × `BATHROOM`)
+  implementada como lógica real, no como valor de tabla -- exactamente
+  el enfoque decidido al reclasificar la taxonomía. Formulación general
+  (sin ramificar explícitamente por número de baños, pero equivalente):
+  al menos un `BATHROOM` debe tener adyacencia real (pared compartida)
+  con una estancia de circulación (`CORRIDOR` o `ENTRANCE_HALL`). Con
+  1 solo baño, la exigencia recae necesariamente sobre él (equivale a
+  "acceso solo vía pasillo"); con 2+, basta con que uno la cumpla, el
+  resto puede ser en-suite de un dormitorio sin acceso propio.
+- **Efecto real al conectarlo**: el programa de ejemplo del CLI y dos
+  tests de integración no tenían `ENTRANCE_HALL` ni `CORRIDOR` -- el
+  nuevo validador los hacía fallar por imposibilidad geométrica, no por
+  mala suerte del recocido. Añadido `ENTRANCE_HALL` a los tres.
+- **Hallazgo colateral, no relacionado con el validador nuevo**: al
+  ampliar el programa del CLI, la semilla fija anterior (`seed=1`) dejó
+  de converger de forma fiable (1/5 intentos). Cambiada a `seed=3`,
+  confirmada estable en 8/8 ejecuciones. Además, los dos tests de
+  integración de retranqueo/colocación nunca habían fijado semilla
+  (usaban el `None` por defecto) -- eran no deterministas por su cuenta
+  desde antes de esta sesión; corregido de paso.

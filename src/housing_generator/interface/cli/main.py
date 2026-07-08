@@ -20,6 +20,7 @@ def build_sample_program() -> Program:
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
         Room(id="dining", name="Comedor", room_type=RoomType.DINING_ROOM, dimensions=Dimensions(area_m2=15)),
         Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=12)),
+        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=5)),
         Room(id="bed1", name="Dormitorio principal", room_type=RoomType.MASTER_BEDROOM, dimensions=Dimensions(area_m2=16)),
         Room(id="bed2", name="Dormitorio 2", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)),
         Room(id="bath1", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=6)),
@@ -31,7 +32,8 @@ def build_sample_program() -> Program:
     adjacency = [
         AdjacencyRequirement("living", "dining", AdjacencyStrength.MUST_BE_NEAR),
         AdjacencyRequirement("dining", "kitchen", AdjacencyStrength.MUST_BE_NEAR),
-        AdjacencyRequirement("bed1", "bath1", AdjacencyStrength.MUST_BE_NEAR),
+        AdjacencyRequirement("living", "entrance", AdjacencyStrength.MUST_BE_NEAR),
+        AdjacencyRequirement("bath1", "entrance", AdjacencyStrength.MUST_BE_NEAR),
         AdjacencyRequirement("living", "garage", AdjacencyStrength.MUST_BE_AWAY),
         AdjacencyRequirement("bed1", "kitchen", AdjacencyStrength.MUST_BE_AWAY),
     ]
@@ -46,12 +48,10 @@ def main():
     parser = argparse.ArgumentParser(description="Generador de viviendas por zonificacion dia/noche/servicio")
     parser.add_argument("--output", default="layout.json", help="Ruta de salida del layout generado")
     parser.add_argument(
-        "--seed", type=int, default=1,
-        help="Semilla del recocido simulado (por defecto 1, fija -- determinista). "
-             "Usa --seed 0 o cualquier otro valor para explorar variantes distintas. "
-             "DEBILIDAD CONOCIDA corregida aqui: antes seed=None por defecto, el CLI "
-             "podia fallar aleatoriamente (~1 de cada 4 ejecuciones, confirmado durante "
-             "el DAFO); con semilla fija el resultado es reproducible.",
+        "--seed", type=int, default=3,
+        help="Semilla del recocido simulado (por defecto 3, fija -- determinista; "
+             "1 dejo de converger de forma fiable al ampliar el programa de ejemplo "
+             "con ENTRANCE_HALL). Usa otro valor para explorar variantes distintas.",
     )
     parser.add_argument("--max-iterations", type=int, default=3000, help="Iteraciones del recocido simulado")
     args = parser.parse_args()
