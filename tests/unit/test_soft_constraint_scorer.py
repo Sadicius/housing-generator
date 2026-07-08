@@ -113,3 +113,24 @@ def test_multiple_unsatisfied_soft_requirements_accumulate():
     layout = Layout(lot=_dummy_lot(), rooms=[a, b, c], zones=[])
 
     assert _scorer(reqs).score(layout) == 2.0
+
+
+def test_should_be_near_unplaced_room_not_in_graph_is_penalized():
+    # room_a colocada, room_b SIN colocar (boundary=None, nunca entra en
+    # el grafo) -- caso distinto de "desconectada pero colocada", nunca
+    # probado hasta ahora
+    a = _placed("a", RoomType.LIVING_ROOM, box(0, 0, 2, 2))
+    unplaced = Room(id="b", name="b", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=8))
+    reqs = [AdjacencyRequirement("a", "b", AdjacencyStrength.SHOULD_BE_NEAR)]
+    layout = Layout(lot=_dummy_lot(), rooms=[a, unplaced], zones=[])
+
+    assert _scorer(reqs).score(layout) == 1.0
+
+
+def test_should_be_away_unplaced_room_not_in_graph_scores_zero():
+    a = _placed("a", RoomType.LIVING_ROOM, box(0, 0, 2, 2))
+    unplaced = Room(id="b", name="b", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=15))
+    reqs = [AdjacencyRequirement("a", "b", AdjacencyStrength.SHOULD_BE_AWAY)]
+    layout = Layout(lot=_dummy_lot(), rooms=[a, unplaced], zones=[])
+
+    assert _scorer(reqs).score(layout) == 0.0

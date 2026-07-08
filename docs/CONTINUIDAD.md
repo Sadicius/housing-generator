@@ -50,6 +50,43 @@ mezcla estado actual con narrativa histórica en el mismo sitio.
    pero no el mecanismo principal -- confiar solo en eso es lo que
    dejó acumularse el problema dos veces antes de notarlo.
 
+## Convención de tests — evitar código muerto/sin probar invisible
+
+El usuario preguntó, con razón: "los tests que dices haber hecho,
+¿están actualizados, o son solo los que se hicieron en su momento?".
+Al comprobarlo de verdad (no de memoria), aparecieron 5 casos reales
+de código sin usar ni probar desde el principio de la sesión,
+invisibles porque "la suite pasa" nunca los señaló como problema:
+`AdjacencyRequirement.involves()`/`.other()`, `Zone.add_room()`,
+`Program.total_area_m2`/`.room_by_id()`, las tres validaciones de
+error de `Dimensions.__post_init__`, y el camino de fallo de
+`GenerateLayoutUseCase` (comprobado a mano con `bash_tool` en su
+momento, nunca convertido en test permanente).
+
+**La causa raíz**: "la suite pasa" solo detecta CONTRADICCIONES con lo
+que ya se prueba -- nunca detecta código que nunca se ejerció desde el
+principio, ni verificaciones hechas a mano que nunca se convirtieron en
+test real. Son dos fallos de proceso distintos, el mismo síntoma
+(confianza infundada) que ya vimos con la documentación obsoleta.
+
+**Regla, a partir de ahora:**
+
+1. **Ninguna verificación exploratoria (`bash_tool`, `python -c`) cuenta
+   como "comprobado" para dar una tarea por terminada.** Si merece la
+   pena comprobarlo, merece la pena que sea un test permanente -- la
+   conversión es parte de cerrar la tarea, no un paso opcional
+   posterior.
+2. **Los huecos de cobertura son un hallazgo a investigar, no solo un
+   número que aceptar.** Cuando la cobertura de un archivo (sobre todo
+   uno que se acaba de tocar) no llega al 100%, mirar las líneas
+   concretas sin cubrir antes de seguir -- no basta con que el
+   porcentaje agregado del proyecto "suene bien".
+3. **Barrido periódico de código sin uso** (no solo sin cobertura de
+   test): `grep` de métodos declarados que nunca se llaman en ningún
+   sitio del propio código fuente, no solo en los tests. Mismo patrón
+   que la convención de documentación -- una auditoría periódica es red
+   de seguridad, no el mecanismo principal.
+
 ## Cómo orientarse rápido
 
 ```

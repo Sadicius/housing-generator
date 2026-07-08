@@ -1,3 +1,4 @@
+import pytest
 from shapely.geometry import box
 from housing_generator.config.container import build_generate_layout_use_case
 from housing_generator.application.dto.generation_request import GenerationRequest
@@ -8,6 +9,7 @@ from housing_generator.domain.value_objects.dimensions import Dimensions
 from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
+from housing_generator.domain.exceptions import LayoutGenerationError
 
 
 def test_generate_layout_places_all_rooms_within_lot():
@@ -129,3 +131,20 @@ def test_hard_constraint_never_loses_to_soft_even_when_tempting():
     living = next(r for r in layout.rooms if r.id == "living")
     garage = next(r for r in layout.rooms if r.id == "garage")
     assert living.boundary.polygon.distance(garage.boundary.polygon) > 0  # de verdad separadas
+
+
+def test_impossible_program_raises_layout_generation_error_with_last_violations():
+    # camino de fallo de GenerateLayoutUseCase (una sola planta) --
+    # comprobado antes de forma manual con bash_tool durante una
+    # exploracion de casos limite, pero nunca capturado como test
+    # permanente (a diferencia de su equivalente en multi-planta,
+    # test_per_floor_generation_failure_raises_with_floor_name). Hueco
+    # real encontrado al auditar la cobertura de tests del proyecto.
+    rooms = [Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25))]
+    program = Program(rooms=rooms, adjacency_requirements=[])
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 0.5, 0.5)))  # imposiblemente pequena
+
+    use_case = build_generate_layout_use_case(seed=1, max_iterations=50)
+
+    with pytest.raises(LayoutGenerationError, match="Ultimas violaciones"):
+        use_case.execute(GenerationRequest(program=program, lot=lot))
