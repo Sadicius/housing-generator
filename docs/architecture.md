@@ -678,3 +678,36 @@ no solo en el CLI aislado.
   (SÍ converge), pero confirma que usar el catálogo completo
   "tal cual" para un programa real puede necesitar más iteraciones que
   las que bastan con conjuntos de restricciones más pequeños y curados.
+
+## Auditoría de mantenimiento de tests + estática de código completa
+
+A petición explícita del usuario ("¿los tests siguen actualizados o
+son solo los de su momento?" + "revisa todo el proyecto ya que
+estamos"). Hallazgos reales, con evidencia, no solo confirmaciones:
+
+- **[RESUELTO] 2 tests duplicados de verdad**, creados por mí mismo en
+  la ronda anterior sin comprobar si ya existían: `test_domain_entities.py`
+  tenía `test_program_rejects_duplicate_room_ids` y
+  `test_program_rejects_adjacency_to_unknown_room`, textualmente iguales
+  a dos tests nuevos en `test_program.py`. Eliminados los duplicados,
+  archivo renombrado a `test_room.py` (tras quitar los de `Program`,
+  quedó puramente sobre `Room`).
+- **[RESUELTO] Auditoría estática completa con `pyflakes`** (instalado
+  para esta auditoría, no estaba antes): 3 hallazgos reales en `src/`
+  (imports sin usar en `shapely_utils.py` y
+  `cocina_integrada_validator.py`, residuos de limpiezas anteriores; y
+  **`best_tree` en `SimulatedAnnealingLayoutGenerator` se rastreaba
+  durante toda la búsqueda pero nunca se leía en ningún sitio** --
+  bookkeeping completamente muerto, eliminado). 6 hallazgos más en
+  `tests/`: imports sin usar, y **dos casos donde una variable local sin
+  usar señalaba un test más débil de lo que su propio comentario
+  prometía** (`test_graph_based_generator.py` obtenía `bath` pero nunca
+  lo comprobaba, pese a que el comentario decía que sí; corregido
+  añadiendo la aserción que faltaba, no solo borrando la variable).
+- **Confirmado limpio**: arquitectura hexagonal (ningún import de
+  `application`/`domain` hacia `infrastructure`/`config`), y ningún
+  validador huérfano (uno pareció serlo -- `GroupingConstraintValidator`
+  -- pero es un falso positivo, se conecta vía 4 funciones fábrica, no
+  por nombre de clase directo).
+- Suite final: 276/276 (278 - 2 duplicados eliminados), pyflakes limpio
+  en `src/` y `tests/`.

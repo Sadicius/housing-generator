@@ -15,8 +15,7 @@ from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.lot import Lot
 from housing_generator.domain.value_objects.dimensions import Dimensions
 from housing_generator.domain.value_objects.boundary import Boundary
-from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
-from housing_generator.domain.enums import RoomType, AdjacencyStrength
+from housing_generator.domain.enums import RoomType
 
 
 def _dummy_lot(w=12, h=15) -> Lot:

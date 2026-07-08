@@ -1,10 +1,6 @@
-import pytest
 from housing_generator.domain.entities.room import Room
-from housing_generator.domain.entities.program import Program
 from housing_generator.domain.value_objects.dimensions import Dimensions
-from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
-from housing_generator.domain.enums import RoomType, ZoneType, AdjacencyStrength
-from housing_generator.domain.exceptions import InvalidProgramError
+from housing_generator.domain.enums import RoomType, ZoneType
 
 
 def test_room_gets_default_zone_from_type():
@@ -60,19 +56,3 @@ def test_corridor_and_entrance_hall_default_to_circulation_zone_not_day():
     assert hall.zone == ZoneType.CIRCULATION
     assert corridor.zone != ZoneType.DAY
     assert hall.zone != ZoneType.DAY
-
-
-def test_program_rejects_duplicate_room_ids():
-    rooms = [
-        Room(id="a", name="A", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=10)),
-        Room(id="a", name="B", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
-    ]
-    with pytest.raises(InvalidProgramError):
-        Program(rooms=rooms)
-
-
-def test_program_rejects_adjacency_to_unknown_room():
-    rooms = [Room(id="a", name="A", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=10))]
-    bad_req = [AdjacencyRequirement("a", "ghost", AdjacencyStrength.MUST_BE_NEAR)]
-    with pytest.raises(InvalidProgramError):
-        Program(rooms=rooms, adjacency_requirements=bad_req)

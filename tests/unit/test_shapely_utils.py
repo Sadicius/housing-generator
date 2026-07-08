@@ -1,4 +1,3 @@
-import math
 from shapely.geometry import box, Polygon
 from shapely.affinity import rotate
 from housing_generator.infrastructure.geometry.shapely_utils import can_inscribe_square

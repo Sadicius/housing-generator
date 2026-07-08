@@ -92,7 +92,6 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
         current_layout = self._materialize(current_tree, program, lot, areas)
         current_hard, current_soft = self._score(current_layout)
 
-        best_tree = current_tree
         best_layout = current_layout
         best_hard, best_soft = current_hard, current_soft
 
@@ -130,7 +129,7 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
                 current_tree, current_layout = candidate_tree, candidate_layout
                 current_hard, current_soft = candidate_hard, candidate_soft
                 if (current_hard, current_soft) < (best_hard, best_soft):
-                    best_tree, best_layout = current_tree, current_layout
+                    best_layout = current_layout
                     best_hard, best_soft = current_hard, current_soft
 
             temperature *= self._cooling_rate

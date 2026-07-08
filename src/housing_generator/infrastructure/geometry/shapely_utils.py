@@ -6,7 +6,7 @@ estrategias (CSP, genetico, etc.).
 """
 import math
 from typing import Optional, Tuple
-from shapely.geometry import Polygon, box, LineString
+from shapely.geometry import Polygon, LineString
 
 
 def _is_axis_or_rotated_rectangle(polygon: Polygon, relative_tolerance: float = 0.01) -> bool:

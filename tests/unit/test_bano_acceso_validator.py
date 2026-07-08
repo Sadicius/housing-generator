@@ -66,7 +66,6 @@ def test_two_bathrooms_one_ensuite_one_general_passes():
     ensuite = _placed("ensuite", RoomType.BATHROOM, box(4, 0, 6, 4))  # solo toca master
     corridor = _placed("corridor", RoomType.CORRIDOR, box(0, 4, 6, 5))
     general_bath = _placed("general_bath", RoomType.BATHROOM, box(0, 5, 3, 7))  # toca corridor
-    corridor2 = _placed("c2", RoomType.CORRIDOR, box(0, 5, 3, 7))  # dummy no usado
 
     layout = Layout(lot=_dummy_lot(), rooms=[master, ensuite, corridor, general_bath], zones=[])
     result = _validator().validate(layout)

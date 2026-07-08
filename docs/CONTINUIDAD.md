@@ -86,6 +86,18 @@ test real. Son dos fallos de proceso distintos, el mismo síntoma
    sitio del propio código fuente, no solo en los tests. Mismo patrón
    que la convención de documentación -- una auditoría periódica es red
    de seguridad, no el mecanismo principal.
+4. **Antes de escribir un test nuevo, comprobar si ya existe uno
+   equivalente.** Se encontró un caso real: al cerrar el hueco de
+   `Program.total_area_m2`/`.room_by_id()`, escribí también tests para
+   la validación de ids duplicados y de adyacencia a estancia
+   desconocida -- que YA existían, textualmente iguales, en
+   `test_domain_entities.py`. Un `grep` rápido del nombre de la clase/
+   método en `tests/` antes de escribir evita esto.
+5. **Herramientas de análisis estático (`pyflakes` u otras) forman
+   parte de la auditoría, no solo `pytest`.** Encontraron bookkeeping
+   completamente muerto (`best_tree` en el generador, nunca leído) que
+   ningún test detectaría nunca, porque no verificar comportamiento --
+   solo ocupaba ciclos sin ningún efecto observable.
 
 ## Cómo orientarse rápido
 

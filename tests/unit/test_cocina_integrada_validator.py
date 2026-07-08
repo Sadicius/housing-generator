@@ -1,6 +1,5 @@
 from housing_generator.infrastructure.algorithms.constraints.cocina_integrada_validator import (
     CocinaIntegradaValidator,
-    APERTURA_VERTICAL_MIN_M2,
 )
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.entities.lot import Lot

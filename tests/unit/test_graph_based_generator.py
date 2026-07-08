@@ -69,6 +69,12 @@ def test_rooms_are_grouped_by_zone_in_separate_horizontal_strips():
     bath = next(r for r in layout.rooms if r.id == "bath")
 
     # dormitorio y bano (misma zona noche) deben quedar en franjas
-    # separadas del salon (zona dia) -- sin solape en el eje de reparto
+    # separadas del salon (zona dia) -- sin solape en el eje de reparto.
+    # Hallazgo real en auditoria: una version anterior de este test
+    # obtenia 'bath' pero nunca lo comprobaba -- el propio comentario
+    # prometia verificarlo, el codigo no lo hacia. Corregido, no solo
+    # eliminada la variable sin usar.
     assert living.boundary.polygon.bounds[1] != bed.boundary.polygon.bounds[1] or \
         living.boundary.polygon.bounds[0] != bed.boundary.polygon.bounds[0]
+    assert living.boundary.polygon.bounds[1] != bath.boundary.polygon.bounds[1] or \
+        living.boundary.polygon.bounds[0] != bath.boundary.polygon.bounds[0]
