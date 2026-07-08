@@ -1,6 +1,9 @@
 import json
+from typing import List, Optional
 from housing_generator.application.ports.layout_repository_port import LayoutRepositoryPort
 from housing_generator.domain.entities.layout import Layout
+from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
+from housing_generator.infrastructure.algorithms.adjacency.door_graph import build_door_graph
 
 
 class JsonLayoutRepository(LayoutRepositoryPort):
@@ -8,7 +11,15 @@ class JsonLayoutRepository(LayoutRepositoryPort):
     de geometria (via shapely.wkt) se puede anadir cuando haga falta cargar
     layouts guardados, no solo inspeccionarlos."""
 
-    def save(self, layout: Layout, path: str) -> None:
+    def save(
+        self, layout: Layout, path: str,
+        adjacency_requirements: Optional[List[AdjacencyRequirement]] = None,
+    ) -> None:
+        doors = []
+        if adjacency_requirements:
+            door_graph = build_door_graph(layout, adjacency_requirements)
+            doors = [{"room_a": a, "room_b": b} for a, b in door_graph.edges()]
+
         data = {
             "rooms": [
                 {
@@ -21,6 +32,7 @@ class JsonLayoutRepository(LayoutRepositoryPort):
                 }
                 for r in layout.rooms
             ],
+            "doors": doors,
             "metadata": layout.metadata,
         }
         with open(path, "w", encoding="utf-8") as f:

@@ -62,3 +62,37 @@ def test_save_writes_multiple_rooms_in_order(tmp_path):
 def test_load_raises_not_implemented():
     with pytest.raises(NotImplementedError):
         JsonLayoutRepository().load("cualquier_ruta.json")
+
+
+def test_save_without_adjacency_requirements_produces_empty_doors_list(tmp_path):
+    # compatibilidad hacia atras: sin requisitos, "doors" existe pero vacio
+    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living.boundary = Boundary(polygon=box(0, 0, 4, 5))
+    layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
+
+    path = tmp_path / "layout.json"
+    JsonLayoutRepository().save(layout, str(path))
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["doors"] == []
+
+
+def test_save_with_adjacency_requirements_includes_real_doors(tmp_path):
+    from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
+    from housing_generator.domain.enums import AdjacencyStrength
+
+    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living.boundary = Boundary(polygon=box(0, 0, 4, 5))
+    dining = Room(id="dining", name="Comedor", room_type=RoomType.DINING_ROOM, dimensions=Dimensions(area_m2=15))
+    dining.boundary = Boundary(polygon=box(4, 0, 8, 5))  # comparte 5m con living
+
+    layout = Layout(lot=_dummy_lot(), rooms=[living, dining], zones=[])
+    reqs = [AdjacencyRequirement("living", "dining", AdjacencyStrength.MUST_BE_NEAR)]
+
+    path = tmp_path / "layout.json"
+    JsonLayoutRepository().save(layout, str(path), adjacency_requirements=reqs)
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert len(data["doors"]) == 1
+    pair = {data["doors"][0]["room_a"], data["doors"][0]["room_b"]}
+    assert pair == {"living", "dining"}

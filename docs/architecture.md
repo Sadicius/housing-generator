@@ -390,3 +390,21 @@ programa + relaciones de adyacencia). Hallazgos:
   búsqueda. Vuelto a `seed=1` (que con el conjunto de movimientos
   anterior había dejado de funcionar, y ahora vuelve a hacerlo) tras
   confirmar 8/8 ejecuciones estables.
+
+## Grafo de puertas (hueco de modelo "acceso/puertas" resuelto parcialmente)
+
+- **[RESUELTO, parcial]** `build_door_graph`
+  (`infrastructure/algorithms/adjacency/door_graph.py`). Investigación
+  externa (patrón "Door Connectivity Graph", paper *"Automatic Rendering
+  of Building Floor Plan Images from Textual Descriptions"*; confirmado
+  por Infinigen Indoors 2024 que la colocación de puertas es típicamente
+  un paso POSTERIOR a resolver posiciones, no algo que compita con la
+  búsqueda del generador). Capa dispersa sobre el grafo de adyacencia
+  geométrica ya existente: un par tiene puerta si y solo si hay
+  `AdjacencyRequirement(MUST_BE_NEAR)` declarado Y la geometría final los
+  coloca realmente adyacentes (≥1.0m de borde compartido). No modela
+  geometría real de puerta (posición en el muro, ancho, sentido de
+  apertura) -- deliberadamente mínimo, solo existencia a nivel de grafo.
+  Conectado a `JsonLayoutRepository` (nuevo campo `"doors"` en la
+  exportación) y al CLI. Confirmado con el CLI real: exporta exactamente
+  los 4 pares `Obligatorio cerca` declarados en el programa de ejemplo.

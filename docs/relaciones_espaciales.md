@@ -232,22 +232,30 @@ CORRIDOR (Preferencia cerca).
 |---|---|---|
 | CORRIDOR | Neutro | — |
 
-## Huecos de modelo identificados (no resueltos, registrados para más adelante)
+## Huecos de modelo identificados
 
-1. **Acceso/puertas**: no se modelan puertas ni accesos, solo geometría
-   de paredes compartidas. Varias relaciones de este catálogo distinguen
-   "cerca" de "cerca pero sin puerta directa" (BATHROOM con zonas
-   sociales, KITCHEN↔GARAGE, ENTRANCE_HALL↔BATHROOM...) — hoy no se
-   puede expresar esa distinción.
+1. **[RESUELTO, parcialmente]** Acceso/puertas: `build_door_graph`
+   (`infrastructure/algorithms/adjacency/door_graph.py`), investigación
+   externa confirmada (patrón "Door Connectivity Graph" -- grafo
+   disperso de puertas, separado del de adyacencia geométrica, en vez de
+   modelar geometría real de puertas). Regla: un par tiene puerta si y
+   solo si hay `AdjacencyRequirement(MUST_BE_NEAR)` declarado Y la
+   geometría final los coloca realmente adyacentes con ≥1.0m de borde
+   compartido (mismo umbral ya usado por `AdjacencyConstraintValidator`
+   -- no una regla nueva inventada, sino hacer explícito lo que ese
+   umbral ya representaba implícitamente). Conectado a la exportación
+   JSON (`JsonLayoutRepository`). **Parcial** porque no modela geometría
+   real de puerta (posición en el muro, ancho, sentido de apertura) --
+   solo si existe, a nivel de grafo.
 2. **Topología de circulación (de paso vs. terminal)**: KITCHEN↔CORRIDOR
    señaló que el pasillo debe *llevar a* la cocina, no *atravesarla*. No
    existe ningún concepto de "estancia de paso" vs. "estancia terminal"
-   en el grafo de circulación.
-3. **Reglas condicionadas por cardinalidad total**: BEDROOM↔BATHROOM (y
-   MASTER_BEDROOM↔BATHROOM) dependen de cuántos baños completos existan
-   en total en el programa (1 baño → acceso solo por pasillo; ≥2 →
-   uno puede ser en-suite). No es una propiedad fija del par, sino del
-   programa completo.
+   en el grafo de circulación. Investigación externa (Infinigen Indoors,
+   2024) sugiere una vía: coste de "camino más corto hasta la entrada",
+   calculable ahora que existe el grafo de puertas -- pendiente de
+   implementar.
+3. **[RESUELTO]** Reglas condicionadas por cardinalidad total
+   (BEDROOM/MASTER_BEDROOM↔BATHROOM): `BanoAccesoGeneralValidator`.
 
 ## Candidato a nuevo `RoomType` (no añadido)
 

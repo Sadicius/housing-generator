@@ -67,7 +67,7 @@ def main():
     )
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
-    JsonLayoutRepository().save(layout, args.output)
+    JsonLayoutRepository().save(layout, args.output, adjacency_requirements=program.adjacency_requirements)
 
     print(f"Layout generado y guardado en {args.output}\n")
     for room in layout.rooms:
