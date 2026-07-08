@@ -646,3 +646,35 @@ no solo en el CLI aislado.
   sin tensión con ninguna regla dura SÍ se satisface por la búsqueda
   (no solo "no rompe nada"); y una preferencia blanda en tensión directa
   con una regla dura para el MISMO par SIEMPRE cede ante la dura.
+
+## Catálogo de 120 pares formalizado como código ejecutable (retomado de CONTINUIDAD.md)
+
+- **[RESUELTO]** `domain/services/type_adjacency_catalog.py`. Generado
+  PROGRAMÁTICAMENTE desde `docs/relaciones_espaciales.md` (no
+  transcrito a mano, 120 pares -- fuente de errores real dado el
+  volumen). `DEFAULT_TYPE_ADJACENCY` contiene 82 entradas reales
+  (120 pares - 35 Neutro - 2 Condicional - 1 Ya cubierto). Los pares
+  Condicional (BEDROOM/MASTER_BEDROOM↔BATHROOM) y Ya cubierto
+  (KITCHEN↔BATHROOM) se excluyen deliberadamente del diccionario y se
+  declaran aparte (`CONDICIONAL_PAIRS`, `YA_CUBIERTO_PAIRS`) --
+  generar un `AdjacencyRequirement` fijo para ellos sería incorrecto
+  (dependen de lógica evaluada contra el `Program` real o ya están
+  cubiertos por otro validador).
+- `generate_adjacency_requirements(rooms)`: función pura que, dado un
+  conjunto de `Room`, deriva automáticamente los `AdjacencyRequirement`
+  (duros y blandos) según sus `RoomType`. Aplica la misma relación a
+  cada instancia si hay varias estancias del mismo tipo (el catálogo es
+  por tipo, no por instancia única); nunca genera nada entre dos
+  estancias del mismo tipo (el catálogo no tiene entradas tipo-tipo
+  consigo mismo).
+- **Verificado con el generador real, no solo con la función aislada**:
+  un programa realista de 11 estancias genera 44 `AdjacencyRequirement`
+  automáticamente, y el conjunto completo SÍ es alcanzable por el
+  recocido simulado (layout válido, 0 violaciones duras). **Hallazgo
+  honesto, no ocultado**: es una búsqueda notablemente más difícil que
+  los ejemplos curados a mano de este proyecto (44 requisitos frente a
+  los 4-6 típicos) -- de 10 semillas probadas con 5000 iteraciones,
+  solo una convergió. No es una contradicción interna del catálogo
+  (SÍ converge), pero confirma que usar el catálogo completo
+  "tal cual" para un programa real puede necesitar más iteraciones que
+  las que bastan con conjuntos de restricciones más pequeños y curados.

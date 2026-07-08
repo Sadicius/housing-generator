@@ -132,6 +132,23 @@ otro -- no se modela como volumen 3D con altura de paso propia).
 
 ## Auditoría de coherencia entre documentos (encontrado, sin resolver)
 
+**Actualizado tras implementar multi-planta real (ver `docs/architecture.md`,
+secciones "Multi-planta: primer incremento real" y "Catálogo de 120
+pares formalizado")**: las tres tensiones de abajo ya NO "dependen de
+tener multi-planta" -- multi-planta existe. La 1 y la 3 siguen sin
+resolver de verdad. La 2 está **verificada como neutralizada, aunque
+de forma silenciosa**: `generate_adjacency_requirements` (el catálogo
+formalizado) no conoce `Room.level` en absoluto -- genera el requisito
+KITCHEN↔GARAGE igual sin importar la planta de cada una. Pero
+`GenerateBuildingUseCase.execute()` ya filtra por planta antes de
+generar cada una (`level_adjacency = [req for req in ... if
+req.room_a_id in level_room_ids and req.room_b_id in level_room_ids]`)
+-- un requisito entre dos estancias de plantas distintas se descarta
+automáticamente, nunca llega a aplicarse mal. Confirmado con una
+comprobación directa, no solo argumentado. No está pulido (no hay
+ningún aviso de que se descartó, simplemente desaparece), pero no es
+peligroso como se temía originalmente.
+
 Al auditar `niveles_plantas.md` contra `relaciones_espaciales.md` y
 `ExteriorContactValidator`, aparecen tres tensiones que no están
 resueltas (no son errores de dato, son interacciones no formalizadas
@@ -145,28 +162,21 @@ entre reglas que hoy viven en documentos/validadores separados):
    "contacto exterior" más específico que una simple fachada, que
    `count_exterior_sides()` no distingue. No es una contradicción
    imposible, pero el modelo actual no representa la diferencia entre
-   "fachada plana" y "rampa que baja a sótano".
-2. **KITCHEN↔GARAGE "muy cerca" asume misma planta**. La relación
-   `Preferencia (muy cerca, con barrera)` de `relaciones_espaciales.md`
-   solo tiene sentido si ambas estancias acaban en la misma planta --
-   pero nada en el modelo obliga a eso: `KITCHEN` prefiere
-   `PLANTA_BAJA` fija, `GARAGE` es indiferente entre sótano/semisótano/
-   planta baja. Si el generador (multi-planta, futuro) eligiera GARAGE
-   en sótano por otros motivos, esta preferencia de adyacencia quedaría
-   automáticamente inviable, sin que ningún validador lo señale como tal
-   -- los dos documentos no están enlazados formalmente.
+   "fachada plana" y "rampa que baja a sótano". **Sigue sin resolver.**
+2. **KITCHEN↔GARAGE "muy cerca" asume misma planta** -- ver nota de
+   arriba: verificado que el filtrado por planta de
+   `GenerateBuildingUseCase` neutraliza el riesgo real, aunque de forma
+   silenciosa (sin aviso de que el requisito se descartó).
 3. **BEDROOM/STUDY "alejar" de LIVING_ROOM se vuelve irrelevante entre
    plantas distintas**: la preferencia de separación horizontal
    (adyacencia) solo importa de verdad cuando ambas estancias comparten
    planta (condicional a espacio, ver arriba). No es una contradicción,
    solo una observación de diseño: cuando el dormitorio sube de planta,
    la separación ya la proporciona el propio nivel, y la preferencia de
-   adyacencia horizontal pasa a ser irrelevante para ese caso.
-
-Ninguna de las tres se resuelve aquí -- todas dependen de tener
-generación multi-planta real, momento en el que habrá que decidir cómo
-el generador consulta varios documentos/reglas a la vez (o formalizarlos
-en una sola estructura de datos que los prevea desde el principio).
+   adyacencia horizontal pasa a ser irrelevante para ese caso. **Mismo
+   mecanismo de filtrado por planta que en el punto 2 -- neutralizado,
+   no peligroso, aunque tampoco "resuelto" con intención (es un efecto
+   colateral correcto, no una regla explícita para este caso).**
 
 ## Multi-planta real — RESUELTO, primer incremento
 

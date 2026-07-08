@@ -123,17 +123,34 @@ recocido, ver architecture.md). Confirmado con tests: la preferencia
 blanda se satisface cuando no hay tensión con lo duro, y lo duro nunca
 cede aunque haya tensión directa para el mismo par.
 
+## Catálogo de 120 pares formalizado — RESUELTO
+
+`domain/services/type_adjacency_catalog.py`. `DEFAULT_TYPE_ADJACENCY`
+(82 entradas reales, generado programáticamente desde
+`relaciones_espaciales.md`, no transcrito a mano) +
+`generate_adjacency_requirements(rooms)` (deriva `AdjacencyRequirement`
+duros y blandos automáticamente por `RoomType`). Verificado con el
+generador real: un programa de 11 estancias genera 44 requisitos
+automáticamente y produce un layout válido. Hallazgo honesto: usar el
+catálogo completo es una búsqueda más difícil que los ejemplos curados
+a mano (más iteraciones/intentos de semilla necesarios) -- no es una
+contradicción del catálogo, solo un espacio de búsqueda más restringido.
+Todavía no está conectado como opción automática en `container.py`/CLI
+(la función existe y funciona, pero nadie la llama por defecto) --
+pendiente si se quiere ese último paso de integración.
+
 ## Pendiente real, si se retoma
 
-- **Formalizar el catálogo de 120 pares como estructura ejecutable**
-  (`DEFAULT_TYPE_ADJACENCY`) — ya no bloqueado (los 3 huecos de modelo que
-  lo impedían están resueltos, y las restricciones blandas ya tienen
-  mecanismo real al que conectarse). Pendiente de construir.
 - **Importador JSON (exportación de la sección vertical del dashboard) →
-  Program real** — discutido, no construido. Derivaría `Obligatorio` Y
-  ahora también `Preferencia` automáticamente del catálogo formalizado.
+  Program real** — discutido, no construido. Con el catálogo ya
+  formalizado, derivaría `Obligatorio` y `Preferencia` automáticamente
+  vía `generate_adjacency_requirements`, no habría que construir esa
+  parte desde cero.
 - **Vivienda pareada/adosada** (medianeras) — solo aislada implementada
   (retranqueo). Extensión natural: añadir "lados de medianera" a `Lot`.
+- **Conectar `generate_adjacency_requirements` como opción automática**
+  en `container.py`/CLI (hoy solo existe como función que hay que
+  llamar a mano antes de construir el `Program`).
 - **Reducir el contorno edificable planta a planta** (en vez de compartir
   el mismo en todas) — la opción más compleja de las dos vistas en
   investigación externa (Infinigen Indoors), deliberadamente pospuesta.
@@ -141,6 +158,13 @@ cede aunque haya tensión directa para el mismo par.
   precalculado por `GenerateBuildingUseCase`) — mencionado aquí solo para
   que quede claro que NO es un pendiente, por si se confunde con la nota
   anterior de contorno compartido.
+- **GARAGE en sótano vs. contacto exterior**: un garaje en `SOTANO` exige
+  también contacto exterior (`ExteriorContactValidator`, acceso
+  vehicular) -- solo se puede satisfacer con una rampa que corte el
+  nivel de rasante, que el modelo actual no distingue de una fachada
+  plana normal. Encontrado al aplicar esta misma convención de
+  documentación sobre `niveles_plantas.md`; no es peligroso (no genera
+  resultados incorrectos), pero está sin resolver de verdad.
 
 ## Cosas aprendidas por las malas — no las repitas
 
