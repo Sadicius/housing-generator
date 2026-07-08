@@ -17,6 +17,39 @@ Arquitectura hexagonal estricta. Generación por recocido simulado sobre un
 **Estado en el momento de escribir esto**: 234/234 tests, 97% cobertura,
 15 commits de git, working tree limpio.
 
+## Convención de documentación — evitar que esto se repita
+
+Esto ya ha pasado dos veces (dos rondas distintas encontraron
+`architecture.md` y `relaciones_espaciales.md` afirmando como
+"pendiente" cosas que ya estaban resueltas en otra sección del mismo
+documento). La causa no fue un despiste puntual — es que la estructura
+mezcla estado actual con narrativa histórica en el mismo sitio.
+
+**Regla de separación, a partir de ahora:**
+
+1. **Este documento (`CONTINUIDAD.md`) es la ÚNICA fuente de verdad
+   sobre qué queda pendiente.** Se reescribe, no se amplía sin más --
+   cada vez que algo de la lista de pendientes se resuelve, se quita de
+   aquí en el mismo momento en que se resuelve, no en una limpieza
+   posterior.
+2. **`architecture.md` es un log histórico de solo-añadir, NUNCA una
+   fuente de "estado actual".** Cada sección cuenta qué pasó en ese
+   momento. Si algo queda pendiente al escribir una sección nueva, debe
+   remitir a este documento (`docs/CONTINUIDAD.md`) en vez de afirmarlo
+   por su cuenta con frases tipo "no implementado" sin matizar -- así,
+   si se resuelve más adelante, solo hace falta actualizar un sitio.
+3. **Paso obligatorio al cerrar cualquier tarea que resuelva algo de la
+   lista de pendientes de arriba**: antes de dar la tarea por
+   terminada, buscar (`grep`) las palabras clave relacionadas en
+   `architecture.md`, `relaciones_espaciales.md` y `niveles_plantas.md`
+   para encontrar y corregir cualquier frase que lo siga describiendo
+   como pendiente -- en la misma respuesta que resuelve la tarea, no
+   como una auditoría aparte más adelante.
+4. **Auditorías periódicas de documentación completa** (como la que
+   encontró este problema) siguen siendo una red de seguridad útil,
+   pero no el mecanismo principal -- confiar solo en eso es lo que
+   dejó acumularse el problema dos veces antes de notarlo.
+
 ## Cómo orientarse rápido
 
 ```

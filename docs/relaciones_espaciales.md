@@ -3,9 +3,10 @@
 Este documento recoge el "breeding" de relaciones entre los 16 `RoomType`
 del sistema (120 pares únicos), construido par a par de forma manual,
 con el motivo de cada relación documentado. Es un catálogo **cualitativo
-de intención de diseño**, no todavía una estructura de datos ejecutable
-del dominio — se consolida aquí primero para poder decidir con calma
-cómo formalizarlo (ver "Próximos pasos" al final).
+de intención de diseño** -- para saber si ya existe (o sigue pendiente)
+una estructura de datos ejecutable del dominio a partir de este
+catálogo, ver `docs/CONTINUIDAD.md` (única fuente de verdad sobre
+pendientes, no este documento).
 
 ## Terminología (importante, no confundir)
 
@@ -273,12 +274,14 @@ CORRIDOR (Preferencia cerca).
   añadido como tipo porque requeriría revisar de nuevo varias filas del
   catálogo si se incorpora.
 
-## Próximos pasos (para decidir en otra sesión)
+## Historial de esta sección del catálogo (log, no lista de pendientes)
 
-- Formalizar (o no) este catálogo como estructura de datos del dominio,
-  por ejemplo `DEFAULT_TYPE_ADJACENCY: Dict[Tuple[RoomType, RoomType], ...]`,
-  generando `AdjacencyRequirement` sugeridos automáticamente para un
-  `Program` según los tipos que contenga.
+> Para saber qué queda pendiente de verdad ahora mismo, ver
+> `docs/CONTINUIDAD.md` -- es la única fuente de verdad sobre eso. Lo
+> que sigue es el registro de qué se resolvió aquí y cómo, no una lista
+> de próximos pasos (una versión anterior de esta sección mezclaba
+> ambas cosas, lo que llevó a que quedara desactualizada dos veces).
+
 - **[RESUELTO]** Mecanismo de restricciones blandas ("Preferencia
   cerca/alejar") conectado a la función objetivo del recocido simulado:
   `SoftConstraintScorer` + nuevo `AdjacencyStrength.SHOULD_BE_AWAY`
@@ -304,9 +307,7 @@ CORRIDOR (Preferencia cerca).
   entrada de catálogo -- `BanoAccesoGeneralValidator`.
 - **[RESUELTO]** Los tres huecos de modelo (acceso/puertas, topología
   de paso/terminal, cardinalidad) están todos resueltos -- ver las
-  secciones de este documento y `docs/architecture.md`. La estructura
-  ejecutable del catálogo (`DEFAULT_TYPE_ADJACENCY`) ya no está
-  bloqueada por nada, sigue pendiente de construir si se retoma.
+  secciones de este documento y `docs/architecture.md`.
 - El "grafo de burbujas" del dashboard que se mencionaba aquí como
   paso intermedio fue ELIMINADO en una ronda posterior -- sustituido
   por selección directa de estancias en la pestaña de sección vertical,

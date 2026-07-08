@@ -168,21 +168,35 @@ generación multi-planta real, momento en el que habrá que decidir cómo
 el generador consulta varios documentos/reglas a la vez (o formalizarlos
 en una sola estructura de datos que los prevea desde el principio).
 
-## Pendiente para cuando se aborde generación multi-planta real
+## Multi-planta real — RESUELTO, primer incremento
 
+> Para saber qué queda pendiente de verdad ahora mismo, ver
+> `docs/CONTINUIDAD.md` -- es la única fuente de verdad sobre eso. Esta
+> sección era antes una lista de "pendiente cuando se aborde
+> multi-planta"; se reescribe aquí como registro de qué se resolvió,
+> porque casi todo lo que decía quedó obsoleto sin que se corrigiera a
+> tiempo (mismo problema encontrado en `architecture.md` y
+> `relaciones_espaciales.md` -- ver la convención en `CONTINUIDAD.md`).
 
-- Extender `Lot` para representar múltiples plantas (¿un solar por
-  planta con la misma huella, o huellas distintas por planta?).
-- Extender `Layout` para agrupar resultados por planta.
-- Decidir cómo el generador (recocido simulado u otro) coordina
-  colocación entre plantas — incluyendo circulación vertical (escaleras,
-  no modeladas todavía, nivel edificio B.2.2, fuera de alcance actual).
-- Formalizar el condicional "según espacio disponible" en código (no es
-  una simple constante por tipo, depende del programa completo).
-- Decidir cómo `CORRIDOR` se multiplica por planta en el `Program`.
-- Implementar la continuidad vertical de instalaciones (bajantes) una
-  vez exista generación multi-planta -- ver sección anterior.
-- Añadir `RoomType` de escalera con las dimensiones ya confirmadas
-  (CTE DB-SUA 1, uso restringido) -- ver sección anterior. Pendiente:
-  resolver la geometría de peldaños y la alineación exacta entre
-  plantas antes de implementar.
+Todo lo siguiente está **[RESUELTO]**, ver `docs/architecture.md`
+sección "Multi-planta: primer incremento real" para el detalle:
+- `Building` (nueva entidad) agrupa varias `Layout`, una por planta.
+- `Room.level` (`NivelPlanta`) formaliza el nivel de cada estancia.
+- `GenerateBuildingUseCase` coordina la generación planta a planta,
+  encadenando referencias fijas entre plantas consecutivas.
+- `RoomType.STAIRCASE` + `EscaleraAlineacionValidator` (huella
+  alineada ≥90% entre plantas) + `EscaleraAnchoLibreValidator` (0.80m).
+- Continuidad vertical de instalaciones (bajantes) →
+  `NucleoHumedoVerticalValidator`.
+- `CORRIDOR` se declara igual que cualquier otro tipo, con su propio
+  `Room.level` -- no hay multiplicación automática, cada instancia por
+  planta se declara explícitamente en el `Program`.
+
+**Simplificación deliberada que queda** (no un pendiente urgente, una
+decisión de alcance): todas las plantas comparten el mismo contorno
+edificable (`lot.buildable_area`), no se reduce planta a planta.
+
+**Lo único que sigue sin implementar de verdad**: geometría de
+peldaños (huella/contrahuella) -- la escalera es un `RoomType` con
+área/ancho declarados, como cualquier otro, sin modelar volumen 3D ni
+número de escalones.
