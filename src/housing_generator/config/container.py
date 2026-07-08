@@ -63,6 +63,9 @@ from housing_generator.infrastructure.algorithms.constraints.bano_acceso_validat
 from housing_generator.infrastructure.algorithms.constraints.escalera_ancho_libre_validator import (
     EscaleraAnchoLibreValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.pasillo_topologia_validator import (
+    PasilloTopologiaValidator,
+)
 from housing_generator.infrastructure.algorithms.constraints.escalera_alineacion_validator import (
     EscaleraAlineacionValidator,
 )
@@ -118,6 +121,7 @@ def build_per_floor_validators(
         CocinaIntegradaValidator(),
         EspacioAccesoValidator(),
         EscaleraAnchoLibreValidator(),
+        PasilloTopologiaValidator(graph_builder),
     ]
 
 

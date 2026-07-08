@@ -247,13 +247,21 @@ CORRIDOR (Preferencia cerca).
    JSON (`JsonLayoutRepository`). **Parcial** porque no modela geometría
    real de puerta (posición en el muro, ancho, sentido de apertura) --
    solo si existe, a nivel de grafo.
-2. **Topología de circulación (de paso vs. terminal)**: KITCHEN↔CORRIDOR
-   señaló que el pasillo debe *llevar a* la cocina, no *atravesarla*. No
-   existe ningún concepto de "estancia de paso" vs. "estancia terminal"
-   en el grafo de circulación. Investigación externa (Infinigen Indoors,
-   2024) sugiere una vía: coste de "camino más corto hasta la entrada",
-   calculable ahora que existe el grafo de puertas -- pendiente de
-   implementar.
+2. **[RESUELTO]** Topología de circulación (de paso vs. terminal):
+   `PasilloTopologiaValidator`. KITCHEN↔CORRIDOR señalaba que el pasillo
+   debe *llevar a* la cocina, no *atravesarla* -- formalizado con
+   detección de puntos de corte (articulation points, `networkx`) sobre
+   el grafo de adyacencia geométrica real: ninguna estancia
+   no-circulación puede ser un punto de corte obligado entre la
+   circulación y otra estancia, excepto `LIVING_ROOM`/`DINING_ROOM`
+   (open-plan, confirmado que es normal atravesarlos). **Corrección real
+   durante la construcción**: la primera versión usaba el grafo de
+   PUERTAS disperso (`build_door_graph`, solo `Obligatorio cerca`
+   declarados) -- con programas reales (mayoría `Preferencia`, no
+   `Obligatorio`), resultó demasiado disperso y rompió 9 tests
+   (incluido el CLI). Corregido usando la adyacencia geométrica real
+   (`GeometryAdjacencyGraphBuilder`, misma fuente que núcleo húmedo y
+   zonificación) en vez del grafo de puertas.
 3. **[RESUELTO]** Reglas condicionadas por cardinalidad total
    (BEDROOM/MASTER_BEDROOM↔BATHROOM): `BanoAccesoGeneralValidator`.
 
