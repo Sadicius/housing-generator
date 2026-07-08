@@ -16,6 +16,9 @@ from housing_generator.infrastructure.algorithms.layout_generation.partition_tre
     place_tree,
     random_neighbor,
 )
+from housing_generator.infrastructure.algorithms.layout_generation.soft_constraint_scorer import (
+    SoftConstraintScorer,
+)
 
 
 class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
@@ -24,9 +27,18 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
     por macro-zona geometrica) y buscando la mejor topologia mediante
     recocido simulado.
 
-    La funcion objetivo es, deliberadamente, solo el NUMERO de violaciones
-    que reporta `constraint_validator` -- restricciones duras unicamente,
-    sin ponderacion ni blandas, tal como se acordo.
+    La funcion objetivo combina violaciones DURAS (siempre dominantes)
+    con una penalizacion BLANDA opcional (Preferencia cerca/alejar) --
+    ver `_score`. Comparacion LEXICOGRAFICA real (tupla `(duro, blando)`),
+    no suma ponderada: una primera version sumaba `duro*peso_grande +
+    blando`, que garantiza el orden final correcto pero rompe la
+    dinamica de aceptacion del recocido (`exp(-delta/temperatura)`
+    reacciona a la magnitud absoluta del delta, no solo al orden
+    relativo -- confirmado que rompia tests que no tocaban nada de las
+    restricciones blandas). Con la tupla, cuando lo duro cambia entre
+    candidato y actual, la aceptacion se decide SOLO por ese delta (a su
+    escala natural, igual que antes de anadir nada blando); lo blando
+    solo entra en juego cuando lo duro empata.
 
     DIFERENCIA DE ARQUITECTURA respecto a GraphBasedLayoutGenerator: este
     generador recibe el ConstraintValidatorPort como dependencia PROPIA
@@ -50,12 +62,14 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
         initial_temperature: float = 10.0,
         cooling_rate: float = 0.995,
         seed: Optional[int] = None,
+        soft_constraint_scorer: Optional[SoftConstraintScorer] = None,
     ):
         self._constraint_validator = constraint_validator
         self._max_iterations = max_iterations
         self._initial_temperature = initial_temperature
         self._cooling_rate = cooling_rate
         self._seed = seed
+        self._soft_scorer = soft_constraint_scorer
 
     def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout:
         # BUG REAL encontrado en auditoria: antes, `self._rng` se creaba
@@ -76,35 +90,60 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
 
         current_tree = build_random_tree(room_ids, self._rng)
         current_layout = self._materialize(current_tree, program, lot, areas)
-        current_score = self._score(current_layout)
+        current_hard, current_soft = self._score(current_layout)
 
         best_tree = current_tree
         best_layout = current_layout
-        best_score = current_score
+        best_hard, best_soft = current_hard, current_soft
 
         temperature = self._initial_temperature
         for _ in range(self._max_iterations):
-            if best_score == 0:
+            if best_hard == 0 and best_soft == 0:
                 break
 
             candidate_tree = random_neighbor(current_tree, self._rng, areas)
             candidate_layout = self._materialize(candidate_tree, program, lot, areas)
-            candidate_score = self._score(candidate_layout)
+            candidate_hard, candidate_soft = self._score(candidate_layout)
 
-            delta = candidate_score - current_score
+            # BUG REAL encontrado al conectar las restricciones blandas:
+            # una primera version combinaba duro+blando en un UNICO
+            # numero (hard*1000 + soft) para la aceptacion del recocido.
+            # Esto garantiza el orden final correcto, pero ROMPE la
+            # dinamica de aceptacion: exp(-delta/temperatura) reacciona a
+            # la MAGNITUD absoluta del delta, no solo al orden relativo
+            # -- multiplicar por 1000 hacia practicamente imposible
+            # aceptar CUALQUIER movimiento que empeorase lo duro, incluso
+            # al principio con temperatura alta, cambiando el
+            # comportamiento ya afinado de todo el proyecto (confirmado:
+            # rompio un test de multi-planta que no tocaba nada de esto).
+            # Corregido con comparacion LEXICOGRAFICA real: si lo duro
+            # cambia, la aceptacion se decide SOLO por el delta duro (a
+            # su escala natural, pequeña, igual que antes de tocar nada
+            # de esto); solo se mira lo blando cuando lo duro empata.
+            if candidate_hard != current_hard:
+                delta = candidate_hard - current_hard
+            else:
+                delta = candidate_soft - current_soft
+
             accepted = delta <= 0 or self._rng.random() < math.exp(-delta / max(temperature, 1e-9))
             if accepted:
-                current_tree, current_layout, current_score = candidate_tree, candidate_layout, candidate_score
-                if current_score < best_score:
-                    best_tree, best_layout, best_score = current_tree, current_layout, current_score
+                current_tree, current_layout = candidate_tree, candidate_layout
+                current_hard, current_soft = candidate_hard, candidate_soft
+                if (current_hard, current_soft) < (best_hard, best_soft):
+                    best_tree, best_layout = current_tree, current_layout
+                    best_hard, best_soft = current_hard, current_soft
 
             temperature *= self._cooling_rate
 
-        best_layout.metadata["annealing_score"] = best_score
+        best_layout.metadata["annealing_score"] = best_hard  # compatibilidad: violaciones duras del mejor layout
+        best_layout.metadata["hard_violations"] = best_hard
+        best_layout.metadata["soft_penalty"] = best_soft
         return best_layout
 
-    def _score(self, layout: Layout) -> int:
-        return len(self._constraint_validator.validate(layout).violations)
+    def _score(self, layout: Layout) -> tuple:
+        hard_violations = len(self._constraint_validator.validate(layout).violations)
+        soft_penalty = self._soft_scorer.score(layout) if self._soft_scorer else 0.0
+        return (hard_violations, soft_penalty)
 
     def _materialize(
         self,

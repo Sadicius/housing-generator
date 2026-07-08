@@ -42,10 +42,20 @@ class RoomType(str, Enum):
 
 class AdjacencyStrength(str, Enum):
     """Fuerza de un requisito de adyacencia, siguiendo la matriz clasica
-    'debe estar cerca / deberia estar cerca / indiferente / debe estar lejos'."""
+    'debe estar cerca / deberia estar cerca / indiferente / deberia
+    estar lejos / debe estar lejos'.
+
+    SHOULD_BE_NEAR/SHOULD_BE_AWAY ("Preferencia cerca/alejar" del
+    catalogo de relaciones_espaciales.md) usan una METRICA DISTINTA a
+    MUST_BE_NEAR/MUST_BE_AWAY -- saltos en el grafo de adyacencia
+    (cerca objetivo <=2, alejar objetivo >=3), no contacto geometrico
+    directo. Decision deliberada (ver architecture.md): no unificar
+    metricas para no perder la precision de "ancho de puerta" (1.0m)
+    que ya tiene MUST_BE_NEAR. Ver SoftConstraintScorer."""
     MUST_BE_NEAR = "must_be_near"
     SHOULD_BE_NEAR = "should_be_near"
     INDIFFERENT = "indifferent"
+    SHOULD_BE_AWAY = "should_be_away"
     MUST_BE_AWAY = "must_be_away"
 
 

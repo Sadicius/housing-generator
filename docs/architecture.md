@@ -598,3 +598,49 @@ vulnerabilidades) en vez de solo casos límite de dominio. Resultado:
 **Suite completa tras las tres correcciones**: 233/233, ~24s (antes
 ~30-47s) -- la mejora de rendimiento se nota en el conjunto de tests,
 no solo en el CLI aislado.
+
+## Restricciones blandas conectadas a la función objetivo (retomado de CONTINUIDAD.md)
+
+- **[RESUELTO]** Investigación externa confirmada antes de implementar
+  (curriculum-based course timetabling, arxiv 1409.7186): la suma
+  ponderada con peso grande para lo duro es la técnica estándar para
+  mezclar restricciones duras y blandas en una función de coste de
+  recocido simulado -- no una técnica inventada sin precedente.
+- `SoftConstraintScorer` (nuevo) + `AdjacencyStrength.SHOULD_BE_AWAY`
+  (nuevo -- `SHOULD_BE_NEAR` ya existía en el enum desde el diseño
+  inicial del dominio, declarado pero sin ningún uso en todo el
+  código, confirmado antes de tocarlo). Métrica: saltos de grafo sobre
+  adyacencia geométrica real, no el grafo de puertas disperso ni
+  contacto directo -- cerca objetivo ≤2, alejar objetivo ≥3, ya
+  decididos en una sesión anterior.
+- **Bug real encontrado y corregido durante la construcción, no solo
+  investigado de antemano**: la primera implementación combinaba
+  duro+blando en un único número (`duro*1000 + blando`) para decidir
+  la aceptación del recocido. Esto garantiza el ORDEN final correcto,
+  pero **rompe la dinámica de aceptación en sí**: `exp(-delta/T)`
+  reacciona a la magnitud absoluta del delta, no solo al orden
+  relativo -- multiplicar por 1000 hacía casi imposible aceptar
+  cualquier movimiento que empeorase lo duro, incluso con temperatura
+  alta al principio, cambiando el comportamiento ya afinado de todo el
+  recocido. Confirmado porque rompió un test de multi-planta
+  (alineación de escalera) que no tenía relación alguna con
+  restricciones blandas -- la señal de que algo estructural había
+  cambiado, no un caso límite aislado.
+- **Corregido con comparación LEXICOGRÁFICA real**: `_score` devuelve
+  una tupla `(violaciones_duras, penalización_blanda)`. Cuando lo duro
+  cambia entre candidato y actual, la aceptación se decide SOLO por ese
+  delta (a su escala natural pequeña, igual que antes de tocar nada de
+  esto); lo blando solo entra en juego cuando lo duro empata. `best_score`
+  se compara con `<` sobre la tupla completa (comparación lexicográfica
+  nativa de Python, sin necesidad de ningún peso ni constante).
+- Conectado tanto en `build_generate_layout_use_case` (una planta) como
+  en `build_generate_building_use_case` (multi-planta, un scorer propio
+  por planta con sus propios requisitos de adyacencia).
+- Metadatos del `Layout` ahora exponen `hard_violations` y
+  `soft_penalty` por separado (antes solo `annealing_score`, un número
+  opaco) -- se mantiene `annealing_score` por compatibilidad, igual al
+  nuevo `hard_violations`.
+- Confirmado con tests de integración dedicados: una preferencia blanda
+  sin tensión con ninguna regla dura SÍ se satisface por la búsqueda
+  (no solo "no rompe nada"); y una preferencia blanda en tensión directa
+  con una regla dura para el MISMO par SIEMPRE cede ante la dura.

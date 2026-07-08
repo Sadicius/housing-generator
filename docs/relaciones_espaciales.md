@@ -279,14 +279,26 @@ CORRIDOR (Preferencia cerca).
   por ejemplo `DEFAULT_TYPE_ADJACENCY: Dict[Tuple[RoomType, RoomType], ...]`,
   generando `AdjacencyRequirement` sugeridos automáticamente para un
   `Program` según los tipos que contenga.
-- **[DISEÑO DECIDIDO, sin conectar todavía]** Mecanismo de restricciones
-  blandas ("Preferencia cerca/alejar") en la función objetivo del
-  recocido simulado -- hoy el generador solo minimiza violaciones
-  duras. Métrica y umbrales ya acordados (ver "Terminología" arriba:
-  saltos de grafo, cerca ≤2, alejar ≥3); falta la implementación en sí
-  (penalización ponderada sumada a la puntuación de violaciones duras,
-  siempre subordinada a estas). Deliberadamente separado como paso
-  aparte de la reclasificación del catálogo.
+- **[RESUELTO]** Mecanismo de restricciones blandas ("Preferencia
+  cerca/alejar") conectado a la función objetivo del recocido simulado:
+  `SoftConstraintScorer` + nuevo `AdjacencyStrength.SHOULD_BE_AWAY`
+  (`SHOULD_BE_NEAR` ya existía en el enum, declarado pero sin usar en
+  ningún sitio). Métrica: saltos de grafo sobre la adyacencia
+  geométrica real (misma fuente que núcleo húmedo/zonificación/
+  topología de pasillo, ya con caché), cerca objetivo ≤2, alejar
+  objetivo ≥3 -- tal como se había decidido. **Corrección real durante
+  la construcción**: una primera versión combinaba duro+blando en un
+  único número (`duro*peso_grande + blando`) para la aceptación del
+  recocido -- garantiza el orden final correcto, pero rompe la
+  dinámica de aceptación (`exp(-delta/temperatura)` reacciona a la
+  magnitud absoluta del delta, no solo al orden relativo), confirmado
+  porque rompió un test de multi-planta que no tocaba nada de esto.
+  Corregido con comparación LEXICOGRÁFICA real (tupla `(duro, blando)`):
+  cuando lo duro cambia, la aceptación se decide solo por ese delta a
+  su escala natural; lo blando solo entra en juego cuando lo duro
+  empata. Confirmado con tests dedicados: la preferencia blanda SÍ
+  influye en la búsqueda cuando no hay tensión con lo duro, y lo duro
+  NUNCA cede aunque haya tensión directa con lo blando para el mismo par.
 - **[RESUELTO]** Implementar la regla `Condicional` (acceso de baño
   según nº de baños) como lógica evaluada contra el `Program`, no como
   entrada de catálogo -- `BanoAccesoGeneralValidator`.

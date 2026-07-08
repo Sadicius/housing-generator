@@ -72,6 +72,9 @@ from housing_generator.infrastructure.algorithms.constraints.escalera_alineacion
 from housing_generator.infrastructure.algorithms.constraints.nucleo_humedo_vertical_validator import (
     NucleoHumedoVerticalValidator,
 )
+from housing_generator.infrastructure.algorithms.layout_generation.soft_constraint_scorer import (
+    SoftConstraintScorer,
+)
 from housing_generator.application.use_cases.generate_building import GenerateBuildingUseCase
 from housing_generator.infrastructure.algorithms.adjacency.geometry_adjacency_graph_builder import (
     GeometryAdjacencyGraphBuilder,
@@ -157,11 +160,13 @@ def build_generate_layout_use_case(
         BanoAccesoGeneralValidator(graph_builder),
     ]
     composite = CompositeConstraintValidator(validators)
+    soft_scorer = SoftConstraintScorer(adjacency_requirements or [], graph_builder)
 
     layout_generator = SimulatedAnnealingLayoutGenerator(
         constraint_validator=composite,
         max_iterations=max_iterations,
         seed=seed,
+        soft_constraint_scorer=soft_scorer,
     )
 
     return GenerateLayoutUseCase(
@@ -196,11 +201,13 @@ def build_generate_building_use_case(
         ]
         return CompositeConstraintValidator(validators)
 
-    def layout_generator_factory(composite):
+    def layout_generator_factory(composite, level_adjacency):
+        soft_scorer = SoftConstraintScorer(level_adjacency, graph_builder)
         return SimulatedAnnealingLayoutGenerator(
             constraint_validator=composite,
             max_iterations=max_iterations,
             seed=seed,
+            soft_constraint_scorer=soft_scorer,
         )
 
     return GenerateBuildingUseCase(

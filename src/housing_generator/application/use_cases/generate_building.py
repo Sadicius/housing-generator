@@ -30,7 +30,7 @@ PerFloorValidatorsFactory = Callable[
     [List[AdjacencyRequirement], Optional[BaseGeometry], List[BaseGeometry], int, Dict[str, int], bool],
     ConstraintValidatorPort,
 ]
-LayoutGeneratorFactory = Callable[[ConstraintValidatorPort], LayoutGeneratorPort]
+LayoutGeneratorFactory = Callable[[ConstraintValidatorPort, List[AdjacencyRequirement]], LayoutGeneratorPort]
 
 
 class GenerateBuildingUseCase:
@@ -96,7 +96,7 @@ class GenerateBuildingUseCase:
                 level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank,
                 floor_below_exists,
             )
-            generator = self._layout_generator_factory(composite)
+            generator = self._layout_generator_factory(composite, level_adjacency)
             zones = self._zoning_strategy.build_zones(level_program)
             layout = generator.generate(level_program, lot, zones)
 

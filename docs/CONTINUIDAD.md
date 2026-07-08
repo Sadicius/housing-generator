@@ -80,18 +80,25 @@ planta a planta queda pendiente si se retoma.
    tests, ver architecture.md)
 3. Cardinalidad (baño según nº de baños) → `BanoAccesoGeneralValidator`
 
+## Restricciones blandas — RESUELTO
+
+`SoftConstraintScorer` + `AdjacencyStrength.SHOULD_BE_AWAY` (nuevo;
+`SHOULD_BE_NEAR` ya existía en el enum sin usar). Conectado al recocido
+simulado con comparación LEXICOGRÁFICA `(duro, blando)` — no suma
+ponderada (esa primera versión rompía la dinámica de aceptación del
+recocido, ver architecture.md). Confirmado con tests: la preferencia
+blanda se satisface cuando no hay tensión con lo duro, y lo duro nunca
+cede aunque haya tensión directa para el mismo par.
+
 ## Pendiente real, si se retoma
 
-- **Restricciones blandas ("Preferencia cerca/alejar") sin conectar a la
-  función objetivo** — diseño ya decidido (saltos de grafo, cerca≤2,
-  alejar≥3, anclado a umbrales ya usados en el proyecto), falta la
-  implementación. Ver `relaciones_espaciales.md`.
 - **Formalizar el catálogo de 120 pares como estructura ejecutable**
   (`DEFAULT_TYPE_ADJACENCY`) — ya no bloqueado (los 3 huecos de modelo que
-  lo impedían están resueltos), pendiente de construir.
+  lo impedían están resueltos, y las restricciones blandas ya tienen
+  mecanismo real al que conectarse). Pendiente de construir.
 - **Importador JSON (exportación de la sección vertical del dashboard) →
-  Program real** — discutido, no construido. Derivaría `Obligatorio`
-  automáticamente del catálogo formalizado.
+  Program real** — discutido, no construido. Derivaría `Obligatorio` Y
+  ahora también `Preferencia` automáticamente del catálogo formalizado.
 - **Vivienda pareada/adosada** (medianeras) — solo aislada implementada
   (retranqueo). Extensión natural: añadir "lados de medianera" a `Lot`.
 - **Reducir el contorno edificable planta a planta** (en vez de compartir
@@ -136,6 +143,17 @@ planta a planta queda pendiente si se retoma.
   patrón de "grafo de puertas" separado de la adyacencia geométrica, y el
   mecanismo de "hueco de escalera compartido" (Infinigen Indoors 2024) se
   adoptaron y funcionaron.
+- **Combinar duro+blando con `duro*peso_grande + blando` garantiza el
+  orden final correcto, pero puede romper la DINÁMICA de un recocido
+  simulado** — `exp(-delta/temperatura)` reacciona a la magnitud
+  absoluta del delta, no solo al orden relativo; un peso grande hace
+  casi imposible aceptar cualquier movimiento que empeore lo duro,
+  incluso con temperatura alta al principio. Usar comparación
+  LEXICOGRÁFICA real (tupla `(duro, blando)`, decidir el delta de
+  aceptación solo por el componente que de verdad cambió) preserva la
+  dinámica ya afinada. Se encontró porque rompió un test de multi-planta
+  que no tenía relación alguna con restricciones blandas -- esa fue la
+  señal de que algo estructural había cambiado, no un caso aislado.
 
 ## Cómo verificar que todo sigue en orden
 
