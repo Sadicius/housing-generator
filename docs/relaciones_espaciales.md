@@ -302,12 +302,13 @@ CORRIDOR (Preferencia cerca).
 - **[RESUELTO]** Implementar la regla `Condicional` (acceso de baño
   según nº de baños) como lógica evaluada contra el `Program`, no como
   entrada de catálogo -- `BanoAccesoGeneralValidator`.
-- Resolver los tres huecos de modelo antes de formalizar del todo,
-  para no heredar una estructura de datos que no pueda expresarlos.
-- **Paso intermedio ya disponible**: el "grafo de burbujas" del
-  dashboard (`docs/visualizador/relaciones_espaciales.html`) permite
-  explorar arreglos concretos por planta y exportar un JSON de
-  `AdjacencyRequirement` a partir de qué burbujas quedaron tocándose --
-  no sustituye la formalización en código, pero da un punto de partida
-  revisable manualmente en vez de escribir el `Program` a mano desde
-  cero.
+- **[RESUELTO]** Los tres huecos de modelo (acceso/puertas, topología
+  de paso/terminal, cardinalidad) están todos resueltos -- ver las
+  secciones de este documento y `docs/architecture.md`. La estructura
+  ejecutable del catálogo (`DEFAULT_TYPE_ADJACENCY`) ya no está
+  bloqueada por nada, sigue pendiente de construir si se retoma.
+- El "grafo de burbujas" del dashboard que se mencionaba aquí como
+  paso intermedio fue ELIMINADO en una ronda posterior -- sustituido
+  por selección directa de estancias en la pestaña de sección vertical,
+  con exportación de tipos por planta (no de `AdjacencyRequirement`
+  derivados de qué burbujas se tocaban, que ya no existe).

@@ -226,22 +226,25 @@ puertos independientes permite:
   `DormitorioArmarioValidator` (confirmado por investigación
   independiente, no estaba en `nhv.lua`).
 - **Catálogo de relaciones espaciales entre tipos de estancia**: ver
-  `docs/relaciones_espaciales.md` — 120 pares documentados
-  cualitativamente (Obligatorio cerca/lejos, Preferencia de diseño,
-  Neutro), con tres huecos de modelo identificados (acceso/puertas,
-  topología de paso/terminal, reglas por cardinalidad) y un candidato a
-  nuevo `RoomType` ("mudroom") pendientes de resolver antes de
-  formalizar el catálogo como estructura de dominio ejecutable.
+  `docs/relaciones_espaciales.md` — 120 pares documentados. **Los tres
+  huecos de modelo que bloqueaban su formalización están RESUELTOS**
+  (acceso/puertas, topología de paso/terminal, cardinalidad -- ver
+  secciones posteriores de este documento). El catálogo en sí sigue
+  sin formalizarse como estructura de dominio ejecutable
+  (`DEFAULT_TYPE_ADJACENCY`), pero ya no está bloqueado por nada --
+  pendiente de construir si se retoma (ver `docs/CONTINUIDAD.md`).
 - **Dashboard interactivo** (`docs/visualizador/relaciones_espaciales.html`):
-  explora visualmente el catálogo anterior y `niveles_plantas.md` —
-  matriz de 120 pares, sección vertical por planta, grafo de burbujas
-  arrastrable (con selección libre de estancias por planta, tamaño
-  proporcional a área de referencia ilustrativa, y referencia fantasma
-  de bajantes entre plantas), red de sinergias, y fichas por tipo. Sigue
-  siendo una herramienta de exploración a nivel de catálogo, no de un
-  `Program` real -- el botón "exportar requisitos" genera un JSON de
-  `AdjacencyRequirement` de partida a revisar antes de usar, no una
-  integración directa con el generador Python.
+  explora visualmente el catálogo anterior y `niveles_plantas.md` — 4
+  pestañas: matriz de 120 pares, sección vertical por planta (selección
+  activable de estancias, incluidas adicionales de bajo cubierta/
+  semisótano no normativas, con exportación a JSON de tipos por planta),
+  red de sinergias, y fichas por tipo. La pestaña de "grafo de burbujas"
+  (arrastrable, con selección libre por planta) que existió en una
+  versión anterior fue ELIMINADA -- sustituida por la selección
+  directa en la sección vertical, más simple para lo que hacía falta.
+  Sigue siendo una herramienta de exploración a nivel de catálogo, no
+  de un `Program` real -- la exportación genera JSON a revisar antes de
+  usar, no una integración directa con el generador Python.
 - **Contacto exterior mínimo por estancia**: **[RESUELTO]**
   `ExteriorContactValidator` + `Room.min_exterior_sides` (derivado por
   `RoomType`, ver `DEFAULT_MIN_EXTERIOR_SIDES` en `enums.py`). Umbral de
@@ -250,13 +253,12 @@ puertos independientes permite:
   relaciones (categoría A.1.1/A.1.2: piezas vivideras exigen exterior,
   baño/aseo/pasillo admiten ventilación mecánica).
 - **Preferencia de planta/nivel por tipo de estancia**: catalogada en
-  `docs/niveles_plantas.md`, **NO implementada en código** — el sistema
-  entero (`Lot`, `Layout`, el generador) asume un único plano 2D. Antes
-  de generar multi-planta real hace falta: extender `Lot`/`Layout` para
-  representar varias plantas, formalizar el condicional "según espacio
-  disponible" (BEDROOM/STUDY/BATHROOM no tienen planta fija), decidir
-  cómo `CORRIDOR` se multiplica por planta, y abordar circulación
-  vertical (escaleras, nivel edificio, fuera de alcance actual).
+  `docs/niveles_plantas.md`. **[RESUELTO, primer incremento]** — ver
+  sección "Multi-planta: primer incremento real" más abajo en este
+  mismo documento (`GenerateBuildingUseCase`, `Building`, `Room.level`,
+  `RoomType.STAIRCASE`). Limitación que queda, deliberada: todas las
+  plantas comparten el mismo contorno edificable (no se reduce planta
+  a planta).
 
 ## Infraestructura de desarrollo (añadido tras el DAFO)
 
