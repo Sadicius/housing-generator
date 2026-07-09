@@ -154,15 +154,20 @@ Al auditar `niveles_plantas.md` contra `relaciones_espaciales.md` y
 resueltas (no son errores de dato, son interacciones no formalizadas
 entre reglas que hoy viven en documentos/validadores separados):
 
-1. **GARAGE: sótano vs. contacto exterior**. `GARAGE` puede estar en
-   `SOTANO` (esta tabla) pero también exige mínimo 1 lado de contacto
-   exterior (`ExteriorContactValidator`, por acceso vehicular). Un
-   garaje en sótano solo puede satisfacer ambas cosas a la vez con una
-   rampa que corte el nivel de rasante -- un caso particular de
-   "contacto exterior" más específico que una simple fachada, que
-   `count_exterior_sides()` no distingue. No es una contradicción
-   imposible, pero el modelo actual no representa la diferencia entre
-   "fachada plana" y "rampa que baja a sótano". **Sigue sin resolver.**
+1. **[RESUELTO] GARAGE: sótano vs. contacto exterior**. Investigado a
+   fondo (Decreto 29/2010 + `nhv.lua` + discusión real de arquitectos en
+   foro): la exigencia de contacto exterior de `GARAGE` nunca estuvo
+   respaldada por normativa de habitabilidad para vivienda unifamiliar
+   -- "garajes colectivos" (B.2.6) es de edificio con varios vecinos,
+   confirmado explícitamente que NO aplica a unifamiliar ("no disponen
+   de ninguno de ellos por tipología"), y `nhv.lua` declara
+   explícitamente no modelar "garajes de viviendas unifamiliares". La
+   tensión con `SOTANO` desaparece porque la premisa (GARAGE exige
+   contacto exterior) era incorrecta, no porque se haya resuelto la
+   geometría de la rampa. `DEFAULT_MIN_EXTERIOR_SIDES[GARAGE]` pasó de
+   1 a 0 -- sigue siendo opcional por proyecto (`Room.min_exterior_sides`
+   admite override explícito) para quien quiera exigirlo por motivos
+   prácticos propios.
 2. **KITCHEN↔GARAGE "muy cerca" asume misma planta** -- ver nota de
    arriba: verificado que el filtrado por planta de
    `GenerateBuildingUseCase` neutraliza el riesgo real, aunque de forma

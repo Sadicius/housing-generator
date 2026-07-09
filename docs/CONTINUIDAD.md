@@ -197,12 +197,6 @@ pendiente si se quiere ese último paso de integración.
   esa parte desde cero.
 - **Vivienda pareada/adosada** (medianeras) — solo aislada implementada
   (retranqueo). Extensión natural: añadir "lados de medianera" a `Lot`.
-- **GARAGE en sótano vs. contacto exterior**: un garaje en `SOTANO` exige
-  también contacto exterior (`ExteriorContactValidator`, acceso
-  vehicular) -- solo se puede satisfacer con una rampa que corte el
-  nivel de rasante, que el modelo actual no distingue de una fachada
-  plana normal. No es peligroso (no genera resultados incorrectos),
-  pero está sin resolver de verdad.
 
 ## Cosas aprendidas por las malas — no las repitas
 

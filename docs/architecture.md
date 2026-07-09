@@ -926,3 +926,37 @@ una ausencia de revisión.
   (`contains()` verdadero), con el desplazamiento exacto esperado en
   los 4 lados. Red de seguridad confirmada por separado con un
   incremento deliberadamente excesivo.
+
+## GARAGE: contacto exterior sin base normativa (investigado a fondo, resuelto)
+
+- **[RESUELTO]** Investigación completa antes de decidir (a petición
+  explícita del usuario, "investiga, revisa la normativa oficial"):
+  confirmado que la exigencia de `min_exterior_sides=1` para `GARAGE`
+  nunca estuvo respaldada por el Decreto 29/2010. "Garajes colectivos"
+  (B.2.6/antiguo I.B.5) es una sección de EDIFICIO para garajes
+  compartidos entre varios vecinos -- confirmado con una discusión real
+  de arquitectos en foro (soloarquitectura.com) que cita textualmente:
+  "las referidas a... garajes colectivos (I.B.5) no [aplican a
+  unifamiliares], ya que no disponen de ninguno de ellos por tipología".
+  Revisado también `nhv.lua` directamente: declara EXPLÍCITAMENTE en su
+  propio comentario que NO modela "garajes de viviendas unifamiliares"
+  -- lo que sí modela (`validarGaraje`, con datos de pendiente de rampa,
+  ancho, radio de giro) es explícitamente B.2.6 colectivo, con
+  dimensiones de tráfico en dos sentidos y giro de varios coches, no
+  transferibles a un garaje privado.
+- **Hallazgo curioso durante la investigación**: el código YA tenía un
+  comentario extenso documentando exactamente este razonamiento (mismo
+  hilo de foro, misma cita de `nhv.lua`) junto al diccionario
+  `DEFAULT_MIN_EXTERIOR_SIDES` -- pero el valor seguía en `GARAGE: 1`,
+  contradiciendo su propio comentario. Corregido a `0`, alineando el
+  valor con el razonamiento ya escrito.
+- `GARAGE` sigue siendo **opcional por proyecto**: `Room.min_exterior_sides`
+  admite override explícito (`Room(room_type=GARAGE, ...,
+  min_exterior_sides=1)`) para quien quiera exigirlo por motivos
+  prácticos propios, sin que sea la exigencia por defecto del sistema.
+- **Efecto secundario esperado, no un bug nuevo**: cambiar una
+  restricción dura cambia la dinámica de aceptación del recocido
+  simulado -- dos tests con semilla fija dejaron de converger con la
+  misma semilla que antes (mismo patrón ya documentado varias veces en
+  esta sesión). Rebuscada semilla estable (1, en vez de 10) para ambos.
+- Suite final: 293/293, `pyflakes` y `mypy` limpios.

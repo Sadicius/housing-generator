@@ -161,6 +161,25 @@ DEFAULT_SERVICE_SUBTYPE = {
 # exige ventilacion natural directa (1) pese a ser tambien "servicio".
 # TECHNICAL_ROOM: 0 exigido, aunque por comodidad de acceso tecnico se
 # prefiera 1 en la practica -- eso es preferencia de diseno, no regla.
+#
+# GARAGE: 0 -- **[CORREGIDO tras investigacion, antes era 1]**. La
+# exigencia anterior de contacto exterior para GARAGE nunca estuvo
+# respaldada por ninguna fuente real: ni el Decreto 29/2010 (donde el
+# unico apartado sobre garajes, B.2.6 "Garajes colectivos", esta
+# confirmado -- por un hilo real de arquitectos en soloarquitectura.com
+# discutiendo la aplicacion practica del decreto -- que NO aplica a
+# vivienda unifamiliar, "ya que no disponen de ninguno de ellos por
+# tipologia") ni siquiera nhv.lua (que declara explicitamente en su
+# propio comentario: "garajes de viviendas unifamiliares... no se
+# modela aqui -- ese es GARAJE colectivo"). GARAGE ya es
+# SpaceCategory.OTROS (excluido de A.1.2, iluminacion/ventilacion de
+# piezas habitables) -- consistente con que la norma de habitabilidad
+# no lo trata como pieza vividera. El acceso vehicular real es un
+# asunto de urbanismo/acceso a parcela (A.2.1), no de habitabilidad por
+# estancia. Sigue siendo OPCIONAL por proyecto: `Room.min_exterior_sides`
+# admite override explicito (`Room(room_type=GARAGE, ...,
+# min_exterior_sides=1)`) para quien quiera exigirlo por motivos
+# practicos propios, sin que sea la exigencia por defecto del sistema.
 DEFAULT_MIN_EXTERIOR_SIDES = {
     RoomType.LIVING_ROOM: 1,
     RoomType.DINING_ROOM: 1,
@@ -175,7 +194,7 @@ DEFAULT_MIN_EXTERIOR_SIDES = {
     RoomType.DRYING_AREA: 1,
     RoomType.STORAGE: 0,
     RoomType.STORAGE_ROOM: 0,
-    RoomType.GARAGE: 1,
+    RoomType.GARAGE: 0,
     RoomType.TECHNICAL_ROOM: 0,
     RoomType.CORRIDOR: 0,
     RoomType.STAIRCASE: 0,

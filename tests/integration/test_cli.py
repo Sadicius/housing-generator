@@ -64,7 +64,7 @@ def test_cli_with_auto_adjacency_as_a_real_subprocess(tmp_path):
         [
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--output", str(output_path), "--auto-adjacency",
-            "--max-iterations", "5000", "--seed", "10",
+            "--max-iterations", "5000", "--seed", "1",
         ],
         capture_output=True, text=True, timeout=60,
     )

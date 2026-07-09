@@ -26,3 +26,29 @@ def test_min_exterior_sides_can_be_overridden():
         dimensions=Dimensions(area_m2=4), min_exterior_sides=1,
     )
     assert room.min_exterior_sides == 1
+
+
+def test_garage_requires_zero_exterior_sides_by_default():
+    # [RESUELTO] investigacion confirmada (Decreto 29/2010 + nhv.lua +
+    # discusion real de arquitectos en foro): el contacto exterior de
+    # GARAGE nunca estuvo respaldado por normativa de habitabilidad para
+    # vivienda unifamiliar -- "garajes colectivos" (B.2.6) es de edificio
+    # con varios vecinos, confirmado explicitamente que NO aplica a
+    # unifamiliar ("no disponen de ninguno de ellos por tipologia").
+    # nhv.lua tambien declara explicitamente no modelar "garajes de
+    # viviendas unifamiliares". GARAGE ya es SpaceCategory.OTROS,
+    # excluido de A.1.2 (iluminacion/ventilacion de piezas habitables) --
+    # consistente con no exigir contacto exterior tampoco aqui.
+    room = Room(id="g", name="Garaje", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=15))
+    assert room.min_exterior_sides == 0
+
+
+def test_garage_exterior_side_can_still_be_required_explicitly():
+    # sigue siendo OPCIONAL por proyecto -- quien quiera exigirlo por
+    # motivos practicos propios (acceso vehicular, aunque no sea
+    # normativo de habitabilidad) puede declararlo explicitamente.
+    room = Room(
+        id="g", name="Garaje", room_type=RoomType.GARAGE,
+        dimensions=Dimensions(area_m2=15), min_exterior_sides=1,
+    )
+    assert room.min_exterior_sides == 1
