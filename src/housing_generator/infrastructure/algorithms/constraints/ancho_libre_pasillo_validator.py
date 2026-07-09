@@ -3,7 +3,7 @@ from housing_generator.application.ports.constraint_validator_port import Constr
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
-from housing_generator.infrastructure.geometry.shapely_utils import meets_minimum_width
+from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
 
 # A.3.2.3: espacios de comunicacion interiores a la vivienda (pasillos).
 # No se modela la distincion "estrechamiento puntual" (0.90m) vs "todo
@@ -26,15 +26,12 @@ class AnchoLibrePasilloValidator(ConstraintValidatorPort):
         for room in layout.rooms:
             if room.room_type != RoomType.CORRIDOR or not room.is_placed:
                 continue
-            cumple = meets_minimum_width(room.boundary.polygon, ANCHO_LIBRE_PASILLO_M)
-            if cumple is False:
-                violations.append(
-                    f"'{room.id}': ancho libre por debajo del minimo de A.3.2.3 ({ANCHO_LIBRE_PASILLO_M:.2f}m)"
-                )
-            elif cumple is None:
-                warnings.append(
-                    f"'{room.id}': forma no rectangular, no se puede verificar el ancho "
-                    f"libre de pasillo (A.3.2.3)"
-                )
+            v, w = evaluate_minimum_width(
+                room.id, room.boundary.polygon, ANCHO_LIBRE_PASILLO_M,
+                violation_message=f"ancho libre por debajo del minimo de A.3.2.3 ({ANCHO_LIBRE_PASILLO_M:.2f}m)",
+                warning_message="forma no rectangular, no se puede verificar el ancho libre de pasillo (A.3.2.3)",
+            )
+            violations.extend(v)
+            warnings.extend(w)
 
         return ValidationResult(violations=violations, warnings=warnings)

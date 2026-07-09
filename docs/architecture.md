@@ -733,3 +733,28 @@ estamos"). Hallazgos reales, con evidencia, no solo confirmaciones:
 - Confirmado sin cambio de comportamiento: 276/276 tests, sin tocar
   ninguna lógica, solo defensas explícitas. `mypy src/` limpio en los
   75 archivos tras la corrección.
+
+## Duplicación de lógica real encontrada y refactorizada
+
+Detección sistemática (no intuición): script que busca bloques de 4
+líneas idénticos repetidos entre archivos distintos de
+`infrastructure/algorithms/constraints/`. La mayoría de coincidencias
+son boilerplate esperable del patrón de puerto (`validate(layout) ->
+ValidationResult`, inicializar `violations`/`warnings`) -- no vale la
+pena abstraerlo, forzaría indirección por poco ahorro. Un hallazgo SÍ
+era duplicación real de lógica, no solo estructura:
+
+- **[RESUELTO]** `AnchoLibrePasilloValidator`, `EscaleraAnchoLibreValidator`
+  y `TrasteroMinimumAreaValidator` repetían exactamente el mismo manejo
+  de los 3 estados de `meets_minimum_width` (violación/aviso/aprobado).
+  Extraído `evaluate_minimum_width()` a `shapely_utils.py`, junto a la
+  función que envuelve. Diseño reconsiderado a media construcción: un
+  primer intento con `violation_label`/`threshold` separados no encajó
+  con `EscaleraAnchoLibreValidator` (pone la referencia normativa DENTRO
+  del mismo paréntesis que el umbral, no como texto aparte) -- corregido
+  dejando que cada validador preformatee su propio mensaje completo, el
+  helper solo decide cuál usar según el resultado de 3 estados.
+  Confirmado con los 14 tests de los tres validadores (texto exacto de
+  mensaje preservado, los tests comprueban subcadenas concretas) más 3
+  tests nuevos del propio helper en aislamiento. Suite completa 279/279,
+  `pyflakes` y `mypy` limpios tras el refactor.

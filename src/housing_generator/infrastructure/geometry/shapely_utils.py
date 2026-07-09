@@ -86,3 +86,37 @@ def count_exterior_sides(room_polygon: Polygon, lot_polygon: Polygon, min_contac
         if overlap_length >= min_contact_m:
             count += 1
     return count
+
+
+def evaluate_minimum_width(
+    room_id: str,
+    polygon: Polygon,
+    threshold_m: float,
+    violation_message: str,
+    warning_message: str,
+) -> tuple:
+    """Evalua el ancho libre minimo (meets_minimum_width, 3 estados) de
+    una estancia y devuelve (violaciones, avisos) -- listas de 0 o 1
+    elemento cada una, listas para que el llamador haga
+    `violations.extend(v); warnings.extend(w)`.
+
+    `violation_message`/`warning_message` ya vienen formateados por
+    completo por el llamador (incluido el umbral y cualquier referencia
+    normativa) -- este helper solo antepone `'{room_id}': ` y decide
+    cual de los dos usar segun el resultado de 3 estados. Diseño
+    deliberadamente flexible tras un primer intento mas rigido (umbral
+    siempre al final entre parentesis) que no encajaba con
+    EscaleraAnchoLibreValidator, cuyo mensaje pone la referencia
+    normativa DENTRO del mismo parentesis que el umbral.
+
+    DUPLICACION REAL encontrada en auditoria (deteccion sistematica de
+    bloques repetidos entre archivos, no solo intuicion): tres
+    validadores distintos (pasillo A.3.2.3, escalera CTE DB-SUA 1,
+    trastero B.2.5) repetian exactamente el manejo de los 3 estados de
+    `meets_minimum_width`, solo cambiaba el umbral y el texto."""
+    cumple = meets_minimum_width(polygon, threshold_m)
+    if cumple is False:
+        return ([f"'{room_id}': {violation_message}"], [])
+    elif cumple is None:
+        return ([], [f"'{room_id}': {warning_message}"])
+    return ([], [])

@@ -3,7 +3,7 @@ from housing_generator.application.ports.constraint_validator_port import Constr
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
-from housing_generator.infrastructure.geometry.shapely_utils import meets_minimum_width
+from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
 
 # CTE DB-SUA 1, escalera de USO RESTRINGIDO (interior de vivienda
 # unifamiliar -- confirmado por investigacion independiente en
@@ -26,15 +26,14 @@ class EscaleraAnchoLibreValidator(ConstraintValidatorPort):
         for room in layout.rooms:
             if room.room_type != RoomType.STAIRCASE or not room.is_placed:
                 continue
-            cumple = meets_minimum_width(room.boundary.polygon, ESCALERA_ANCHO_LIBRE_MIN_M)
-            if cumple is False:
-                violations.append(
-                    f"'{room.id}': ancho libre por debajo del minimo de escalera de uso "
+            v, w = evaluate_minimum_width(
+                room.id, room.boundary.polygon, ESCALERA_ANCHO_LIBRE_MIN_M,
+                violation_message=(
+                    f"ancho libre por debajo del minimo de escalera de uso "
                     f"restringido ({ESCALERA_ANCHO_LIBRE_MIN_M:.2f}m, CTE DB-SUA 1)"
-                )
-            elif cumple is None:
-                warnings.append(
-                    f"'{room.id}': forma no rectangular, no se puede verificar el ancho "
-                    f"libre de escalera"
-                )
+                ),
+                warning_message="forma no rectangular, no se puede verificar el ancho libre de escalera",
+            )
+            violations.extend(v)
+            warnings.extend(w)
         return ValidationResult(violations=violations, warnings=warnings)
