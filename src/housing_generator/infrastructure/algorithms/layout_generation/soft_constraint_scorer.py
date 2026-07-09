@@ -59,11 +59,17 @@ class SoftConstraintScorer:
 
         for req in self._soft_requirements:
             if req.room_a_id not in graph or req.room_b_id not in graph:
-                # no colocadas o no conectadas a nada -- para "cerca" es
-                # un incumplimiento real (no hay forma de estar cerca sin
-                # estar siquiera en el mismo grafo); para "alejar" no se
-                # penaliza (dos estancias totalmente desconectadas ya
-                # estan, por definicion, todo lo lejos que se puede pedir).
+                # Solo dispara si la estancia NO esta colocada (is_placed
+                # excluida por GeometryAdjacencyGraphBuilder.build()) --
+                # una estancia colocada pero totalmente AISLADA (sin
+                # ninguna pared compartida) SI aparece como nodo en el
+                # grafo (add_node se llama para toda estancia colocada,
+                # tenga o no aristas), asi que ese caso NO entra aqui:
+                # se resuelve mas abajo via distance=inf (nx.has_path
+                # devuelve False si no hay ninguna arista), con el mismo
+                # resultado final. Comentario corregido en auditoria --
+                # el anterior atribuia el caso "aislada" a esta rama por
+                # error, aunque el resultado numerico ya era correcto.
                 if req.strength == AdjacencyStrength.SHOULD_BE_NEAR:
                     penalty += PESO_CERCA_NO_SATISFECHO
                 continue

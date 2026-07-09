@@ -758,3 +758,47 @@ era duplicación real de lógica, no solo estructura:
   mensaje preservado, los tests comprueban subcadenas concretas) más 3
   tests nuevos del propio helper en aislamiento. Suite completa 279/279,
   `pyflakes` y `mypy` limpios tras el refactor.
+
+## Revisión manual de lógica (no detectable por pyflakes/mypy) -- 2 bugs reales
+
+A petición explícita del usuario de volver a revisar la lógica de todo
+el proyecto. Lectura crítica línea a línea de las piezas más
+propensas a errores (recocido simulado, scorer blando, Tabla 1/2),
+no solo herramientas automáticas -- ninguno de los dos hallazgos
+siguientes es detectable por `pyflakes` ni `mypy`, son errores
+semánticos de dominio, no de sintaxis ni de tipos.
+
+- **[RESUELTO] `EstanciaMinimumAreaValidator` podía generar una
+  VIOLACIÓN FALSA en multi-planta**: cuando una planta no tiene
+  `LIVING_ROOM` (el caso NORMAL para plantas superiores con solo
+  dormitorios), el validador sustituía por la mayor estancia local y le
+  aplicaba el cuadrado inscribible de 3.30m -- una regla que solo
+  corresponde al salón. Si esa estancia sustituta no cumplía (algo que
+  nunca debería exigírsele), generaba una violación que bloquearía un
+  edificio multi-planta perfectamente válido. Confirmado empíricamente
+  con el edificio de prueba de 2 plantas antes y después de corregir.
+  Corregido: la sustitución+aviso solo se aplica en modo una-sola-planta
+  (`total_num_estancias_override is None`); en multi-planta, si esta
+  planta no tiene salón, simplemente no se comprueba nada aquí -- la
+  planta que SÍ tiene el salón real lo comprueba correctamente por su
+  cuenta, sin necesitar sustituto.
+- **[RESUELTO] `CocinaIntegradaValidator` nunca recibió el arreglo
+  multi-planta que sí tienen sus dos primos** (`EstanciaMinimumAreaValidator`,
+  `ServicioMinimumAreaValidator`): contaba `num_estancias` solo de la
+  planta actual, sin `total_num_estancias_override`. En un edificio de
+  2 plantas con cocina integrada abajo y dormitorios arriba (el caso
+  normal), esto podía **aprobar silenciosamente** una superficie
+  combinada salón+cocina realmente insuficiente para el edificio
+  completo -- confirmado con un test que reproduce el escenario exacto
+  (25m2 pasaba con el conteo local de 2 estancias, 23m2 mínimo; con el
+  conteo real de 5 estancias del edificio, el mínimo sube a 31m2 y
+  correctamente falla). Corregido añadiendo el mismo parámetro que sus
+  primos, conectado en `container.py`.
+- Revisados sin hallazgos adicionales: `SimulatedAnnealingLayoutGenerator`
+  (acceptance/scoring, ya con dos bugs corregidos en rondas anteriores --
+  esta vez sólido), `ServicioMinimumAreaValidator` (no comparte el mismo
+  patrón de sustitución, cada servicio se comprueba directamente contra
+  su propio umbral). Corregido tambien un comentario impreciso (no un
+  bug funcional) en `SoftConstraintScorer` que atribuía el caso
+  "estancia aislada" a la rama equivocada.
+- Suite final: 282/282, `pyflakes` y `mypy` limpios.

@@ -191,3 +191,42 @@ def test_global_rank_override_resolves_the_ranking_across_floors():
         total_num_estancias_override=3, global_rank_override={"small": 2},
     ).validate(layout)
     assert con_ranking.violations == []  # 15m2 >= 12m2 (fila 3, puesto 2)
+
+
+def test_no_living_room_on_this_floor_in_multi_planta_mode_does_not_substitute():
+    # BUG REAL encontrado en auditoria de logica: en modo multi-planta
+    # (total_num_estancias_override declarado), una planta sin
+    # living_room (p.ej. planta superior, solo dormitorios) NO debe
+    # sustituir por la mayor estancia local y comprobarle el cuadrado
+    # inscribible de 3.30m -- esa regla es del salon, no de cualquier
+    # dormitorio. Antes de corregir esto, un dormitorio que no cumpliera
+    # el cuadrado de 3.30m (algo que nunca deberia exigirsele) generaba
+    # una VIOLACION FALSA, no solo un aviso enganoso.
+    master = _room("master", RoomType.MASTER_BEDROOM, 14)  # deliberadamente < 3.30x3.30
+    master.boundary = Boundary(polygon=box(0, 0, 2, 7))  # rectangulo estrecho, NO cabe el cuadrado
+    bed2 = _room("bed2", RoomType.BEDROOM, 10)
+    layout = Layout(lot=_dummy_lot(), rooms=[master, bed2], zones=[])
+
+    result = EstanciaMinimumAreaValidator(
+        total_num_estancias_override=3, global_rank_override={"master": 2, "bed2": 3},
+    ).validate(layout)
+
+    assert result.violations == []  # ni de area (puesto correcto) ni de cuadrado inscribible
+    assert result.warnings == []  # tampoco el aviso enganoso de "sustituto"
+
+
+def test_no_living_room_in_single_floor_mode_still_substitutes_with_warning():
+    # comportamiento ORIGINAL preservado para el caso real al que
+    # aplicaba: una vivienda de una sola planta (o el caso de uso de una
+    # planta, sin total_num_estancias_override) donde de verdad no hay
+    # ningun salon en todo el programa -- ahi SI tiene sentido avisar.
+    bed1 = _room("bed1", RoomType.MASTER_BEDROOM, 20)
+    bed1.boundary = Boundary(polygon=box(0, 0, 5, 4))
+    bed2 = _room("bed2", RoomType.BEDROOM, 12)
+    bed2.boundary = Boundary(polygon=box(5, 0, 8, 4))
+
+    layout = Layout(lot=_dummy_lot(), rooms=[bed1, bed2], zones=[])
+    result = EstanciaMinimumAreaValidator().validate(layout)  # SIN override -- modo una planta
+
+    assert len(result.warnings) == 1
+    assert "bed1" in result.warnings[0] and "living_room" in result.warnings[0]

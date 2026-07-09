@@ -92,3 +92,28 @@ def test_vertical_opening_below_minimum_fails():
     result = CocinaIntegradaValidator().validate(layout)
     assert len(result.violations) == 1
     assert "apertura vertical" in result.violations[0]
+
+
+def test_total_num_estancias_override_prevents_silent_approval_in_multi_planta():
+    # BUG REAL encontrado en auditoria de logica: este validador nunca
+    # recibio el mismo arreglo multi-planta que EstanciaMinimumAreaValidator
+    # y ServicioMinimumAreaValidator -- sin el override, contaba solo
+    # las estancias de ESTA planta (2: salon + 1 dormitorio), aplicando
+    # un minimo combinado mas bajo (23m2 = 16+7) del que corresponderia
+    # al edificio completo (5 estancias reales -> 31m2 = 22+9). Un area
+    # combinada de 25m2 pasaba SIN avisar con el conteo local, pese a
+    # ser insuficiente para el edificio real.
+    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=18))
+    bed = Room(id="bed", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12))
+    kitchen = Room(
+        id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=7), integrated_in_largest_room=True,
+        vertical_opening_m2=5.0,
+    )
+    layout = Layout(lot=_dummy_lot(), rooms=[living, bed, kitchen], zones=[])
+
+    sin_override = CocinaIntegradaValidator().validate(layout)
+    assert sin_override.violations == []  # 25m2 >= 23m2 (fila local de 2 estancias) -- aprobaba mal
+
+    con_override = CocinaIntegradaValidator(total_num_estancias_override=5).validate(layout)
+    assert len(con_override.violations) == 1  # 25m2 < 31m2 (fila real del edificio de 5 estancias)

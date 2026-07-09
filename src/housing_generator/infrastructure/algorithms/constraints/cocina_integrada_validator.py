@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
@@ -33,7 +33,20 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
     - Si hay ambos: se comprueba la superficie combinada (violacion si
       no alcanza el minimo) y la apertura vertical (violacion si es
       insuficiente; AVISO si no se declaro, nunca aprobacion silenciosa).
-    """
+
+    `total_num_estancias_override`: **[RESUELTO]** bug real encontrado en
+    auditoria de logica -- este validador NUNCA recibio el mismo arreglo
+    multi-planta que sus dos primos (`EstanciaMinimumAreaValidator`,
+    `ServicioMinimumAreaValidator`). Sin esto, en un edificio de 2
+    plantas con cocina integrada abajo y dormitorios arriba (el caso
+    normal), `num_estancias` solo contaba las estancias de ESTA planta,
+    aplicando una fila de Tabla 1/2 mas baja de la real -- podia APROBAR
+    SILENCIOSAMENTE una superficie combinada realmente insuficiente para
+    el edificio completo. `None` (por defecto, caso de una sola planta)
+    preserva el comportamiento anterior exacto."""
+
+    def __init__(self, total_num_estancias_override: Optional[int] = None):
+        self._total_override = total_num_estancias_override
 
     def validate(self, layout: Layout) -> ValidationResult:
         cocina = next(
@@ -53,7 +66,8 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
         violations: List[str] = []
         warnings: List[str] = []
 
-        num_estancias = sum(1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA)
+        local_count = sum(1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA)
+        num_estancias = self._total_override if self._total_override is not None else local_count
         minimo_mayor = minimo_estancia(num_estancias, 1)
         minimo_cocina = tabla_servicios_para(num_estancias).get("cocina")
 

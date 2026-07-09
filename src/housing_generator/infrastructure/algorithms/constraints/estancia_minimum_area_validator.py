@@ -101,6 +101,20 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
 
         mayor = next((r for r in estancias if r.room_type == RoomType.LIVING_ROOM), None)
         if mayor is None:
+            if self._total_override is not None:
+                # BUG REAL encontrado en auditoria de logica: en
+                # multi-planta, "no hay living_room EN ESTA PLANTA" es
+                # el caso NORMAL para plantas superiores (dormitorios),
+                # no una anomalia -- el salon esta legitimamente en OTRA
+                # planta. Sustituir por la mayor estancia LOCAL y
+                # comprobarle el cuadrado inscribible de 3.30m (regla
+                # que solo aplica al salon) generaba avisos enganosos y,
+                # peor, podia generar una VIOLACION FALSA si esa
+                # estancia local no cumplia un requisito que nunca le
+                # correspondio. La planta que SI tiene el salon real ya
+                # lo comprueba correctamente por su cuenta (mas abajo,
+                # sin pasar por esta rama) -- no hace falta sustituto.
+                return ValidationResult(violations=violations, warnings=warnings)
             mayor = ordenadas[0]
             warnings.append(
                 f"No hay 'living_room' declarado entre las estancias; se usa '{mayor.id}' "

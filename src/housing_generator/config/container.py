@@ -121,7 +121,7 @@ def build_per_floor_validators(
         AnchoLibrePasilloValidator(),
         AlturaLibreValidator(),
         ExteriorContactValidator(),
-        CocinaIntegradaValidator(),
+        CocinaIntegradaValidator(total_num_estancias_override=total_num_estancias),
         EspacioAccesoValidator(),
         EscaleraAnchoLibreValidator(),
         PasilloTopologiaValidator(graph_builder),
