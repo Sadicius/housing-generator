@@ -870,3 +870,29 @@ mutables por defecto (fallo clásico de Python que ni `pyflakes` ni
   legítimos que manejan, no candidatos claros a más separación sin
   introducir indirección sin beneficio real.
 - Suite final: 282/282, `pyflakes` y `mypy` limpios.
+
+## Revisión de patrones peligrosos y consistencia de nombres — sin hallazgos nuevos
+
+Continuación de la revisión de funciones/variables, esta vez con
+comprobaciones basadas en AST (más fiables que expresiones regulares
+sueltas -- un primer intento con regex para "parámetros que ensombrecen
+builtins" dio falsos positivos al confundir anotaciones de tipo con
+nombres de parámetro, corregido usando el árbol de sintaxis real):
+
+- Sin `except:` genéricos (peligroso: atraparía hasta `KeyboardInterrupt`).
+- Sin comparaciones `== None`/`!= None` (deberían ser `is None`/`is not None`).
+- Sin parámetros que ensombrezcan builtins de Python (`id`, `type`,
+  `list`, `dict`...) -- comprobado con AST en todo `src/`.
+- Parámetros declarados pero nunca usados en el cuerpo: encontrados
+  varios, todos explicables sin ser bugs -- la mayoría son firmas de
+  puertos abstractos (`ConstraintValidatorPort`, `LayoutGeneratorPort`...),
+  donde no usar el parámetro es lo esperado (solo declaran el contrato).
+  Los dos casos concretos (`JsonLayoutRepository.load`,
+  `SimulatedAnnealingLayoutGenerator.generate`) ya estaban documentados
+  como intencionados (stub sin implementar; `zones` ignorado a propósito).
+- Consistencia de nombres: `room_id` se usa siempre igual (0 variantes
+  como `rid`), y los 19 métodos `validate()` del proyecto usan `layout`
+  como nombre de parámetro sin una sola excepción.
+
+Sin cambios de código en esta ronda -- es un resultado limpio real, no
+una ausencia de revisión.
