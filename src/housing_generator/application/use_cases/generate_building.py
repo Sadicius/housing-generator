@@ -181,18 +181,14 @@ class GenerateBuildingUseCase:
         )
 
     def _check_programa_minimo(self, building: Building) -> None:
-        all_rooms = [room for layout in building.floors.values() for room in layout.rooms]
-        synthetic_layout = Layout(
-            lot=next(iter(building.floors.values())).lot,
-            rooms=all_rooms,
-            zones=[],
-        )
-        result = self._programa_minimo_validator.validate(synthetic_layout)
-        if not result.is_valid:
-            raise LayoutGenerationError(
-                f"El edificio completo no cumple el programa minimo de vivienda "
-                f"(comprobado uniendo todas las plantas): {result.violations}"
-            )
+        # BUG REAL encontrado en auditoria de logica: este metodo tenia
+        # su cuerpo ENTERO duplicado (dos veces seguidas, idéntico) --
+        # probablemente residuo de una edicion anterior en la que se
+        # perdio y se restauro el metodo (ver el incremento de
+        # "acceso general de bano a nivel de edificio", donde un
+        # str_replace se comio este cuerpo por error). No cambiaba el
+        # resultado (idempotente), pero es codigo real duplicado sin
+        # motivo, ni pyflakes ni mypy lo detectan.
         all_rooms = [room for layout in building.floors.values() for room in layout.rooms]
         synthetic_layout = Layout(
             lot=next(iter(building.floors.values())).lot,

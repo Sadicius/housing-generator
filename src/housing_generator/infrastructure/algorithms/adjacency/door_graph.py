@@ -3,6 +3,9 @@ import networkx as nx
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 from housing_generator.domain.enums import AdjacencyStrength
+from housing_generator.infrastructure.algorithms.constraints.adjacency_validator import (
+    MUST_BE_NEAR_MIN_SHARED_LENGTH_M,
+)
 
 # Hueco de modelo identificado en relaciones_espaciales.md: "acceso/
 # puertas -- 'cerca pero sin puerta directa' no se podia expresar con la
@@ -56,7 +59,7 @@ def build_door_graph(layout: Layout, adjacency_requirements: List[AdjacencyRequi
         shared_length = room_a.boundary.polygon.boundary.intersection(
             room_b.boundary.polygon.boundary
         ).length
-        if shared_length >= 1.0:  # mismo umbral que AdjacencyConstraintValidator
+        if shared_length >= MUST_BE_NEAR_MIN_SHARED_LENGTH_M:  # mismo umbral que AdjacencyConstraintValidator
             graph.add_edge(req.room_a_id, req.room_b_id, shared_length_m=shared_length)
 
     return graph

@@ -124,7 +124,8 @@ DEFAULT_TYPE_ADJACENCY: Dict[Tuple[RoomType, RoomType], AdjacencyStrength] = {
     (RoomType.STUDY, RoomType.TECHNICAL_ROOM): AdjacencyStrength.SHOULD_BE_AWAY,
     (RoomType.TOILET, RoomType.CORRIDOR): AdjacencyStrength.SHOULD_BE_NEAR,
     (RoomType.TOILET, RoomType.ENTRANCE_HALL): AdjacencyStrength.SHOULD_BE_NEAR,
-    (RoomType.TOILET, RoomType.STORAGE_ROOM): AdjacencyStrength.SHOULD_BE_AWAY,}
+    (RoomType.TOILET, RoomType.STORAGE_ROOM): AdjacencyStrength.SHOULD_BE_AWAY,
+}
 
 
 def get_type_adjacency(type_a: RoomType, type_b: RoomType) -> Optional[AdjacencyStrength]:

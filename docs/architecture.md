@@ -802,3 +802,40 @@ semánticos de dominio, no de sintaxis ni de tipos.
   bug funcional) en `SoftConstraintScorer` que atribuía el caso
   "estancia aislada" a la rama equivocada.
 - Suite final: 282/282, `pyflakes` y `mypy` limpios.
+
+## Continuación de la revisión manual de lógica — 3 hallazgos más
+
+Cobertura de esta ronda: `GenerateBuildingUseCase` completo,
+`GroupingConstraintValidator` + sus 4 fábricas (núcleo húmedo,
+zonificación día/noche/servicio), `ExteriorContactValidator`,
+`ViviendaMinimaValidator`, `BanoAccesoGeneralValidator`, `door_graph.py`,
+`type_adjacency_catalog.py` completo. Tres hallazgos, ninguno tan grave
+como los dos anteriores pero reales:
+
+- **[RESUELTO] `GenerateBuildingUseCase._check_programa_minimo` tenía su
+  cuerpo ENTERO duplicado** (dos veces seguidas, idéntico) -- residuo de
+  una edición anterior de esta misma sesión donde un `str_replace` se
+  comió el método y hubo que restaurarlo. No cambiaba el resultado
+  (idempotente), pero es código real duplicado sin motivo que ni
+  `pyflakes` ni `mypy` detectan.
+- **[RESUELTO] `door_graph.py` repetía el umbral `1.0` como número
+  mágico** en vez de importar `MUST_BE_NEAR_MIN_SHARED_LENGTH_M` de
+  `adjacency_validator.py` -- mismo valor hoy, pero si alguien cambia el
+  umbral real, este archivo no lo seguiría automáticamente.
+- Cosmético: la última entrada de `DEFAULT_TYPE_ADJACENCY` se generó
+  pegada a la llave de cierre (residuo del script de generación desde
+  el Markdown). Sin efecto funcional, corregido por legibilidad.
+
+Revisados sin hallazgos adicionales: `GroupingConstraintValidator` y
+sus 4 fábricas (parámetros consistentes, sin riesgo de fuga entre
+plantas porque cada `Layout` ya es de una sola planta al llegar aquí),
+`ExteriorContactValidator`, `ViviendaMinimaValidator`,
+`BanoAccesoGeneralValidator`, `generate_adjacency_requirements` (la
+búsqueda bidireccional con `or` es segura porque los valores del enum
+nunca son "falsy" en Python -- se verificó explícitamente, no se asumió).
+
+Con esta ronda se ha revisado manualmente la práctica totalidad de la
+lógica de negocio del proyecto (generador, scorer blando, Tabla 1/2,
+cocina integrada, orquestador multi-planta, agrupación/zonificación,
+contacto exterior, programa mínimo, acceso de baño, grafo de puertas,
+catálogo formalizado). Suite final: 282/282, `pyflakes` y `mypy` limpios.
