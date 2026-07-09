@@ -98,6 +98,17 @@ test real. Son dos fallos de proceso distintos, el mismo síntoma
    completamente muerto (`best_tree` en el generador, nunca leído) que
    ningún test detectaría nunca, porque no verificar comportamiento --
    solo ocupaba ciclos sin ningún efecto observable.
+6. **Cuando se encuentra un comentario con razonamiento completo que
+   contradice el valor real del código junto a él, buscar sistemáticamente
+   si se repite** -- no asumir que fue un caso aislado. Se encontró así
+   (`GARAGE`/altura libre, dos hallazgos más en la misma búsqueda que
+   encontró el primero de `GARAGE`/contacto exterior): localizar todos
+   los bloques de comentario largos (`grep`/script, no revisión manual
+   archivo por archivo) y revisar cada uno contra su código adyacente.
+   La señal más fiable: frases como "no aparece en ninguna lista",
+   "queda fuera de alcance", "no aplica" -- son exactamente donde una
+   exclusión se pudo quedar desactualizada tras una investigación
+   posterior que SÍ encontró la referencia.
 
 ## Cómo orientarse rápido
 

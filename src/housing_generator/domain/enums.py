@@ -135,7 +135,7 @@ DEFAULT_SPACE_CATEGORY = {
     RoomType.ENTRANCE_HALL: SpaceCategory.CIRCULACION,
     RoomType.CORRIDOR: SpaceCategory.CIRCULACION,
     RoomType.STAIRCASE: SpaceCategory.CIRCULACION,
-    RoomType.GARAGE: SpaceCategory.OTROS,        # regla propia B.2.6, no Tabla 1/2
+    RoomType.GARAGE: SpaceCategory.OTROS,        # no es pieza vividera, fuera de Tabla 1/2
     RoomType.TECHNICAL_ROOM: SpaceCategory.OTROS,
 }
 

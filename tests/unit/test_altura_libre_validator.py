@@ -78,12 +78,53 @@ def test_bathroom_below_2_20_still_fails():
     assert len(result.violations) == 1
 
 
-def test_garage_and_technical_room_are_out_of_scope():
-    garage = Room(
-        id="g", name="Garaje", room_type=RoomType.GARAGE,
-        dimensions=Dimensions(area_m2=18, ceiling_height_m=1.80),  # muy bajo, pero fuera de alcance
+def test_technical_room_is_out_of_scope():
+    technical = Room(
+        id="t", name="Cuarto tecnico", room_type=RoomType.TECHNICAL_ROOM,
+        dimensions=Dimensions(area_m2=4, ceiling_height_m=1.80),  # muy bajo, pero fuera de alcance
     )
-    layout = Layout(lot=_dummy_lot(), rooms=[garage], zones=[])
+    layout = Layout(lot=_dummy_lot(), rooms=[technical], zones=[])
 
     result = AlturaLibreValidator().validate(layout)
     assert result.violations == [] and result.warnings == []
+
+
+def test_garage_gets_direct_reduction_like_vestibulo_or_bathroom():
+    # [RESUELTO] bug real encontrado en auditoria: GARAGE estaba
+    # excluido por completo (ROOM_TYPES_FUERA_DE_ALCANCE), pero el
+    # Decreto 29/2010 A.3.1.1.b nombra explicitamente "garajes de
+    # viviendas unifamiliares" en la lista de reduccion directa a
+    # 2.20m -- confirmado por investigacion normativa directa (misma
+    # investigacion que encontro que B.2.6 NO aplica a GARAGE unifamiliar,
+    # pero esta seccion A.3.1.1 SI aplica). Ahora se comprueba igual que
+    # vestibulo/pasillo/escaleras/bano/aseo/lavadero/tendedero.
+    garage_bajo = Room(
+        id="g1", name="Garaje", room_type=RoomType.GARAGE,
+        dimensions=Dimensions(area_m2=18, ceiling_height_m=1.80),  # por debajo de 2.20m
+    )
+    garage_ok = Room(
+        id="g2", name="Garaje", room_type=RoomType.GARAGE,
+        dimensions=Dimensions(area_m2=18, ceiling_height_m=2.20),  # exactamente el minimo reducido
+    )
+    layout = Layout(lot=_dummy_lot(), rooms=[garage_bajo, garage_ok], zones=[])
+
+    result = AlturaLibreValidator().validate(layout)
+    assert len(result.violations) == 1
+    assert "g1" in result.violations[0]
+    assert result.warnings == []
+
+
+def test_staircase_gets_direct_reduction_too():
+    # mismo hallazgo: "escaleras" tambien aparece explicitamente en la
+    # lista de A.3.1.1.b, y STAIRCASE no estaba en ninguna de las dos
+    # listas (caia en el caso general mas estricto, 2.50m/excepcion 30%).
+    stair_bajo = Room(
+        id="s", name="Escalera", room_type=RoomType.STAIRCASE,
+        dimensions=Dimensions(area_m2=4, ceiling_height_m=2.0),  # por debajo de 2.20m
+    )
+    layout = Layout(lot=_dummy_lot(), rooms=[stair_bajo], zones=[])
+
+    result = AlturaLibreValidator().validate(layout)
+    assert len(result.violations) == 1
+    assert "s" in result.violations[0]
+    assert "A.3.1.1.b" in result.violations[0]  # reduccion directa, no el caso general

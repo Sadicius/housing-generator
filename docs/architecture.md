@@ -960,3 +960,42 @@ una ausencia de revisión.
   misma semilla que antes (mismo patrón ya documentado varias veces en
   esta sesión). Rebuscada semilla estable (1, en vez de 10) para ambos.
 - Suite final: 293/293, `pyflakes` y `mypy` limpios.
+
+## Búsqueda sistemática de "razonamiento completo sin aplicar" (a petición del usuario)
+
+Tras encontrar el caso de `GARAGE`/B.2.6 (comentario ya razonado
+correctamente, valor del código sin actualizar), el usuario preguntó si
+podía haber más casos así sin detectar. Búsqueda sistemática, no
+suposición: localizados los 28 bloques de comentario de 6+ líneas en
+todo `src/`, revisado cada uno contra su código adyacente. Dos hallazgos
+reales más, ambos en `AlturaLibreValidator`:
+
+- **[RESUELTO] `GARAGE` excluido por completo de la comprobación de
+  altura libre** (`ROOM_TYPES_FUERA_DE_ALCANCE`), cuando el propio texto
+  del Decreto 29/2010 A.3.1.1.b nombra explícitamente "garajes de
+  viviendas unifamiliares" en la lista de reducción directa a 2.20m --
+  confirmado con la MISMA cita textual ya verificada en la investigación
+  del hallazgo anterior (B.2.6). El comentario decía "garaje... no
+  aparece en ninguna lista de la fuente", repitiendo la misma confusión
+  de fondo (B.2.6 no es "la regla del garaje unifamiliar") en un sitio
+  distinto del código.
+- **[RESUELTO] `STAIRCASE` no estaba en ninguna de las dos listas**
+  (ni reducción directa ni fuera de alcance), cayendo por defecto en el
+  caso general más estricto (2.50m / excepción del 30%) -- el Decreto
+  también nombra explícitamente "escaleras" en la misma lista A.3.1.1.b.
+  No detectado por la primera revisión de este validador porque el
+  comentario original no mencionaba escaleras en absoluto, ni en un
+  sentido ni en otro -- una ausencia, no una afirmación contradictoria,
+  más difícil de detectar por inspección casual.
+- Dos correcciones adicionales de documentación (sin cambio de
+  comportamiento): comentario de `GARAGE` en `enums.py` seguía
+  atribuyendo su categoría a "B.2.6" (ya sabemos que no aplica);
+  docstring de `ServicioMinimumAreaValidator` decía que "cocina
+  integrada" y "trastero" quedaban pendientes "hasta que se aborden como
+  piezas propias" -- ya se abordaron, cada una en su propio validador
+  (`CocinaIntegradaValidator`, `TrasteroMinimumAreaValidator`),
+  construidos en incrementos posteriores a como se escribió esa nota.
+- Resto de los 28 bloques revisados: consistentes con su código, sin
+  hallazgos adicionales.
+
+Suite final: 295/295, `pyflakes` y `mypy` limpios.

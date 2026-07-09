@@ -38,11 +38,14 @@ class ServicioMinimumAreaValidator(ConstraintValidatorPort):
     aseo, lavadero, tendedero, almacenamiento), segun el numero de
     estancias de la vivienda.
 
-    NOTA DE ALCANCE (deliberada, no un descuido): no se modela todavia
-    "cocina integrada en estancia mayor" (superficie combinada distinta,
-    ver `validarCocinaIntegrada` en nhv.lua) ni "trastero" B.2.5 (regla
-    fija de 4.00m2, distinta de "almacenamiento"). Ambos quedan fuera de
-    este validador hasta que se aborden como piezas propias.
+    NOTA DE ALCANCE: "cocina integrada en estancia mayor" (superficie
+    combinada distinta) y "trastero" B.2.5 (regla fija de 4.00m2,
+    distinta de "almacenamiento") NO se comprueban en ESTE validador --
+    pero SÍ están cubiertas, cada una en su propio validador dedicado
+    (`CocinaIntegradaValidator`, `TrasteroMinimumAreaValidator`),
+    construidos en incrementos posteriores a como se escribió
+    originalmente esta nota. No son pendientes: son piezas propias,
+    exactamente como esta nota anticipaba que deberían resolverse.
 
     `total_num_estancias_override`: mismo motivo que en
     `EstanciaMinimumAreaValidator` -- para vivienda MULTI-PLANTA, Tabla 2
