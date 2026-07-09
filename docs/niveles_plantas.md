@@ -201,10 +201,11 @@ sección "Multi-planta: primer incremento real" para el detalle:
 - `CORRIDOR` se declara igual que cualquier otro tipo, con su propio
   `Room.level` -- no hay multiplicación automática, cada instancia por
   planta se declara explícitamente en el `Program`.
-
-**Simplificación deliberada que queda** (no un pendiente urgente, una
-decisión de alcance): todas las plantas comparten el mismo contorno
-edificable (`lot.buildable_area`), no se reduce planta a planta.
+- **[RESUELTO]** Contorno edificable reducido progresivamente planta a
+  planta (`Lot.retranqueo_incremento_por_planta_m`, opcional -- `None`
+  por defecto preserva el comportamiento anterior de mismo contorno
+  para todas). Ver `docs/architecture.md`, sección "Dos pendientes
+  resueltos: catálogo automático conectado + contorno progresivo".
 
 **Lo único que sigue sin implementar de verdad**: geometría de
 peldaños (huella/contrahuella) -- la escalera es un `RoomType` con

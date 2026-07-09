@@ -12,10 +12,17 @@ from housing_generator.domain.value_objects.dimensions import Dimensions
 from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
+from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
 from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
 
 
-def build_sample_program() -> Program:
+def build_sample_program(auto_adjacency: bool = False) -> Program:
+    """`auto_adjacency=True`: en vez de la declaracion manual de abajo,
+    deriva los AdjacencyRequirement automaticamente del catalogo
+    formalizado (`generate_adjacency_requirements`) -- retomado de
+    docs/CONTINUIDAD.md ("conectar como opcion automatica en
+    container.py/CLI"). Mismas 11 estancias en ambos casos, solo cambia
+    de donde salen las relaciones de adyacencia."""
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
         Room(id="dining", name="Comedor", room_type=RoomType.DINING_ROOM, dimensions=Dimensions(area_m2=15)),
@@ -29,14 +36,17 @@ def build_sample_program() -> Program:
         Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=4)),
         Room(id="garage", name="Garaje", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=18)),
     ]
-    adjacency = [
-        AdjacencyRequirement("living", "dining", AdjacencyStrength.MUST_BE_NEAR),
-        AdjacencyRequirement("dining", "kitchen", AdjacencyStrength.MUST_BE_NEAR),
-        AdjacencyRequirement("living", "entrance", AdjacencyStrength.MUST_BE_NEAR),
-        AdjacencyRequirement("bath1", "entrance", AdjacencyStrength.MUST_BE_NEAR),
-        AdjacencyRequirement("living", "garage", AdjacencyStrength.MUST_BE_AWAY),
-        AdjacencyRequirement("bed1", "kitchen", AdjacencyStrength.MUST_BE_AWAY),
-    ]
+    if auto_adjacency:
+        adjacency = generate_adjacency_requirements(rooms)
+    else:
+        adjacency = [
+            AdjacencyRequirement("living", "dining", AdjacencyStrength.MUST_BE_NEAR),
+            AdjacencyRequirement("dining", "kitchen", AdjacencyStrength.MUST_BE_NEAR),
+            AdjacencyRequirement("living", "entrance", AdjacencyStrength.MUST_BE_NEAR),
+            AdjacencyRequirement("bath1", "entrance", AdjacencyStrength.MUST_BE_NEAR),
+            AdjacencyRequirement("living", "garage", AdjacencyStrength.MUST_BE_AWAY),
+            AdjacencyRequirement("bed1", "kitchen", AdjacencyStrength.MUST_BE_AWAY),
+        ]
     return Program(rooms=rooms, adjacency_requirements=adjacency)
 
 
@@ -55,9 +65,17 @@ def main():
              "variantes distintas.",
     )
     parser.add_argument("--max-iterations", type=int, default=3000, help="Iteraciones del recocido simulado")
+    parser.add_argument(
+        "--auto-adjacency", action="store_true",
+        help="Derivar Obligatorio/Preferencia automaticamente del catalogo formalizado "
+             "de 120 pares (generate_adjacency_requirements) en vez de la declaracion "
+             "manual del programa de ejemplo -- genera bastantes mas requisitos "
+             "(44 en vez de 6 para las mismas 11 estancias), busqueda mas dificil, "
+             "puede necesitar --max-iterations mayor o probar otra --seed.",
+    )
     args = parser.parse_args()
 
-    program = build_sample_program()
+    program = build_sample_program(auto_adjacency=args.auto_adjacency)
     lot = build_sample_lot()
 
     use_case = build_generate_layout_use_case(

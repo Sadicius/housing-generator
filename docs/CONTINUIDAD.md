@@ -192,28 +192,17 @@ pendiente si se quiere ese último paso de integración.
 
 - **Importador JSON (exportación de la sección vertical del dashboard) →
   Program real** — discutido, no construido. Con el catálogo ya
-  formalizado, derivaría `Obligatorio` y `Preferencia` automáticamente
-  vía `generate_adjacency_requirements`, no habría que construir esa
-  parte desde cero.
+  formalizado y conectado (`--auto-adjacency`), derivaría
+  `Obligatorio`/`Preferencia` automáticamente, no habría que construir
+  esa parte desde cero.
 - **Vivienda pareada/adosada** (medianeras) — solo aislada implementada
   (retranqueo). Extensión natural: añadir "lados de medianera" a `Lot`.
-- **Conectar `generate_adjacency_requirements` como opción automática**
-  en `container.py`/CLI (hoy solo existe como función que hay que
-  llamar a mano antes de construir el `Program`).
-- **Reducir el contorno edificable planta a planta** (en vez de compartir
-  el mismo en todas) — la opción más compleja de las dos vistas en
-  investigación externa (Infinigen Indoors), deliberadamente pospuesta.
-- **Ranking global de Tabla 1**: ya resuelto (`global_rank_override`,
-  precalculado por `GenerateBuildingUseCase`) — mencionado aquí solo para
-  que quede claro que NO es un pendiente, por si se confunde con la nota
-  anterior de contorno compartido.
 - **GARAGE en sótano vs. contacto exterior**: un garaje en `SOTANO` exige
   también contacto exterior (`ExteriorContactValidator`, acceso
   vehicular) -- solo se puede satisfacer con una rampa que corte el
   nivel de rasante, que el modelo actual no distingue de una fachada
-  plana normal. Encontrado al aplicar esta misma convención de
-  documentación sobre `niveles_plantas.md`; no es peligroso (no genera
-  resultados incorrectos), pero está sin resolver de verdad.
+  plana normal. No es peligroso (no genera resultados incorrectos),
+  pero está sin resolver de verdad.
 
 ## Cosas aprendidas por las malas — no las repitas
 

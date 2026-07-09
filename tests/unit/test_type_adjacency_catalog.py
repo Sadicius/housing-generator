@@ -99,3 +99,22 @@ def test_generate_requirements_consistent_with_get_type_adjacency():
         assert reqs == []
     else:
         assert len(reqs) == 1 and reqs[0].strength == strength
+
+
+def test_build_program_with_auto_adjacency_produces_a_valid_program():
+    from housing_generator.domain.services.type_adjacency_catalog import build_program_with_auto_adjacency
+
+    rooms = [
+        _room("living", RoomType.LIVING_ROOM),
+        _room("dining", RoomType.DINING_ROOM),
+        _room("garage", RoomType.GARAGE),
+    ]
+    program = build_program_with_auto_adjacency(rooms)
+
+    assert program.rooms == rooms
+    assert len(program.adjacency_requirements) == len(generate_adjacency_requirements(rooms))
+    # el Program resultante debe pasar su propia validacion interna
+    # (todo AdjacencyRequirement referencia estancias que existen)
+    pairs = {frozenset((r.room_a_id, r.room_b_id)) for r in program.adjacency_requirements}
+    assert frozenset(("living", "dining")) in pairs
+    assert frozenset(("living", "garage")) in pairs

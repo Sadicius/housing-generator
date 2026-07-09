@@ -896,3 +896,33 @@ nombres de parámetro, corregido usando el árbol de sintaxis real):
 
 Sin cambios de código en esta ronda -- es un resultado limpio real, no
 una ausencia de revisión.
+
+## Dos pendientes resueltos: catálogo automático conectado + contorno progresivo
+
+- **[RESUELTO]** `generate_adjacency_requirements` conectado como opción
+  real, no solo función suelta: `build_program_with_auto_adjacency`
+  (domain/services, lógica pura sin infraestructura) + `--auto-adjacency`
+  en el CLI. Confirmado con subprocess real: mismas 11 estancias, 44
+  requisitos derivados automáticamente en vez de los 6 declarados a
+  mano, layout válido con más iteraciones/semilla ajustada (ya
+  documentado que el catálogo completo es una búsqueda más difícil).
+- **[RESUELTO]** Contorno edificable reducido progresivamente planta a
+  planta. Investigación externa confirmada antes de implementar
+  (Devans, "Procedural Generation For Dummies: Building Footprints"):
+  "subtractive generation... empezando por la parcela y recortando
+  trozos -- buen enfoque para plantas superiores, ya que la segunda
+  planta suele parecerse a la primera", con patrón de red de seguridad
+  `MinArea{Action:Shrink, Fallback:...}` si el área encogida no
+  alcanzaría. `Lot.retranqueo_incremento_por_planta_m` (nuevo, `None`
+  por defecto preserva el comportamiento anterior) +
+  `GenerateBuildingUseCase._shrink_for_next_floor`: mismo mecanismo
+  `buffer(-x)` que ya usa `Lot.buildable_area`, aplicado de forma
+  progresiva desde la segunda planta en adelante, con la misma red de
+  seguridad (si no cabe, usa la misma huella que la planta de abajo en
+  vez de fallar -- opción también válida según la propia investigación:
+  "copia exacta O subconjunto"). Confirmado geométricamente, no solo
+  que "genera sin error": la huella de la planta superior queda
+  literalmente contenida dentro de la huella de la planta inferior
+  (`contains()` verdadero), con el desplazamiento exacto esperado en
+  los 4 lados. Red de seguridad confirmada por separado con un
+  incremento deliberadamente excesivo.

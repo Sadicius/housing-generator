@@ -8,6 +8,7 @@ from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.lot import Lot
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.entities.layout import Layout
+from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.enums import NivelPlanta, NIVEL_PLANTA_ORDEN, RoomType, SpaceCategory
 from housing_generator.domain.exceptions import LayoutGenerationError
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
@@ -78,6 +79,7 @@ class GenerateBuildingUseCase:
 
         building = Building()
         previous_layout: Optional[Layout] = None
+        current_buildable_polygon: BaseGeometry = lot.buildable_area.polygon
 
         for level in levels:
             level_rooms = rooms_by_level[level]
@@ -92,13 +94,29 @@ class GenerateBuildingUseCase:
             reference_wet = self._wet_boundaries(previous_layout)
             floor_below_exists = previous_layout is not None
 
+            # encogimiento progresivo del contorno edificable (retomado
+            # de docs/CONTINUIDAD.md) -- solo a partir de la SEGUNDA
+            # planta (la primera usa siempre lot.buildable_area sin
+            # tocar); ver Lot.retranqueo_incremento_por_planta_m para
+            # la investigacion que respalda esta tecnica.
+            if floor_below_exists:
+                current_buildable_polygon = self._shrink_for_next_floor(
+                    current_buildable_polygon, lot.retranqueo_incremento_por_planta_m, level_rooms,
+                )
+            floor_lot = Lot(
+                boundary=Boundary(polygon=current_buildable_polygon),
+                entrance_side=lot.entrance_side,
+                street_side=lot.street_side,
+                retranqueo_m=None,  # ya aplicado al construir current_buildable_polygon
+            )
+
             composite = self._per_floor_validators_factory(
                 level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank,
                 floor_below_exists,
             )
             generator = self._layout_generator_factory(composite, level_adjacency)
             zones = self._zoning_strategy.build_zones(level_program)
-            layout = generator.generate(level_program, lot, zones)
+            layout = generator.generate(level_program, floor_lot, zones)
 
             result = composite.validate(layout)
             if not result.is_valid:
@@ -113,6 +131,29 @@ class GenerateBuildingUseCase:
         self._check_programa_minimo(building)
         self._check_bano_acceso_general(building)
         return building
+
+    @staticmethod
+    def _shrink_for_next_floor(
+        previous_polygon: BaseGeometry, increment_m: Optional[float], level_rooms: List[Room],
+    ) -> BaseGeometry:
+        """Encoge el contorno de la planta anterior por `increment_m`
+        para esta planta -- mismo mecanismo que `Lot.buildable_area`
+        (`buffer(-x)`), aplicado de forma progresiva planta a planta.
+
+        Red de seguridad (investigacion externa confirmada, patron
+        `MinArea{Action:Shrink, Fallback:...}`): si el area encogida no
+        alcanzaria para la suma de superficies declaradas de esta
+        planta, NO se encoge -- se usa la misma huella que la planta de
+        abajo (la otra opcion valida segun la propia investigacion:
+        "copia exacta O subconjunto", nunca una huella inviable)."""
+        if increment_m is None or increment_m <= 0:
+            return previous_polygon
+
+        shrunk = previous_polygon.buffer(-increment_m)
+        required_area = sum(r.dimensions.area_m2 for r in level_rooms)
+        if shrunk.area < required_area:
+            return previous_polygon  # red de seguridad: copia exacta, no un area inviable
+        return shrunk
 
     @staticmethod
     def _compute_global_rank(rooms: List[Room]) -> Dict[str, int]:

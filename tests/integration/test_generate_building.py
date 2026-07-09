@@ -285,3 +285,51 @@ def test_building_with_level_gap_skips_absent_intermediate_levels():
 
     assert set(building.floors.keys()) == {NivelPlanta.SOTANO, NivelPlanta.PLANTA_SUPERIOR}
     assert building.level_below(NivelPlanta.PLANTA_SUPERIOR) == NivelPlanta.SOTANO
+
+
+def test_progressive_footprint_shrinking_between_floors():
+    # retomado de docs/CONTINUIDAD.md ("reducir el contorno edificable
+    # planta a planta"). Investigacion externa confirmada antes de
+    # implementar (Devans, "Procedural Generation For Dummies: Building
+    # Footprints"): tecnica estandar de generacion procedural, "empezar
+    # por la parcela y recortar trozos" -- confirma que la planta
+    # superior queda geometricamente contenida en la huella de la
+    # planta inferior, no solo que "cabe" por casualidad.
+    from shapely.ops import unary_union
+
+    program = _two_floor_program()
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 18, 18)), retranqueo_incremento_por_planta_m=1.5)
+
+    use_case = build_generate_building_use_case(
+        adjacency_requirements=program.adjacency_requirements, seed=1, max_iterations=3000,
+    )
+    building = use_case.execute(program, lot)
+
+    huella_pb = unary_union([r.boundary.polygon for r in building.floors[NivelPlanta.PLANTA_BAJA].rooms])
+    huella_ps = unary_union([r.boundary.polygon for r in building.floors[NivelPlanta.PLANTA_SUPERIOR].rooms])
+
+    assert huella_pb.bounds == (0.0, 0.0, 18.0, 18.0)
+    assert huella_ps.bounds == (1.5, 1.5, 16.5, 16.5)  # exactamente 1.5m hacia dentro en los 4 lados
+    assert huella_pb.buffer(0.1).contains(huella_ps)  # subconjunto real, no solo coincidencia
+
+
+def test_excessive_shrink_increment_falls_back_to_same_footprint_as_below():
+    # red de seguridad (patron MinArea{Action:Shrink, Fallback:...} de
+    # la misma investigacion): un incremento que dejaria un area
+    # inviable para las estancias de esa planta NO debe hacer fallar la
+    # generacion -- debe usar la misma huella que la planta de abajo
+    # (la otra opcion valida: "copia exacta O subconjunto", nunca una
+    # huella invalida).
+    from shapely.ops import unary_union
+
+    program = _two_floor_program()
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 16, 16)), retranqueo_incremento_por_planta_m=8.0)
+
+    use_case = build_generate_building_use_case(
+        adjacency_requirements=program.adjacency_requirements, seed=1, max_iterations=3000,
+    )
+    building = use_case.execute(program, lot)  # NO debe lanzar LayoutGenerationError
+
+    huella_pb = unary_union([r.boundary.polygon for r in building.floors[NivelPlanta.PLANTA_BAJA].rooms])
+    huella_ps = unary_union([r.boundary.polygon for r in building.floors[NivelPlanta.PLANTA_SUPERIOR].rooms])
+    assert huella_pb.bounds == huella_ps.bounds == (0.0, 0.0, 16.0, 16.0)

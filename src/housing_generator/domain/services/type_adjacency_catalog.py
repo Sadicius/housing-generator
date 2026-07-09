@@ -27,6 +27,7 @@ pares totales):
 """
 from typing import Dict, List, Optional, Tuple
 from housing_generator.domain.entities.room import Room
+from housing_generator.domain.entities.program import Program
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 
@@ -168,3 +169,18 @@ def generate_adjacency_requirements(rooms: List[Room]) -> List[AdjacencyRequirem
                 requirements.append(AdjacencyRequirement(room_a.id, room_b.id, strength))
 
     return requirements
+
+
+def build_program_with_auto_adjacency(rooms: List[Room]) -> Program:
+    """Conveniencia que cierra el circulo del catalogo formalizado:
+    construye un `Program` derivando sus `AdjacencyRequirement`
+    automaticamente (`generate_adjacency_requirements`) en vez de
+    exigir declararlos a mano -- retomado de docs/CONTINUIDAD.md
+    ("conectar generate_adjacency_requirements como opcion automatica").
+
+    Vive aqui (domain/services), no en config/container.py: es logica
+    de dominio pura (RoomType -> AdjacencyStrength), sin ninguna
+    dependencia de infraestructura -- container.py sigue siendo el
+    unico sitio que conecta clases CONCRETAS de infraestructura, esto
+    no lo es."""
+    return Program(rooms=rooms, adjacency_requirements=generate_adjacency_requirements(rooms))
