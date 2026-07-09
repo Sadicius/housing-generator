@@ -1,7 +1,8 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
+from housing_generator.domain.entities.room import Room
 from housing_generator.domain.enums import SpaceCategory, RoomType
 from housing_generator.infrastructure.geometry.shapely_utils import can_inscribe_square
 
@@ -81,15 +82,29 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
         self._global_rank = global_rank_override
 
     def validate(self, layout: Layout) -> ValidationResult:
+        # Refactor por complejidad (radon cc: 16, "C" -- el mas alto del
+        # proyecto junto a CocinaIntegradaValidator): este metodo hacia
+        # DOS cosas independientes a la vez (ranking de Tabla 1 por
+        # puesto, y cuadrado inscribible de la estancia mayor). Separado
+        # en dos metodos con responsabilidad unica, sin cambiar el
+        # comportamiento -- mismas violaciones/avisos, mismo orden.
         estancias = [r for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA]
         if not estancias:
             return ValidationResult()
 
         ordenadas = sorted(estancias, key=lambda r: r.dimensions.area_m2, reverse=True)
         num_estancias = self._total_override if self._total_override is not None else len(ordenadas)
-        violations: List[str] = []
-        warnings: List[str] = []
 
+        violations = self._check_rank_minimums(ordenadas, num_estancias)
+        cuadrado_violations, warnings = self._check_estancia_mayor_cuadrado(estancias, ordenadas)
+        violations.extend(cuadrado_violations)
+
+        return ValidationResult(violations=violations, warnings=warnings)
+
+    def _check_rank_minimums(self, ordenadas: List[Room], num_estancias: int) -> List[str]:
+        """Tabla 1 propiamente dicha: superficie minima por puesto de
+        tamano (E1=mayor, E2=segunda...)."""
+        violations: List[str] = []
         for local_i, room in enumerate(ordenadas, start=1):
             puesto = self._global_rank.get(room.id, local_i) if self._global_rank else local_i
             minimo = minimo_estancia(num_estancias, puesto)
@@ -98,6 +113,15 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
                     f"'{room.id}': {room.dimensions.area_m2:.1f}m2, por debajo del minimo de "
                     f"Tabla 1 para el puesto {puesto} de {num_estancias} estancias ({minimo:.1f}m2)"
                 )
+        return violations
+
+    def _check_estancia_mayor_cuadrado(
+        self, estancias: List[Room], ordenadas: List[Room],
+    ) -> Tuple[List[str], List[str]]:
+        """A.3.2.1.a: cuadrado inscribible de 3.30m de lado en la
+        estancia mayor (siempre el salon, RoomType.LIVING_ROOM)."""
+        violations: List[str] = []
+        warnings: List[str] = []
 
         mayor = next((r for r in estancias if r.room_type == RoomType.LIVING_ROOM), None)
         if mayor is None:
@@ -114,7 +138,7 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
                 # correspondio. La planta que SI tiene el salon real ya
                 # lo comprueba correctamente por su cuenta (mas abajo,
                 # sin pasar por esta rama) -- no hace falta sustituto.
-                return ValidationResult(violations=violations, warnings=warnings)
+                return violations, warnings
             mayor = ordenadas[0]
             warnings.append(
                 f"No hay 'living_room' declarado entre las estancias; se usa '{mayor.id}' "
@@ -136,4 +160,4 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
                     f"con la geometria computacional implementada actualmente"
                 )
 
-        return ValidationResult(violations=violations, warnings=warnings)
+        return violations, warnings

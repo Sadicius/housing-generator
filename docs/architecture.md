@@ -839,3 +839,34 @@ lógica de negocio del proyecto (generador, scorer blando, Tabla 1/2,
 cocina integrada, orquestador multi-planta, agrupación/zonificación,
 contacto exterior, programa mínimo, acceso de baño, grafo de puertas,
 catálogo formalizado). Suite final: 282/282, `pyflakes` y `mypy` limpios.
+
+## Revisión de funciones y variables: complejidad (radon) y patrones peligrosos
+
+Instalado `radon` para medir complejidad ciclomática de forma objetiva
+(nunca usado antes en el proyecto), más revisión manual de argumentos
+mutables por defecto (fallo clásico de Python que ni `pyflakes` ni
+`mypy` detectan).
+
+- **Sin argumentos mutables por defecto** en todo `src/` (`def f(x=[])`,
+  `def f(x={})`) -- comprobado explícitamente, no asumido.
+- Complejidad general: mayormente "B" (moderada, esperable dado que
+  cada validador repite el mismo patrón de varias ramas: colocada/no,
+  tipo correcto/no, umbral, tres estados). Ninguna función alcanza "D"
+  o peor en todo el proyecto.
+- **[RESUELTO]** Los dos casos más complejos (`EstanciaMinimumAreaValidator.validate`
+  y `CocinaIntegradaValidator.validate`, ambos 16 -- "C", los más altos
+  del proyecto) hacían DOS cosas independientes a la vez dentro de un
+  mismo método (ranking Tabla 1 + cuadrado inscribible; superficie
+  combinada + apertura vertical). Separados en métodos con
+  responsabilidad única, sin cambiar el comportamiento -- mismas
+  violaciones/avisos, mismo orden, confirmado con los tests existentes
+  sin modificar ninguno. `EstanciaMinimumAreaValidator.validate`:
+  16→5. `CocinaIntegradaValidator.validate`: 16→11.
+- Resto de "C" restantes (11-14: `build_door_graph`,
+  `PasilloTopologiaValidator`, `AnchoLibreEstanciaValidator`,
+  `BanoAccesoGeneralValidator`, `AdjacencyConstraintValidator`,
+  `EscaleraAlineacionValidator`, `GenerateBuildingUseCase.execute`):
+  revisados, complejidad inherente a la cantidad de estados normativos
+  legítimos que manejan, no candidatos claros a más separación sin
+  introducir indirección sin beneficio real.
+- Suite final: 282/282, `pyflakes` y `mypy` limpios.

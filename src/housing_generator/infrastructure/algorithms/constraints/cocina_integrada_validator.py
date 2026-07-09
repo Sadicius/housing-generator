@@ -1,7 +1,8 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
+from housing_generator.domain.entities.room import Room
 from housing_generator.domain.enums import RoomType, SpaceCategory
 from housing_generator.infrastructure.algorithms.constraints.estancia_minimum_area_validator import (
     minimo_estancia,
@@ -49,6 +50,11 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
         self._total_override = total_num_estancias_override
 
     def validate(self, layout: Layout) -> ValidationResult:
+        # Refactor por complejidad (radon cc: 16, "C" -- el mas alto del
+        # proyecto junto a EstanciaMinimumAreaValidator, mismo tratamiento
+        # aplicado alli): este metodo hacia DOS cosas independientes a la
+        # vez (superficie combinada, apertura vertical). Separado en dos
+        # metodos con responsabilidad unica, sin cambiar el comportamiento.
         cocina = next(
             (r for r in layout.rooms if r.room_type == RoomType.KITCHEN and r.integrated_in_largest_room),
             None,
@@ -63,11 +69,24 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
                           "programa -- no se puede determinar la estancia mayor"]
             )
 
+        local_count = sum(1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA)
+        num_estancias = self._total_override if self._total_override is not None else local_count
+
+        area_violations, area_warnings = self._check_combined_area(mayor, cocina, num_estancias)
+        opening_violations, opening_warnings = self._check_vertical_opening(mayor, cocina)
+
+        return ValidationResult(
+            violations=area_violations + opening_violations,
+            warnings=area_warnings + opening_warnings,
+        )
+
+    @staticmethod
+    def _check_combined_area(mayor: Room, cocina: Room, num_estancias: int) -> Tuple[List[str], List[str]]:
+        """Superficie minima del CONJUNTO salon+cocina: suma de los
+        minimos de cada pieza por separado (Tabla 1 + Tabla 2)."""
         violations: List[str] = []
         warnings: List[str] = []
 
-        local_count = sum(1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA)
-        num_estancias = self._total_override if self._total_override is not None else local_count
         minimo_mayor = minimo_estancia(num_estancias, 1)
         minimo_cocina = tabla_servicios_para(num_estancias).get("cocina")
 
@@ -86,6 +105,13 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
                 f"No se pudo determinar el minimo combinado de '{mayor.id}' + '{cocina.id}' "
                 f"-- revisar el numero de estancias"
             )
+        return violations, warnings
+
+    @staticmethod
+    def _check_vertical_opening(mayor: Room, cocina: Room) -> Tuple[List[str], List[str]]:
+        """Apertura vertical minima de relacion entre cocina y salon."""
+        violations: List[str] = []
+        warnings: List[str] = []
 
         if cocina.vertical_opening_m2 is None:
             warnings.append(
@@ -98,5 +124,4 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
                 f"{cocina.vertical_opening_m2:.1f}m2, por debajo del mínimo "
                 f"{APERTURA_VERTICAL_MIN_M2:.1f}m2"
             )
-
-        return ValidationResult(violations=violations, warnings=warnings)
+        return violations, warnings
