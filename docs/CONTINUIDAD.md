@@ -6,6 +6,13 @@
 > `docs/relaciones_espaciales.md` (catálogo de 120 pares + huecos de modelo)
 > y `docs/niveles_plantas.md` (niveles, escalera, bajantes). Este documento
 > es un resumen de alto nivel para orientarse rápido, no un sustituto de esos.
+>
+> Para USAR el proyecto (CLI, API Python, ejemplos verificados), ver
+> `docs/GUIA_USO.md`. Para entender CÓMO FUNCIONA por dentro (arquitectura,
+> algoritmo, validadores), ver `docs/COMO_FUNCIONA.md` -- ambos son
+> documentación de referencia del estado ACTUAL, se reescriben in-place
+> cuando algo cambia (misma convención que este documento), no logs
+> históricos como `architecture.md`.
 
 ## Qué es esto
 
@@ -38,6 +45,14 @@ mezcla estado actual con narrativa histórica en el mismo sitio.
    remitir a este documento (`docs/CONTINUIDAD.md`) en vez de afirmarlo
    por su cuenta con frases tipo "no implementado" sin matizar -- así,
    si se resuelve más adelante, solo hace falta actualizar un sitio.
+2b. **`GUIA_USO.md` y `COMO_FUNCIONA.md` son documentación de referencia
+   del estado ACTUAL** (cómo usar el proyecto, cómo funciona por
+   dentro) -- se reescriben in-place cuando algo relevante cambia,
+   igual que este documento, NUNCA se amplían con un historial de "antes
+   era así". Si un incremento cambia un flag del CLI, un conteo de
+   validadores, una firma pública, etc., actualizar el pasaje concreto
+   de estos dos documentos es parte de cerrar esa tarea -- mismo
+   principio que el punto 3 de abajo, aplicado también a estos dos.
 3. **Paso obligatorio al cerrar cualquier tarea que resuelva algo de la
    lista de pendientes de arriba**: antes de dar la tarea por
    terminada, buscar (`grep`) las palabras clave relacionadas en
