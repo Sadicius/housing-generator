@@ -85,3 +85,37 @@ def test_room_only_near_legal_parcel_line_but_not_buildable_edge_fails_with_retr
     layout = Layout(lot=lot, rooms=[living], zones=[])
     violations = ExteriorContactValidator().validate(layout).violations
     assert len(violations) == 1
+
+
+def test_room_against_medianera_wall_does_not_count_as_exterior_contact():
+    # retomado de docs/CONTINUIDAD.md ("vivienda pareada/adosada"): una
+    # estancia pegada a la pared de medianera (sin retranqueo ahi) NO
+    # debe contar ese lado como contacto exterior real.
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 10, 10)), retranqueo_m=2.0,
+        medianera_sides=frozenset({"east"}),
+    )
+    # area edificable: (2,2)-(10,8) -- sin retranqueo en el este (medianera)
+    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=8))
+    living.boundary = Boundary(polygon=box(8, 4, 10, 6))  # pegada SOLO al lado este (medianera)
+
+    layout = Layout(lot=lot, rooms=[living], zones=[])
+    violations = ExteriorContactValidator().validate(layout).violations
+    assert len(violations) == 1  # 0 lados de contacto exterior real (el unico que toca es medianera)
+
+
+def test_room_against_both_medianera_and_real_exterior_in_adosada():
+    # vivienda adosada (2 medianeras, este y oeste) -- una estancia que
+    # toca el borde SUR (exterior real) y el borde ESTE (medianera) debe
+    # contar solo 1 lado exterior real, no 2.
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 10, 10)), retranqueo_m=2.0,
+        medianera_sides=frozenset({"east", "west"}),
+    )
+    # area edificable: (0,2)-(10,8) -- sin retranqueo en este/oeste
+    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=16))
+    living.boundary = Boundary(polygon=box(6, 2, 10, 6))  # toca sur (exterior real) y este (medianera)
+
+    layout = Layout(lot=lot, rooms=[living], zones=[])
+    result = ExteriorContactValidator().validate(layout)
+    assert result.violations == []  # 1 lado real (sur) es suficiente para min_exterior_sides=1

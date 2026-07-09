@@ -223,6 +223,26 @@ es un valor fijo de la normativa de habitabilidad (el propio decreto
 remite esto al planeamiento urbanístico de cada ayuntamiento), así que
 hay que declararlo según el caso real, no asumir un valor por defecto.
 
+### Vivienda pareada/adosada (con medianera)
+
+```python
+lot = Lot(
+    boundary=Boundary(polygon=box(0, 0, 8, 20)),
+    retranqueo_m=3.0,
+    medianera_sides=frozenset({"east", "west"}),  # adosada: dos medianeras
+    # medianera_sides=frozenset({"east"})          # pareada: una sola
+)
+```
+
+Los lados declarados en `medianera_sides` (`"north"|"south"|"east"|"west"`)
+no llevan retranqueo (la edificación llega hasta el linde, compartido
+con la parcela vecina) y no cuentan como contacto exterior real para
+habitabilidad (una pared de medianera no tiene luz ni ventilación
+propia). El resto de lados se comportan igual que en vivienda aislada.
+Requiere parcela rectangular de lados ortogonales (norte=+y, sur=−y,
+este=+x, oeste=−x), misma simplificación geométrica que el resto del
+proyecto.
+
 ## El dashboard interactivo
 
 `docs/visualizador/relaciones_espaciales.html` — se abre directamente

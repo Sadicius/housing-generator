@@ -35,11 +35,21 @@ class ExteriorContactValidator(ConstraintValidatorPort):
         # ambas coinciden (mismo comportamiento que antes).
         lot_polygon = layout.lot.buildable_area.polygon
 
+        # vivienda pareada/adosada (retomado de docs/CONTINUIDAD.md):
+        # los lados de medianera SI forman parte del area edificable
+        # (la construccion llega hasta el linde ahi), pero una pared de
+        # medianera no tiene luz ni ventilacion propia -- no cuenta como
+        # contacto exterior real aunque geometricamente toque el borde.
+        excluded_segments = layout.lot.medianera_boundary_segments()
+
         for room in layout.rooms:
             if not room.is_placed or room.min_exterior_sides <= 0:
                 continue
 
-            lados = count_exterior_sides(room.boundary.polygon, lot_polygon, EXTERIOR_MIN_CONTACT_M)
+            lados = count_exterior_sides(
+                room.boundary.polygon, lot_polygon, EXTERIOR_MIN_CONTACT_M,
+                excluded_segments=excluded_segments,
+            )
 
             if lados is None:
                 warnings.append(

@@ -148,3 +148,43 @@ def test_impossible_program_raises_layout_generation_error_with_last_violations(
 
     with pytest.raises(LayoutGenerationError, match="Ultimas violaciones"):
         use_case.execute(GenerationRequest(program=program, lot=lot))
+
+
+def test_vivienda_adosada_respects_medianera_sides_end_to_end():
+    # retomado de docs/CONTINUIDAD.md ("vivienda pareada/adosada").
+    # Parcela estrecha tipica de adosada (8m de fachada, 20m de fondo),
+    # medianeras este y oeste -- confirma de extremo a extremo, con el
+    # generador real, que al menos una estancia llega hasta cada linde
+    # de medianera (sin retranqueo ahi) mientras que norte/sur SI
+    # respetan el retranqueo declarado.
+    rooms = [
+        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=22)),
+        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=9)),
+        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
+        Room(id="bed1", name="Dormitorio", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)),
+        Room(id="bath", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
+        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=3)),
+        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=2)),
+        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=3)),
+    ]
+    program = Program(rooms=rooms, adjacency_requirements=[])
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 8, 20)), retranqueo_m=3.0,
+        medianera_sides=frozenset({"east", "west"}),
+    )
+
+    use_case = build_generate_layout_use_case(seed=1, max_iterations=4000)
+    layout = use_case.execute(GenerationRequest(program=program, lot=lot))
+
+    assert layout.metadata["hard_violations"] == 0
+
+    all_bounds = [r.boundary.polygon.bounds for r in layout.rooms]
+    min_x = min(b[0] for b in all_bounds)
+    max_x = max(b[2] for b in all_bounds)
+    min_y = min(b[1] for b in all_bounds)
+    max_y = max(b[3] for b in all_bounds)
+
+    assert min_x == pytest.approx(0.0, abs=0.01)   # llega al linde oeste (medianera, sin retranqueo)
+    assert max_x == pytest.approx(8.0, abs=0.01)   # llega al linde este (medianera, sin retranqueo)
+    assert min_y >= 3.0 - 0.01   # respeta el retranqueo de 3m en el sur
+    assert max_y <= 17.0 + 0.01  # respeta el retranqueo de 3m en el norte

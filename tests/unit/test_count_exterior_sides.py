@@ -32,3 +32,30 @@ def test_non_rectangular_room_is_unverifiable():
     lot = box(0, 0, 10, 10)
     l_shape = Polygon([(0, 0), (4, 0), (4, 2), (2, 2), (2, 4), (0, 4)])
     assert count_exterior_sides(l_shape, lot) is None
+
+
+def test_excluded_segment_does_not_count_as_exterior_contact():
+    # retomado de docs/CONTINUIDAD.md ("vivienda pareada/adosada"): una
+    # pared de medianera excluida no debe contar como contacto exterior
+    # real, aunque toque geometricamente el borde de la parcela.
+    from shapely.geometry import LineString
+
+    lot = box(0, 0, 10, 10)
+    room = box(7, 0, 10, 3)  # toca el borde inferior (exterior real) Y el derecho (medianera)
+    medianera_este = LineString([(10, 0), (10, 10)])
+
+    sin_exclusion = count_exterior_sides(room, lot)
+    con_exclusion = count_exterior_sides(room, lot, excluded_segments=[medianera_este])
+
+    assert sin_exclusion == 2  # abajo + derecha, sin saber que la derecha es medianera
+    assert con_exclusion == 1  # solo abajo cuenta como exterior real
+
+
+def test_excluded_segment_on_a_side_the_room_does_not_touch_has_no_effect():
+    from shapely.geometry import LineString
+
+    lot = box(0, 0, 10, 10)
+    room = box(0, 0, 3, 3)  # esquina inferior izquierda, no toca el lado este
+    medianera_este = LineString([(10, 0), (10, 10)])
+
+    assert count_exterior_sides(room, lot, excluded_segments=[medianera_este]) == 2  # abajo + izquierda

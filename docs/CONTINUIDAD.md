@@ -221,8 +221,20 @@ pendiente si se quiere ese último paso de integración.
   formalizado y conectado (`--auto-adjacency`), derivaría
   `Obligatorio`/`Preferencia` automáticamente, no habría que construir
   esa parte desde cero.
-- **Vivienda pareada/adosada** (medianeras) — solo aislada implementada
-  (retranqueo). Extensión natural: añadir "lados de medianera" a `Lot`.
+- **`SolarExposureValidator`** (asoleamiento/orientación) — sigue
+  deliberadamente aparcado, pero con una referencia externa concreta
+  encontrada si se retoma: `github.com/SeanWong17/building-sunlight-simulator`
+  (Three.js/WebGL). Usa trigonometría esférica estándar para posición
+  solar -- altura `sin(h) = sin(φ)sin(δ) + cos(φ)cos(δ)cos(ω)`, azimut
+  `cos(A) = (sin(h)sin(φ) − sin(δ)) / (cos(h)cos(φ))` (φ=latitud,
+  δ=declinación solar según día del año, ω=ángulo horario según hora) --
+  y proyección de sombras entre edificios vecinos por ray-casting,
+  acumulando horas de luz directa por vivienda. La parte de sombras
+  entre vecinos probablemente no aplica a nuestro alcance actual (una
+  sola parcela, sin edificios vecinos modelados), pero las fórmulas de
+  posición solar en sí son un punto de partida útil para una versión
+  simplificada (orientación de fachada vs. ventana solar representativa,
+  sin geometría de vecinos).
 
 ## Cosas aprendidas por las malas — no las repitas
 

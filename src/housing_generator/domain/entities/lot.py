@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import FrozenSet, List, Optional
+from shapely.geometry import box, LineString, Polygon
 from housing_generator.domain.value_objects.boundary import Boundary
 
 
@@ -39,21 +40,63 @@ class Lot:
     comportamiento anterior: todas las plantas comparten el mismo
     contorno edificable, sin decrecer.
 
-    Vivienda PAREADA/ADOSADA (con medianeras en 1 o 2 lados) queda fuera
-    de este alcance por ahora -- ver docs/architecture.md.
+    `medianera_sides`: **[RESUELTO]** retomado de docs/CONTINUIDAD.md
+    ("vivienda pareada/adosada"). Vivienda con 1 o 2 lados en medianera
+    (pared compartida con la parcela vecina, sin separacion): esos lados
+    NO llevan retranqueo (la edificacion llega hasta el linde) y NO
+    cuentan como contacto exterior real para habitabilidad (una pared
+    de medianera no tiene luz ni ventilacion propia -- confirma
+    `ExteriorContactValidator`). Subconjunto de
+    `{"north","south","east","west"}`; vacio (por defecto) = vivienda
+    AISLADA, comportamiento anterior sin cambios. Requiere parcela
+    rectangular con lados ortogonales (norte=+y, sur=-y, este=+x,
+    oeste=-x) -- misma simplificacion geometrica que el resto del
+    proyecto (particion guillotina, todo rectangular).
     """
     boundary: Boundary
     entrance_side: str = "south"   # north | south | east | west
     street_side: str = "south"
     retranqueo_m: Optional[float] = None
     retranqueo_incremento_por_planta_m: Optional[float] = None
+    medianera_sides: FrozenSet[str] = frozenset()
 
     @property
     def buildable_area(self) -> Boundary:
         """Area edificable real: la parcela reducida hacia dentro por el
-        retranqueo declarado. Si no hay retranqueo, coincide con la
-        parcela completa."""
-        if self.retranqueo_m is None or self.retranqueo_m <= 0:
+        retranqueo declarado -- EXCEPTO en los lados de medianera
+        (`medianera_sides`), donde la edificacion llega hasta el linde
+        sin retranqueo. Sin retranqueo Y sin medianeras, coincide con la
+        parcela completa (comportamiento original sin cambios)."""
+        if (self.retranqueo_m is None or self.retranqueo_m <= 0) and not self.medianera_sides:
             return self.boundary
-        reduced = self.boundary.polygon.buffer(-self.retranqueo_m)
-        return Boundary(polygon=reduced)
+
+        minx, miny, maxx, maxy = self.boundary.polygon.bounds
+        r = self.retranqueo_m or 0.0
+        new_minx = minx if "west" in self.medianera_sides else minx + r
+        new_maxx = maxx if "east" in self.medianera_sides else maxx - r
+        new_miny = miny if "south" in self.medianera_sides else miny + r
+        new_maxy = maxy if "north" in self.medianera_sides else maxy - r
+
+        if new_minx >= new_maxx or new_miny >= new_maxy:
+            # retranqueo excesivo: colapsa a vacio, no a un rectangulo
+            # invertido -- mismo comportamiento que el buffer(-x) previo
+            # cuando el retranqueo superaba la mitad de la parcela.
+            return Boundary(polygon=Polygon())
+        return Boundary(polygon=box(new_minx, new_miny, new_maxx, new_maxy))
+
+    def medianera_boundary_segments(self) -> List[LineString]:
+        """Los segmentos de linde que son medianera (posicion ORIGINAL de
+        la parcela, no del area edificable ya encogida) -- usado por
+        `count_exterior_sides` para no contar contacto con estos lados
+        como contacto exterior real."""
+        minx, miny, maxx, maxy = self.boundary.polygon.bounds
+        segments = []
+        if "north" in self.medianera_sides:
+            segments.append(LineString([(minx, maxy), (maxx, maxy)]))
+        if "south" in self.medianera_sides:
+            segments.append(LineString([(minx, miny), (maxx, miny)]))
+        if "east" in self.medianera_sides:
+            segments.append(LineString([(maxx, miny), (maxx, maxy)]))
+        if "west" in self.medianera_sides:
+            segments.append(LineString([(minx, miny), (minx, maxy)]))
+        return segments

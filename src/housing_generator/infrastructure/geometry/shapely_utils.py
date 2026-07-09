@@ -5,7 +5,7 @@ dupliquen logica de particionado/interseccion cuando se anadan nuevas
 estrategias (CSP, genetico, etc.).
 """
 import math
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 from shapely.geometry import Polygon, LineString
 
 
@@ -61,12 +61,26 @@ def meets_minimum_width(polygon: Polygon, min_width_m: float) -> Optional[bool]:
     return min(width, height) >= min_width_m
 
 
-def count_exterior_sides(room_polygon: Polygon, lot_polygon: Polygon, min_contact_m: float = 0.3) -> Optional[int]:
+def count_exterior_sides(
+    room_polygon: Polygon,
+    lot_polygon: Polygon,
+    min_contact_m: float = 0.3,
+    excluded_segments: Optional[List[LineString]] = None,
+) -> Optional[int]:
     """Cuenta cuantos de los 4 lados de `room_polygon` tienen contacto
     real con el limite de `lot_polygon` (al menos `min_contact_m` de
     borde compartido -- umbral distinto y mayor que el de adyacencia
     interior entre estancias, 0.1m, confirmado por el usuario para
     contacto con el exterior).
+
+    `excluded_segments`: lados de la parcela que NO cuentan como
+    contacto exterior real aunque toquen `lot_polygon.boundary` --
+    retomado de docs/CONTINUIDAD.md ("vivienda pareada/adosada"): una
+    pared de medianera (`Lot.medianera_boundary_segments()`) no tiene
+    luz ni ventilacion propia, aunque geometricamente sea un "borde de
+    la parcela" igual que cualquier otro. `None` (por defecto) preserva
+    el comportamiento anterior sin cambios (vivienda aislada, todos los
+    lados de la parcela cuentan).
 
     Devuelve None (no verificable) si `room_polygon` no es rectangular,
     igual que el resto de utilidades de este modulo -- nunca se asume
@@ -78,6 +92,9 @@ def count_exterior_sides(room_polygon: Polygon, lot_polygon: Polygon, min_contac
     mrr = room_polygon.minimum_rotated_rectangle
     coords = list(mrr.exterior.coords)  # 5 puntos, el ultimo repite el primero
     lot_boundary = lot_polygon.boundary
+    if excluded_segments:
+        for seg in excluded_segments:
+            lot_boundary = lot_boundary.difference(seg.buffer(1e-6))
 
     count = 0
     for i in range(4):

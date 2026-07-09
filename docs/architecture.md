@@ -999,3 +999,35 @@ reales más, ambos en `AlturaLibreValidator`:
   hallazgos adicionales.
 
 Suite final: 295/295, `pyflakes` y `mypy` limpios.
+
+## Vivienda pareada/adosada (medianeras)
+
+- **[RESUELTO]** `Lot.medianera_sides: FrozenSet[str]` (subconjunto de
+  `{"north","south","east","west"}`, vacío por defecto = aislada, sin
+  cambio de comportamiento). Los lados de medianera no llevan
+  retranqueo (la edificación llega hasta el linde) y no cuentan como
+  contacto exterior real (`ExteriorContactValidator`) -- una pared de
+  medianera no tiene luz ni ventilación propia.
+- Requiere parcela rectangular de lados ortogonales (norte=+y, sur=-y,
+  este=+x, oeste=-x) -- convención establecida aquí mismo, no existía
+  antes (`entrance_side`/`street_side` eran metadatos descriptivos, sin
+  ninguna geometría conectada todavía).
+- `Lot.buildable_area` pasó de un `buffer(-x)` uniforme a un cálculo por
+  lados (bounds), para poder aplicar retranqueo asimétrico. **Caso
+  límite real encontrado al migrar**: un retranqueo excesivo con el
+  método antiguo colapsaba a área vacía vía el propio `buffer()`; el
+  nuevo cálculo por bounds, sin cuidado, producía un rectángulo con
+  coordenadas invertidas (área positiva falsa) en vez de colapsar --
+  corregido con una comprobación explícita `minx>=maxx or miny>=maxy`.
+- `count_exterior_sides` (shapely_utils) acepta `excluded_segments`
+  opcional -- lados del perímetro que no cuentan aunque geométricamente
+  se toquen. `Lot.medianera_boundary_segments()` calcula esos segmentos
+  en la posición ORIGINAL de la parcela (no la ya encogida).
+- Confirmado con generación real de extremo a extremo: vivienda adosada
+  en parcela estrecha (8m fachada, medianeras este/oeste) -- al menos
+  una estancia llega hasta cada linde de medianera (x=0 y x=8 exactos),
+  mientras que el retranqueo de 3m SÍ se respeta en norte/sur. Búsqueda
+  algo más difícil que el caso aislado equivalente (parcela más
+  restringida) -- 4000 iteraciones en vez de 3000 para la semilla de
+  prueba.
+- Suite final: 305/305, `pyflakes` y `mypy` limpios.
