@@ -19,10 +19,13 @@
 Sistema generativo de plantas residenciales en Python, cumplimiento del
 Decreto 29/2010 de Galicia (habitabilidad, modificado por Decreto 128/2023).
 Arquitectura hexagonal estricta. Generación por recocido simulado sobre un
-árbol de partición. 15 validadores normativos + multi-planta con escalera.
+árbol de partición. 18 validadores normativos + 1 combinador, multi-planta
+con escalera y contorno progresivo, vivienda aislada y pareada/adosada.
 
-**Estado en el momento de escribir esto**: 234/234 tests, 97% cobertura,
-15 commits de git, working tree limpio.
+**Estado en el momento de escribir esto**: 305/305 tests, 98% cobertura,
+33 commits de git, working tree limpio. Estas cifras quedarán obsoletas
+en cuanto se añada algo más -- si no coinciden con `git log --oneline | wc -l`
+y `pytest -q`, confiar en el comando, no en este número.
 
 ## Convención de documentación — evitar que esto se repita
 
@@ -138,6 +141,8 @@ src/housing_generator/
   interface/cli/     punto de entrada de línea de comandos
 
 docs/
+  GUIA_USO.md                como usar el proyecto (CLI, API Python, ejemplos verificados)
+  COMO_FUNCIONA.md           arquitectura y algoritmo, estado actual
   architecture.md            decisiones + auditorías, en orden cronológico
   relaciones_espaciales.md   catálogo de 120 pares de adyacencia + huecos de modelo
   niveles_plantas.md         niveles, escalera (CTE DB-SUA 1), bajantes
@@ -150,9 +155,10 @@ Para entender el estado real, **`docs/architecture.md` es la fuente de verdad**
 se encontró roto, y por qué. Merece la pena leerlo entero antes de tocar nada
 grande.
 
-## Los 15 validadores (todos en `infrastructure/algorithms/constraints/`)
+## Los 18 validadores normativos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
 
-Por planta (`build_per_floor_validators` en `container.py`): Adjacency,
+Por planta (`build_per_floor_validators` en `container.py`, 14 clases,
+17 instancias contando las 4 de `GroupingConstraintValidator`): Adjacency,
 NucleoHumedo, zonificación día/noche/servicio, EstanciaMinimumArea (Tabla 1),
 ServicioMinimumArea (Tabla 2), DormitorioArmario, TrasteroMinimumArea,
 AnchoLibreEstancia, AnchoLibrePasillo, AlturaLibre, ExteriorContact,
@@ -166,6 +172,10 @@ planta).
 Entre plantas consecutivas (parametrizados con la planta ya resuelta):
 EscaleraAlineacion (huella ≥90% de solape), NucleoHumedoVertical (bajantes).
 
+`CompositeConstraintValidator` agrupa todos los anteriores tras la misma
+interfaz -- no es una regla normativa en sí, es el combinador (14+2+2=18
+reglas). Detalle completo con tabla resumen en `docs/COMO_FUNCIONA.md`.
+
 ## Multi-planta — cómo funciona
 
 `GenerateBuildingUseCase.execute(program, lot)`: agrupa `program.rooms` por
@@ -174,9 +184,10 @@ MISMO generador de una sola planta (búsqueda independiente, no conjunta),
 pasando referencias fijas (huella de escalera, huellas húmedas) de la planta
 ya resuelta a la siguiente. `RoomType.STAIRCASE` conecta plantas.
 
-**Simplificación deliberada, no resuelta**: todas las plantas comparten el
-mismo `lot.buildable_area` (mismo contorno para todas). Reducir el contorno
-planta a planta queda pendiente si se retoma.
+**[RESUELTO]** El contorno edificable puede reducirse progresivamente
+planta a planta (`Lot.retranqueo_incremento_por_planta_m`, opcional --
+`None` por defecto preserva el comportamiento de mismo contorno para
+todas). Ver `docs/architecture.md`.
 
 ## Los tres huecos de modelo originales — TODOS resueltos
 
@@ -210,9 +221,9 @@ automáticamente y produce un layout válido. Hallazgo honesto: usar el
 catálogo completo es una búsqueda más difícil que los ejemplos curados
 a mano (más iteraciones/intentos de semilla necesarios) -- no es una
 contradicción del catálogo, solo un espacio de búsqueda más restringido.
-Todavía no está conectado como opción automática en `container.py`/CLI
-(la función existe y funciona, pero nadie la llama por defecto) --
-pendiente si se quiere ese último paso de integración.
+**[RESUELTO]** Conectado como opción automática real:
+`build_program_with_auto_adjacency` (domain/services) + `--auto-adjacency`
+en el CLI.
 
 ## Pendiente real, si se retoma
 
@@ -281,13 +292,22 @@ pendiente si se quiere ese último paso de integración.
   dinámica ya afinada. Se encontró porque rompió un test de multi-planta
   que no tenía relación alguna con restricciones blandas -- esa fue la
   señal de que algo estructural había cambiado, no un caso aislado.
+- **Este mismo documento (`CONTINUIDAD.md`) se quedó obsoleto varias
+  veces sobre sí mismo**, pese a ser el que exige no hacerlo: el título
+  de una sección decía "15 validadores" con una lista que ya sumaba 18;
+  dos secciones marcadas "RESUELTO" seguían describiendo como
+  "pendiente" algo ya resuelto en una ronda posterior; y las cifras del
+  encabezado (tests/cobertura/commits) llevaban varias rondas sin
+  actualizar. Ninguno de estos números se mantiene solo -- cada vez que
+  alguien pregunta "¿seguro que es lo único pendiente?", vale la pena
+  releer el documento entero, no solo la sección de pendientes.
 
 ## Cómo verificar que todo sigue en orden
 
 ```bash
 cd housing_generator
-python -m pytest -q                                          # deberia dar 234 passed
-python -m pytest --cov=housing_generator --cov-report=term-missing -q  # 97%
+python -m pytest -q                                          # deberia dar 305 passed (o mas)
+python -m pytest --cov=housing_generator --cov-report=term-missing -q  # 98% (o mas)
 python -m housing_generator.interface.cli.main --output /tmp/x.json    # CLI real
 git log --oneline | head -5                                   # historial reciente
 ```
