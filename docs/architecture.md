@@ -711,3 +711,25 @@ estamos"). Hallazgos reales, con evidencia, no solo confirmaciones:
   por nombre de clase directo).
 - Suite final: 276/276 (278 - 2 duplicados eliminados), pyflakes limpio
   en `src/` y `tests/`.
+
+## Depuración con mypy (comprobación de tipos estática, primera vez en el proyecto)
+
+- **[RESUELTO]** 17 errores de tipo, TODOS concentrados en
+  `partition_tree.py`, ninguno en el resto de 74 archivos. Causa raíz
+  única: `PartitionNode.first`/`.second`/`.room_id` son `Optional`, y
+  aunque el código mantiene por construcción la invariante "nodo hoja
+  ⟺ `room_id` establecido ⟺ `first`/`second` en `None`; nodo interno ⟺
+  lo contrario", Python no tiene un mecanismo de "tipos suma" nativo
+  para que `mypy` lo demuestre solo.
+- **Corregido con `assert` explícitos, no silenciando el aviso**: cada
+  punto donde se accede a `.first`/`.second`/`.room_id` tras comprobar
+  `is_leaf` ahora lleva un `assert` que documenta la invariante Y le da
+  a `mypy` la información de estrechamiento de tipo que necesita. No es
+  solo para `mypy` -- si la invariante se rompiera alguna vez de verdad
+  (un bug futuro en un movimiento nuevo del recocido, por ejemplo), da
+  un `AssertionError` claro en el sitio exacto, no un `AttributeError`
+  confuso en medio de la recursión. Extraído `_leaf_area()` como helper
+  compartido para no repetir el mismo assert en tres sitios distintos.
+- Confirmado sin cambio de comportamiento: 276/276 tests, sin tocar
+  ninguna lógica, solo defensas explícitas. `mypy src/` limpio en los
+  75 archivos tras la corrección.

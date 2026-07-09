@@ -45,11 +45,20 @@ class PartitionNode:
     def leaves(self) -> List["PartitionNode"]:
         if self.is_leaf:
             return [self]
+        # invariante mantenida por construccion (build_random_tree,
+        # random_neighbor): un nodo NO-hoja siempre tiene first/second.
+        # mypy no puede demostrarlo solo (Python no tiene "tipos suma"
+        # nativos para esto) -- el assert documenta la invariante Y le
+        # da a mypy la informacion de estrechamiento de tipo que necesita.
+        assert self.first is not None and self.second is not None, \
+            "Nodo interno sin first/second -- invariante del arbol violada"
         return self.first.leaves() + self.second.leaves()
 
     def internal_nodes(self) -> List["PartitionNode"]:
         if self.is_leaf:
             return []
+        assert self.first is not None and self.second is not None, \
+            "Nodo interno sin first/second -- invariante del arbol violada"
         return [self] + self.first.internal_nodes() + self.second.internal_nodes()
 
 
@@ -68,16 +77,26 @@ def build_random_tree(room_ids: List[str], rng: random.Random) -> PartitionNode:
     return PartitionNode(direction=direction, first=first, second=second)
 
 
+def _leaf_area(leaf: "PartitionNode", areas: Dict[str, float]) -> float:
+    """Area de una hoja -- helper compartido por place_tree y
+    _current_ratio, evita repetir el assert de invariante en cada sitio."""
+    assert leaf.room_id is not None, "Nodo no-hoja pasado a _leaf_area -- invariante violada"
+    return areas[leaf.room_id]
+
+
 def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float]) -> Dict[str, Polygon]:
     """Recorre el arbol y devuelve, para cada room_id, el rectangulo que
     le corresponde dentro de `rectangle`, proporcional al area total de
     estancias de cada subarbol en cada corte."""
     if node.is_leaf:
+        assert node.room_id is not None
         return {node.room_id: rectangle}
 
+    assert node.first is not None and node.second is not None, \
+        "Nodo interno sin first/second -- invariante del arbol violada"
     minx, miny, maxx, maxy = rectangle.bounds
-    first_area = sum(areas[leaf.room_id] for leaf in node.first.leaves())
-    second_area = sum(areas[leaf.room_id] for leaf in node.second.leaves())
+    first_area = sum(_leaf_area(leaf, areas) for leaf in node.first.leaves())
+    second_area = sum(_leaf_area(leaf, areas) for leaf in node.second.leaves())
     total = first_area + second_area or 1.0
     ratio = node.ratio_override if node.ratio_override is not None else (first_area / total)
 
@@ -107,8 +126,10 @@ def _current_ratio(node: PartitionNode, areas: Dict[str, float]) -> float:
     el punto de partida real para "deslizar" desde ahi, no un valor fijo."""
     if node.ratio_override is not None:
         return node.ratio_override
-    first_area = sum(areas[leaf.room_id] for leaf in node.first.leaves())
-    second_area = sum(areas[leaf.room_id] for leaf in node.second.leaves())
+    assert node.first is not None and node.second is not None, \
+        "Nodo interno sin first/second -- invariante del arbol violada"
+    first_area = sum(_leaf_area(leaf, areas) for leaf in node.first.leaves())
+    second_area = sum(_leaf_area(leaf, areas) for leaf in node.second.leaves())
     total = first_area + second_area or 1.0
     return first_area / total
 
