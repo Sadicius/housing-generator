@@ -1420,3 +1420,40 @@ abajo y dormitorios/baño arriba (patrón habitual).
   planta baja, sin `BEDROOM` ni `TOILET` ni `CORRIDOR`, programa mínimo
   completo.
 - Suite Python: 325/325 sin cambios (el HTML es independiente).
+
+## El bug real de las "curvas raras" (encontrado gracias a una captura de pantalla real)
+
+El usuario confirmó que los datos cargaban bien (resumen, zonas,
+estancias todos correctos) pero la representación gráfica mostraba
+formas curvas extrañas, no rectángulos limpios -- con una captura de
+pantalla real adjunta. Ninguna de las verificaciones anteriores
+(`jsdom`, `node --check`) podía detectar esto: todas comprueban
+DATOS y AUSENCIA DE ERRORES, nunca el aspecto visual real.
+
+- **Intentado instalar Chromium real (Playwright)** para reproducir
+  exactamente lo que ve el usuario -- bloqueado por las restricciones
+  de red del entorno (dominios no incluidos en la lista permitida).
+  Sin poder confirmar visualmente en un navegador real, se recurrió a
+  inspección directa del SVG generado carácter a carácter.
+- **[RESUELTO] Causa raíz encontrada**: el `viewBox` del SVG del plano
+  está en METROS (coordenadas reales de la vivienda), no en píxeles --
+  pero `.room-rect{stroke-width:2}` y `.door-mark{stroke-width:5}`
+  se escribieron pensando en píxeles razonables para pantalla. Al
+  interpretarse en las mismas unidades que el resto del SVG, un
+  grosor de línea de "2" o "5" se convertía en **2 o 5 METROS de
+  grosor** -- más grueso que estancias enteras (la más pequeña del
+  caso real medía 0.49m de alto). Con `stroke-linecap:round` en las
+  marcas de puerta, esas líneas gigantescas generaban círculos/curvas
+  enormes que se comían el plano -- exactamente lo que muestra la
+  captura de pantalla del usuario (un "mordisco" circular en el
+  Recibidor, una cuña con borde curvo en la esquina).
+- Corregido a valores en metros razonables (`0.03`/`0.08`, 3cm/8cm).
+  **Confirmado cuantitativamente, no solo visualmente** (dado que no
+  hay navegador real disponible en este entorno): medido el porcentaje
+  de píxeles del color de borde en una imagen generada con los valores
+  ANTES (2/5) y DESPUÉS (0.03/0.08) del arreglo, usando los mismos 9
+  datos exactos del caso real del usuario -- 73.2% de la imagen era
+  color de borde con el bug, baja a 2.0% (proporción normal de bordes
+  finos) tras corregirlo.
+- Añadido un comentario de advertencia explícito en el propio CSS para
+  que este error de unidades no se repita en el futuro.

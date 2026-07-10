@@ -265,11 +265,22 @@ table.matrix th.dim{opacity:.25;}
 .plano-stage{display:grid; grid-template-columns:1fr 260px; gap:20px;}
 .plano-canvas{border:1px solid var(--line); border-radius:4px; background:var(--bg-panel); padding:16px; min-height:400px;}
 .plano-canvas svg{width:100%; height:auto; display:block;}
-.room-rect{stroke:var(--bg); stroke-width:2;}
+/* OJO: el viewBox del SVG del plano esta en METROS (coordenadas reales
+   de la vivienda), no en pixeles -- stroke-width tambien se interpreta
+   en esas mismas unidades. BUG REAL que paso desapercibido hasta que
+   el usuario mando una captura de pantalla real: un stroke-width de "2"
+   o "5" (pensado como pixeles razonables) se convertia en 2 o 5 METROS
+   de grosor de linea -- mas grueso que estancias enteras, con
+   stroke-linecap:round generando circulos/curvas gigantes que se
+   comian el plano. Verificado cuantitativamente (no solo visualmente):
+   con el bug, el 73% de los pixeles de la imagen eran del color de
+   borde; corregido a valores en metros razonables (3cm/8cm), baja al
+   2%. Cualquier stroke-width nuevo en este SVG debe pensarse en METROS. */
+.room-rect{stroke:var(--bg); stroke-width:0.03;}
 .room-label{font-family:'IBM Plex Mono',monospace; text-anchor:middle; dominant-baseline:middle; fill:#0d1b2a; pointer-events:none;}
 .room-label .name{font-weight:600;}
 .room-label .area{opacity:.75;}
-.door-mark{stroke:var(--bg); stroke-width:5; stroke-linecap:round;}
+.door-mark{stroke:var(--bg); stroke-width:0.08; stroke-linecap:round;}
 .plano-side{display:flex; flex-direction:column; gap:16px;}
 .plano-box{border:1px dashed var(--line); border-radius:4px; padding:14px 16px;}
 .plano-box h3{font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); margin:0 0 10px;}
