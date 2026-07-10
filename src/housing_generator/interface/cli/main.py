@@ -3,7 +3,7 @@ el generador. Sirve como demostracion end-to-end de la arquitectura."""
 import argparse
 from shapely.geometry import box
 
-from housing_generator.config.container import build_generate_layout_use_case
+from housing_generator.config.container import build_generate_layout_use_case, build_generate_building_use_case
 from housing_generator.application.dto.generation_request import GenerationRequest
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.room import Room
@@ -14,6 +14,7 @@ from housing_generator.domain.value_objects.adjacency import AdjacencyRequiremen
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
 from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
 from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
+from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
 
 
 def build_sample_program(auto_adjacency: bool = False) -> Program:
@@ -73,7 +74,36 @@ def main():
              "(44 en vez de 6 para las mismas 11 estancias), busqueda mas dificil, "
              "puede necesitar --max-iterations mayor o probar otra --seed.",
     )
+    parser.add_argument(
+        "--import-seleccion", metavar="RUTA", default=None,
+        help="Importar 'seleccion_plantas.json' (exportacion del dashboard) en vez del "
+             "programa de ejemplo -- genera un edificio multi-planta real. LIMITACION "
+             "HONESTA: el JSON es solo una seleccion de tipos por planta (nunca cuenta "
+             "ni areas reales), asi que el Program resultante usa areas genericas por "
+             "defecto (ver AREAS_POR_DEFECTO_M2) -- revisar antes de usar en un proyecto "
+             "real, tal como advierte el propio dashboard al exportar. Ignora "
+             "--auto-adjacency (las adyacencias siempre se derivan del catalogo aqui).",
+    )
     args = parser.parse_args()
+
+    if args.import_seleccion:
+        program = import_seleccion_plantas(args.import_seleccion)
+        lot = build_sample_lot()
+        use_case = build_generate_building_use_case(
+            adjacency_requirements=program.adjacency_requirements,
+            seed=args.seed,
+            max_iterations=args.max_iterations,
+        )
+        building = use_case.execute(program, lot)
+
+        for level, layout in building.floors.items():
+            output_path = args.output.replace(".json", f"_{level.value}.json")
+            JsonLayoutRepository().save(layout, output_path, adjacency_requirements=program.adjacency_requirements)
+            print(f"Planta '{level.value}' generada y guardada en {output_path}")
+            for room in layout.rooms:
+                b = room.boundary.polygon.bounds
+                print(f"  - {room.name:22s} zona={room.zone.value:8s} bounds=({b[0]:.1f}, {b[1]:.1f}, {b[2]:.1f}, {b[3]:.1f})")
+        return
 
     program = build_sample_program(auto_adjacency=args.auto_adjacency)
     lot = build_sample_lot()

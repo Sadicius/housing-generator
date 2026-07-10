@@ -81,3 +81,39 @@ def test_cli_with_auto_adjacency_as_a_real_subprocess(tmp_path):
     # curado a mano, por coincidencia), asi que 4 es lo correcto aqui,
     # no una senal de que el catalogo aporte mas puertas que lo manual.
     assert len(data["doors"]) == 4
+
+
+def test_cli_with_import_seleccion_as_a_real_subprocess(tmp_path):
+    # retomado de docs/CONTINUIDAD.md, ultimo pendiente real: importador
+    # JSON (exportacion del dashboard) -> Program real, conectado tambien
+    # como opcion real del CLI, no solo una funcion Python suelta.
+    import json as json_module
+
+    seleccion_path = tmp_path / "seleccion_plantas.json"
+    seleccion_path.write_text(json_module.dumps({
+        "levels": {
+            "PLANTA_BAJA": ["LIVING_ROOM", "KITCHEN", "ENTRANCE_HALL", "LAUNDRY", "DRYING_AREA", "STORAGE"],
+            "PLANTA_SUPERIOR": ["BEDROOM", "MASTER_BEDROOM", "BATHROOM", "CORRIDOR"],
+        },
+    }), encoding="utf-8")
+    output_path = tmp_path / "edificio.json"
+
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "housing_generator.interface.cli.main",
+            "--import-seleccion", str(seleccion_path), "--output", str(output_path),
+            "--max-iterations", "4000", "--seed", "1",
+        ],
+        capture_output=True, text=True, timeout=60,
+    )
+
+    assert result.returncode == 0, f"El CLI con --import-seleccion fallo: {result.stderr}"
+
+    pb_path = tmp_path / "edificio_planta_baja.json"
+    ps_path = tmp_path / "edificio_planta_superior.json"
+    assert pb_path.exists() and ps_path.exists()
+
+    data_pb = json.loads(pb_path.read_text(encoding="utf-8"))
+    data_ps = json.loads(ps_path.read_text(encoding="utf-8"))
+    assert len(data_pb["rooms"]) == 6
+    assert len(data_ps["rooms"]) == 4

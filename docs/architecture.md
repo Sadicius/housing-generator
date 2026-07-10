@@ -1031,3 +1031,31 @@ Suite final: 295/295, `pyflakes` y `mypy` limpios.
   restringida) -- 4000 iteraciones en vez de 3000 para la semilla de
   prueba.
 - Suite final: 305/305, `pyflakes` y `mypy` limpios.
+
+## Importador JSON → Program real (último pendiente de CONTINUIDAD.md, resuelto)
+
+- **[RESUELTO]** `infrastructure/persistence/seleccion_plantas_importer.py`:
+  `import_seleccion_plantas(source, areas_m2=None)`, construido contra
+  el formato REAL de exportación del dashboard (verificado leyendo
+  `exportSectionSelection()` en el propio HTML, no asumido) --
+  `{"levels": {"PLANTA_BAJA": ["LIVING_ROOM", ...], ...}}`, con claves
+  en los NOMBRES del enum en mayúsculas, no los valores en minúscula.
+- **Limitación honesta, heredada del propio formato** (el dashboard ya
+  lo advierte en su campo "nota" al exportar): el JSON es una selección
+  de TIPOS por planta, no un programa completo -- nunca más de una
+  estancia por (tipo, planta), sin áreas reales. El importador usa
+  `AREAS_POR_DEFECTO_M2` (valores genéricos razonables) en vez de
+  fingir resolver algo que el formato de origen no contiene.
+  `generate_adjacency_requirements` sí deriva las relaciones de
+  adyacencia por completo, sin esta limitación.
+- Conectado también como opción real del CLI (`--import-seleccion`),
+  no solo función Python suelta -- usa `GenerateBuildingUseCase`
+  (multi-planta), guarda un JSON por planta.
+- Confirmado con generación real de extremo a extremo, ambos casos: una
+  selección completa genera un edificio válido; una selección
+  incompleta (sin circulación en una planta con baño) falla con mensaje
+  claro, no genera algo incorrecto en silencio -- mismo principio de
+  "nunca aprobar en silencio" que el resto del proyecto.
+- Suite final: 315/315, `pyflakes` y `mypy` limpios.
+
+Con esto, `docs/CONTINUIDAD.md` queda sin pendientes reales conocidos.

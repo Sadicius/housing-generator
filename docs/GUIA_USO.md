@@ -251,9 +251,31 @@ en un navegador, sin instalar nada. Permite explorar:
 - Qué tipos de estancia son habituales en cada planta
 - Fichas descriptivas por tipo de estancia
 
-Es una herramienta de exploración del catálogo, no está conectada al
-generador Python — para usar las mismas relaciones en una generación
-real, usar `build_program_with_auto_adjacency` (ver arriba).
+La pestaña de sección vertical exporta `seleccion_plantas.json` (qué
+tipos de estancia hay en cada planta) — importable directamente:
+
+```python
+from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
+
+program = import_seleccion_plantas("seleccion_plantas.json")
+```
+
+O desde el CLI:
+```bash
+python -m housing_generator.interface.cli.main --import-seleccion seleccion_plantas.json --output edificio.json
+```
+
+**Limitación honesta, heredada del propio formato exportado** (el
+dashboard ya lo advierte al exportar): el JSON es una selección de
+*tipos* por planta, no un programa completo — nunca más de una
+estancia por tipo y planta (aunque quieras dos dormitorios en la misma
+planta), y sin áreas reales (usa valores genéricos de
+`AREAS_POR_DEFECTO_M2`, pensados para revisar y ajustar, no para usar
+tal cual). Las relaciones de adyacencia sí se derivan del todo,
+automáticamente, del catálogo formalizado. Si la selección no incluye
+`CORRIDOR`/`ENTRANCE_HALL` en una planta con baño, la generación falla
+con un mensaje claro (no genera algo incorrecto en silencio) — añadir
+la circulación que falte y reintentar.
 
 ## Errores más comunes
 

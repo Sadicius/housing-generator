@@ -22,10 +22,10 @@ Arquitectura hexagonal estricta. Generación por recocido simulado sobre un
 árbol de partición. 18 validadores normativos + 1 combinador, multi-planta
 con escalera y contorno progresivo, vivienda aislada y pareada/adosada.
 
-**Estado en el momento de escribir esto**: 305/305 tests, 98% cobertura,
-33 commits de git, working tree limpio. Estas cifras quedarán obsoletas
-en cuanto se añada algo más -- si no coinciden con `git log --oneline | wc -l`
-y `pytest -q`, confiar en el comando, no en este número.
+**Estado en el momento de escribir esto**: 315/315 tests, working tree
+limpio. Estas cifras quedarán obsoletas en cuanto se añada algo más --
+si no coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar
+en el comando, no en este número.
 
 ## Convención de documentación — evitar que esto se repita
 
@@ -225,13 +225,28 @@ contradicción del catálogo, solo un espacio de búsqueda más restringido.
 `build_program_with_auto_adjacency` (domain/services) + `--auto-adjacency`
 en el CLI.
 
+## Importador JSON → Program real — RESUELTO
+
+`infrastructure/persistence/seleccion_plantas_importer.py`:
+`import_seleccion_plantas(source, areas_m2=None)`, construido contra el
+formato REAL de exportación del dashboard (verificado en el propio
+HTML, no asumido). Limitación honesta heredada del formato: selección
+de tipos por planta, no programa completo (nunca más de una estancia
+por tipo/planta, áreas genéricas por defecto a revisar) -- las
+adyacencias sí se derivan del todo, sin esa limitación. Conectado
+también en el CLI (`--import-seleccion`). Confirmado con generación
+real de extremo a extremo, éxito y fallo honesto (selección incompleta
+falla con mensaje claro, no en silencio).
+
 ## Pendiente real, si se retoma
 
-- **Importador JSON (exportación de la sección vertical del dashboard) →
-  Program real** — discutido, no construido. Con el catálogo ya
-  formalizado y conectado (`--auto-adjacency`), derivaría
-  `Obligatorio`/`Preferencia` automáticamente, no habría que construir
-  esa parte desde cero.
+Ninguno conocido en el momento de escribir esto -- y este número, como
+cualquier otro de este documento, se quedará obsoleto en cuanto haya
+un incremento nuevo (ver "Cosas aprendidas por las malas" más abajo).
+Antes de asumir que sigue siendo así, releer el documento entero, no
+solo esta sección. El único punto aparcado deliberadamente es
+`SolarExposureValidator`, documentado abajo con referencia externa si
+se retoma -- no es un pendiente activo, es una decisión de alcance.
 - **`SolarExposureValidator`** (asoleamiento/orientación) — sigue
   deliberadamente aparcado, pero con una referencia externa concreta
   encontrada si se retoma: `github.com/SeanWong17/building-sunlight-simulator`
