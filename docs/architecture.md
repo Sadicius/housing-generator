@@ -1166,3 +1166,60 @@ Fichas (Sección ya revisada/mejorada en la ronda previa).
   en Node contra el `PAIRS`/`classify()` reales del propio archivo, no
   una copia simulada.
 - Suite Python: 321/321 sin cambios (el HTML es independiente).
+
+## Visor de planos (nuevo) + rediseño de sinergias
+
+A petición explícita del usuario: el diagrama de red de la pestaña de
+sinergias era demasiado complejo para leer de un vistazo (hasta 85
+aristas entre 16 nodos), y sobre todo -- "todavía no tenemos nada para
+poder trabajar realmente" -- el proyecto no tenía ninguna forma de
+**ver** el resultado generado como un plano, solo JSON con coordenadas.
+
+- **[RESUELTO] `docs/visualizador/plano_viewer.html` (nuevo)**: carga el
+  JSON real que produce el CLI y dibuja la planta -- rectángulos por
+  estancia coloreados por zona, nombre y superficie, marcas de puerta
+  en las paredes compartidas reales. Soporta multi-planta (varios
+  archivos a la vez, detecta la planta por nombre de archivo, pestañas).
+  Verificación exhaustiva sin navegador disponible en este entorno:
+  - Sintaxis JS con `node --check`.
+  - Lógica de bounding box y de `sharedWallMidpoint` (punto medio de
+    pared compartida entre dos rectángulos, sin librería de geometría
+    en el cliente) ejecutada en Node contra un JSON real generado por
+    el CLI, no datos simulados.
+  - Verificación cruzada real: las 4 puertas del ejemplo real tienen
+    longitud de pared compartida ≥1.0m, exactamente el mismo umbral
+    que usa `GeometryAdjacencyGraphBuilder` en Python -- confirma que
+    la representación visual de puertas es consistente con la regla
+    real, no solo plausible.
+  - Instalado `cairosvg` para renderizar el SVG a PNG y verlo de
+    verdad, no solo confiar en que el código "debería" verse bien.
+  - **Bug real encontrado con esta verificación, no a simple vista**:
+    el tamaño de fuente de las etiquetas solo consideraba las
+    dimensiones de la estancia, nunca la LONGITUD del nombre -- con
+    "Dormitorio principal" (el nombre más largo del proyecto) el texto
+    desbordaba su propio rectángulo incluso en el ejemplo real
+    generado (5.93m de texto estimado vs 5.33m disponibles). Corregido
+    tomando el mínimo entre "tamaño según dimensiones" y "tamaño que
+    haría caber el texto en el 85% del ancho disponible" -- confirmado
+    con el mismo caso adverso tras el arreglo.
+- Rediseño del diagrama de red de Sinergias (demasiado denso con las
+  ~85 aristas no neutras del catálogo completo, según feedback directo
+  del usuario) -- ver la siguiente sección de este documento, se aborda
+  a continuación en el mismo incremento.
+
+## Rediseño del diagrama de red de sinergias
+
+- **[RESUELTO]** Filtros de tipo de relación (checkboxes) sobre el
+  diagrama de red -- por defecto solo se muestran las relaciones
+  ESTRUCTURALES (`Obligatorio cerca/lejos` + `Ya cubierto`), las de
+  `Preferencia` se activan aparte. **Confirmado con conteo real, no
+  estimado**: de 83 aristas no neutras del catálogo completo a solo 6
+  con el filtro por defecto -- reducción real de la densidad visual,
+  no cosmética, y sin perder ningún dato (todo sigue disponible,
+  activable). El resaltado al hacer clic en un nodo (`hasNonNeutralEdge`)
+  también respeta el filtro activo, para que sea consistente con lo
+  que de verdad se ve en cada momento.
+- Verificado sin navegador disponible: sintaxis con `node --check`,
+  conteo de aristas con el filtro por defecto vs todo activado
+  ejecutado en Node contra el `PAIRS`/`classify()` reales del archivo.
+- Suite Python: 321/321 sin cambios (el HTML es independiente).
