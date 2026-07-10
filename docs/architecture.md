@@ -1341,3 +1341,29 @@ confirmar render, cambio de pestaña de planta, y datos correctos.
   real-3D-house-animation (animación decorativa) confirmados de nuevo
   como no aplicables a un plano 2D.
 - Suite final: 323/323, `pyflakes` y `mypy` limpios.
+
+## Reintento automático de semillas en --import-seleccion (caso real del usuario)
+
+El usuario subió su `seleccion_plantas.json` real (planta baja con
+salón/comedor/cocina/dormitorio principal/baño/recibidor/lavadero/
+tendedero/almacén, sin `CORRIDOR`) y `--import-seleccion` con la
+semilla por defecto (1) falló: `BanoAccesoGeneralValidator` no
+encontraba una colocación donde el baño quedara junto a circulación.
+Probadas semillas 1-4 directamente: la 1-3 fallan, la 4 converge --
+**dificultad de búsqueda real, no un problema estructural** del programa.
+
+- **[RESUELTO] `--retry-seeds` (nuevo, por defecto 5)**: con
+  `--import-seleccion`, el CLI ahora prueba automáticamente semillas
+  consecutivas (`--seed`, `--seed+1`, `--seed+2`...) hasta que una
+  converja o se agoten los intentos, informando qué semilla funcionó.
+  Justificación explícita en el propio `--help`: los programas de
+  `--import-seleccion` no están curados a mano (a diferencia del
+  ejemplo del CLI), así que necesitan más margen de búsqueda de forma
+  HABITUAL, no como excepción -- el propio caso real del usuario lo
+  confirma.
+- Confirmado con el escenario EXACTO que falló al usuario (subprocess
+  real, no simulado): con `--retry-seeds` por defecto, converge solo,
+  informando "semilla 1 no convergió, funcionó con semilla 4 tras 4
+  intentos". Con `--retry-seeds 1` (reintento desactivado), falla con
+  un mensaje claro que dice cuántas semillas se probaron.
+- Suite final: 325/325, `pyflakes` y `mypy` limpios.

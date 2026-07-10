@@ -309,7 +309,10 @@ a veces con la misma configuración**
 → Probablemente dificultad de búsqueda, no un problema de datos —
 aumentar `max_iterations` o probar otra `seed`. Esto es especialmente
 común con `--auto-adjacency` (ver aviso más arriba) o con parcelas muy
-ajustadas de tamaño.
+ajustadas de tamaño. Con `--import-seleccion` esto ya se maneja solo
+(`--retry-seeds`, 5 intentos por defecto, informa qué semilla funcionó)
+-- confirmado con un caso real donde la semilla 1 no convergía y la 4
+sí, sin que hiciera falta buscarla a mano.
 
 **Cambié algo del generador (movimientos, restricciones) y una
 semilla que antes funcionaba ya no converge**

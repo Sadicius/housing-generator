@@ -117,3 +117,83 @@ def test_cli_with_import_seleccion_as_a_real_subprocess(tmp_path):
     data_ps = json.loads(ps_path.read_text(encoding="utf-8"))
     assert len(data_pb["rooms"]) == 6
     assert len(data_ps["rooms"]) == 4
+
+
+def test_cli_retries_seeds_automatically_when_the_first_one_does_not_converge(tmp_path):
+    # retomado de un caso real: un usuario cargo un seleccion_plantas.json
+    # real (planta baja con salon/comedor/cocina/dorm.ppal/bano/recibidor/
+    # lavadero/tendedero/almacen, SIN corridor) y la semilla 1 (la que
+    # usa el CLI por defecto) no convergia -- la semilla 4 si. Confirma
+    # que ahora el CLI reintenta solo, sin que el usuario tenga que
+    # buscar una semilla a mano.
+    import json as json_module
+
+    seleccion_path = tmp_path / "seleccion_plantas.json"
+    seleccion_path.write_text(json_module.dumps({
+        "version": 2,
+        "levels": {
+            "PLANTA_BAJA": [
+                {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
+                {"type": "DINING_ROOM", "count": 1, "area_m2": 14},
+                {"type": "KITCHEN", "count": 1, "area_m2": 10},
+                {"type": "MASTER_BEDROOM", "count": 1, "area_m2": 15},
+                {"type": "BATHROOM", "count": 1, "area_m2": 5.5},
+                {"type": "ENTRANCE_HALL", "count": 1, "area_m2": 4.5},
+                {"type": "LAUNDRY", "count": 1, "area_m2": 3},
+                {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
+                {"type": "STORAGE", "count": 1, "area_m2": 3},
+            ],
+        },
+    }), encoding="utf-8")
+    output_path = tmp_path / "edificio.json"
+
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "housing_generator.interface.cli.main",
+            "--import-seleccion", str(seleccion_path), "--output", str(output_path),
+            "--max-iterations", "5000", "--seed", "1",
+        ],
+        capture_output=True, text=True, timeout=90,
+    )
+
+    assert result.returncode == 0, f"El CLI fallo pese al reintento automatico: {result.stderr}"
+    assert "no convergio" in result.stdout  # confirma que de verdad reintento, no que acerto a la primera
+    assert (tmp_path / "edificio_planta_baja.json").exists()
+
+
+def test_cli_fails_clearly_when_retry_seeds_is_exhausted(tmp_path):
+    # con retry_seeds=1 (sin reintento), el mismo escenario que arriba
+    # SI debe fallar con la semilla 1 -- confirma que el mensaje de
+    # fallo tras agotar los reintentos es claro, no una traza confusa.
+    import json as json_module
+
+    seleccion_path = tmp_path / "seleccion_plantas.json"
+    seleccion_path.write_text(json_module.dumps({
+        "version": 2,
+        "levels": {
+            "PLANTA_BAJA": [
+                {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
+                {"type": "DINING_ROOM", "count": 1, "area_m2": 14},
+                {"type": "KITCHEN", "count": 1, "area_m2": 10},
+                {"type": "MASTER_BEDROOM", "count": 1, "area_m2": 15},
+                {"type": "BATHROOM", "count": 1, "area_m2": 5.5},
+                {"type": "ENTRANCE_HALL", "count": 1, "area_m2": 4.5},
+                {"type": "LAUNDRY", "count": 1, "area_m2": 3},
+                {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
+                {"type": "STORAGE", "count": 1, "area_m2": 3},
+            ],
+        },
+    }), encoding="utf-8")
+    output_path = tmp_path / "edificio.json"
+
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "housing_generator.interface.cli.main",
+            "--import-seleccion", str(seleccion_path), "--output", str(output_path),
+            "--max-iterations", "5000", "--seed", "1", "--retry-seeds", "1",
+        ],
+        capture_output=True, text=True, timeout=60,
+    )
+
+    assert result.returncode != 0
+    assert "No se pudo generar tras probar 1 semillas" in result.stderr

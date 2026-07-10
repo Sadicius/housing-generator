@@ -12,6 +12,7 @@ from housing_generator.domain.value_objects.dimensions import Dimensions
 from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
+from housing_generator.domain.exceptions import LayoutGenerationError
 from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
 from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
 from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
@@ -84,17 +85,45 @@ def main():
              "real, tal como advierte el propio dashboard al exportar. Ignora "
              "--auto-adjacency (las adyacencias siempre se derivan del catalogo aqui).",
     )
+    parser.add_argument(
+        "--retry-seeds", type=int, default=5,
+        help="Con --import-seleccion, cuantas semillas distintas probar automaticamente "
+             "(empezando en --seed, incrementando de 1 en 1) antes de rendirse -- "
+             "retomado de un caso real: la primera semilla de un programa concreto no "
+             "convergio, la 4a si. Los programas que salen de --import-seleccion no estan "
+             "curados a mano (a diferencia del ejemplo del CLI), asi que necesitan mas "
+             "margen de busqueda de forma habitual, no como excepcion. Poner a 1 para "
+             "desactivar el reintento y usar solo --seed tal cual.",
+    )
     args = parser.parse_args()
 
     if args.import_seleccion:
         program = import_seleccion_plantas(args.import_seleccion)
         lot = build_sample_lot()
-        use_case = build_generate_building_use_case(
-            adjacency_requirements=program.adjacency_requirements,
-            seed=args.seed,
-            max_iterations=args.max_iterations,
-        )
-        building = use_case.execute(program, lot)
+
+        building = None
+        last_error = None
+        for attempt in range(max(1, args.retry_seeds)):
+            seed = args.seed + attempt
+            use_case = build_generate_building_use_case(
+                adjacency_requirements=program.adjacency_requirements,
+                seed=seed,
+                max_iterations=args.max_iterations,
+            )
+            try:
+                building = use_case.execute(program, lot)
+                if attempt > 0:
+                    print(f"(semilla {args.seed} no convergio, funciono con semilla {seed} "
+                          f"tras {attempt + 1} intentos)")
+                break
+            except LayoutGenerationError as e:
+                last_error = e
+        if building is None:
+            raise SystemExit(
+                f"No se pudo generar tras probar {args.retry_seeds} semillas "
+                f"(desde {args.seed} hasta {args.seed + args.retry_seeds - 1}). "
+                f"Ultimo error: {last_error}"
+            )
 
         for level, layout in building.floors.items():
             output_path = args.output.replace(".json", f"_{level.value}.json")
