@@ -1223,3 +1223,49 @@ poder trabajar realmente" -- el proyecto no tenía ninguna forma de
   conteo de aristas con el filtro por defecto vs todo activado
   ejecutado en Node contra el `PAIRS`/`classify()` reales del archivo.
 - Suite Python: 321/321 sin cambios (el HTML es independiente).
+
+## Corrección de feedback real del usuario: fusión, colisión de nombres, y validación real de áreas
+
+El usuario probó lo construido y encontró tres problemas reales, no
+hipotéticos: (1) el selector de archivos del visor no funcionaba de
+verdad; (2) prefería una pestaña del dashboard existente, no un HTML
+nuevo; (3) las áreas editables no avisaban si no se ajustaban a los
+requisitos reales (Tabla 1/2) según el número de estancias.
+
+- **[RESUELTO] Fusión real, no solo copiar y pegar**: antes de fusionar
+  `plano_viewer.html` en `relaciones_espaciales.html`, comparados TODOS
+  los nombres globales (`let`/`const`/`function`) y variables CSS de
+  ambos archivos. **Encontrada una colisión real**: `FLOORS` existía en
+  los dos archivos con significados completamente distintos (catálogo
+  de tipos por planta vs. archivos de plano cargados) -- si se hubiera
+  fusionado sin comprobar, una declaración habría sobreescrito
+  silenciosamente a la otra. Renombrado a `LOADED_PLANS`/`ACTIVE_PLAN`
+  en el visor. Variables CSS compartidas (`--bg`, `--line`, `--ink`,
+  `--cyan`...) confirmadas con el mismo valor exacto antes de
+  reutilizarlas sin duplicar.
+- **Instalado `jsdom`** (no disponible hasta ahora) para poder cargar el
+  HTML real completo, ejecutar sus scripts de verdad, y simular
+  interacción real del usuario (clic, selección de archivo con un
+  `File` real, evento `change` real) -- una verificación mucho más
+  profunda que `node --check` (que solo valida sintaxis, nunca
+  comportamiento en tiempo de ejecución contra un DOM real). Confirmado
+  sin errores en la carga inicial, las 5 pestañas existen y son
+  clicables, el selector de archivo fusionado carga y renderiza
+  correctamente, y la pestaña de sección vertical (que depende del
+  `FLOORS` real, el catálogo) sigue intacta tras la fusión.
+- **[RESUELTO] Validación real de áreas contra Tabla 1/2**: portadas a
+  JS las tablas EXACTAS de `estancia_minimum_area_validator.py` y
+  `servicio_minimum_area_validator.py` (mismos valores literales, no
+  aproximados). El campo de área se marca en rojo si el valor declarado
+  no alcanza el mínimo real -- calculado sobre TODAS las estancias
+  seleccionadas en TODAS las plantas a la vez (mismo criterio que
+  `GenerateBuildingUseCase`, no solo la planta actual), recalculado en
+  vivo cada vez que cambia cualquier cantidad o área. **Verificado con
+  un escenario dinámico real, no solo un caso estático**: un salón de
+  28m² pasa como única estancia (mínimo 25m² para 1 estancia); al
+  añadir un dormitorio de 10m², el total pasa a 2 estancias (fila
+  Tabla 1 distinta, [16,12]) y el dormitorio (puesto 2, mínimo 12m²)
+  correctamente pasa a mostrar aviso -- confirma que el recálculo
+  dinámico funciona de verdad, no solo en el momento de seleccionar.
+- Retirado `plano_viewer.html` como archivo independiente, ya fusionado.
+- Suite Python: 321/321 sin cambios (el HTML es independiente).

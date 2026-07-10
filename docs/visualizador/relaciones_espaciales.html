@@ -26,6 +26,14 @@
   --pa: #d98e4a;   /* preferencia alejar */
   --n:  #3d5266;   /* neutro */
   --cond:#8367c7;  /* condicional */
+
+  --zone-day: #e8b84a;
+  --zone-night: #6f8fd9;
+  --zone-service: #d9824a;
+  --zone-circulation: #4a7d8c;
+  --ok: #4ecb87;
+  --warn: #d98e4a;
+  --bad: #e4572e;
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;}
@@ -191,6 +199,7 @@ table.matrix th.dim{opacity:.25;}
 }
 .chip-controls input:focus{outline:none; border-color:var(--cyan);}
 .chip-controls .unit{font-size:9.5px; color:var(--ink-faint);}
+.chip-controls input.area-warn{border-color:var(--bad); color:var(--bad); background:rgba(228,87,46,.12);}
 .level-empty{color:var(--ink-faint); font-size:11px; font-family:'IBM Plex Mono',monospace; font-style:italic;}
 .section-summary{
   display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; padding:10px 14px;
@@ -208,6 +217,47 @@ table.matrix th.dim{opacity:.25;}
 /* ---------- fichas ---------- */
 .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px;}
 .card{border:1px solid var(--line); background:var(--bg-panel); padding:16px 18px; transition:border-color .15s;}
+
+/* ---- visor de plano ---- */
+.plano-sub{color:var(--ink-dim); font-size:13px; margin-bottom:16px; max-width:720px; line-height:1.5;}
+.plano-sub code{background:var(--bg-panel); padding:1px 5px; border-radius:2px; font-family:'IBM Plex Mono',monospace;}
+.plano-loader{
+  border:1px dashed var(--line); border-radius:4px; padding:16px 20px; margin-bottom:16px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.plano-loader input[type=file]{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-dim);}
+.floor-tabs{display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;}
+.floor-tab{
+  font-family:'IBM Plex Mono',monospace; font-size:12px; padding:7px 14px;
+  border:1px solid var(--line); background:transparent; color:var(--ink-dim);
+  cursor:pointer; border-radius:2px;
+}
+.floor-tab.active{border-color:var(--cyan); color:var(--cyan); background:rgba(127,216,232,.1);}
+.floor-tab .badge{display:inline-block; margin-left:6px; padding:1px 6px; border-radius:8px; font-size:10px;}
+.floor-tab .badge.ok{background:var(--ok); color:#0d1b2a;}
+.floor-tab .badge.bad{background:var(--bad); color:#0d1b2a;}
+.plano-stage{display:grid; grid-template-columns:1fr 260px; gap:20px;}
+.plano-canvas{border:1px solid var(--line); border-radius:4px; background:var(--bg-panel); padding:16px; min-height:400px;}
+.plano-canvas svg{width:100%; height:auto; display:block;}
+.room-rect{stroke:var(--bg); stroke-width:2;}
+.room-label{font-family:'IBM Plex Mono',monospace; text-anchor:middle; dominant-baseline:middle; fill:#0d1b2a; pointer-events:none;}
+.room-label .name{font-weight:600;}
+.room-label .area{opacity:.75;}
+.door-mark{stroke:var(--bg); stroke-width:5; stroke-linecap:round;}
+.plano-side{display:flex; flex-direction:column; gap:16px;}
+.plano-box{border:1px dashed var(--line); border-radius:4px; padding:14px 16px;}
+.plano-box h3{font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); margin:0 0 10px;}
+.plano-stat{display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink-dim); margin-bottom:5px;}
+.plano-stat b{color:var(--ink);}
+.plano-stat.bad b{color:var(--bad);}
+.plano-stat.ok b{color:var(--ok);}
+.plano-room-item{
+  display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace;
+  font-size:11.5px; color:var(--ink-dim); padding:4px 0; border-bottom:1px solid var(--line); cursor:pointer;
+}
+.plano-room-item:hover{color:var(--ink);}
+.plano-room-item .sw{width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:6px;}
+.plano-empty{color:var(--ink-faint); font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:center; padding:60px 20px;}
 .card:hover{border-color:var(--cyan-dim);}
 .card h3{font-family:'IBM Plex Mono',monospace; font-size:15px; margin:0 0 10px; color:var(--ink); letter-spacing:.01em;}
 .card .row{display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; border-top:1px solid var(--line-soft);}
@@ -304,6 +354,7 @@ table.matrix th.dim{opacity:.25;}
     <button class="tab" data-tab="section">Sección vertical (plantas)</button>
     <button class="tab" data-tab="synergy">Sinergias</button>
     <button class="tab" data-tab="cards">Fichas por tipo</button>
+    <button class="tab" data-tab="plano">Visor de plano</button>
   </div>
 
   <!-- ============ TAB: MATRIZ ============ -->
@@ -335,6 +386,7 @@ table.matrix th.dim{opacity:.25;}
     <div class="corridor-note">
       <b>Selección independiente por planta:</b> todas las estancias empiezan inactivas (mismo estilo, sin distinguir "principal" de "respaldo") — actívalas según lo que necesites en tu proyecto concreto. <b>Bajo cubierta</b> y <b>semisótano</b> incluyen aquí estancias adicionales a las de <code>niveles_plantas.md</code> (dormitorios/baño en bajo cubierta, despacho en semisótano) — uso práctico de esta herramienta, no una corrección del documento normativo. <b>CORRIDOR</b> aparece en todas las plantas (no tiene nivel propio, existe en cada una que tenga la vivienda).
       <br><br><b>Para generar con esto:</b> tras exportar, <code>python -m housing_generator.interface.cli.main --import-seleccion seleccion_plantas.json --output edificio.json</code> — genera un edificio real con el generador Python (<code>docs/GUIA_USO.md</code> tiene más detalle, incluido cómo usarlo como librería).
+      <br><br><b>El campo de área se pone en rojo</b> si el valor declarado no alcanza el mínimo real de Tabla 1 (estancias, según su puesto por tamaño) o Tabla 2 (servicios, según subtipo) para el número TOTAL de estancias seleccionadas en todas las plantas -- se recalcula en vivo cada vez que añades o quitas una estancia, no es un valor fijo. Pasa el ratón por encima del campo para ver el mínimo exacto exigido.
     </div>
   </div>
 
@@ -376,6 +428,24 @@ table.matrix th.dim{opacity:.25;}
       <input class="search" id="search-cards" placeholder="Filtrar por tipo…">
     </div>
     <div class="cards" id="cards-wrap"></div>
+  </div>
+
+  <!-- ============ TAB: VISOR DE PLANO ============ -->
+  <div class="panel" id="panel-plano">
+    <div class="plano-sub">
+      Carga el JSON generado por el CLI (<code>--output layout.json</code>, o los
+      varios <code>edificio_planta_*.json</code> de <code>--import-seleccion</code>)
+      y dibuja la planta real, no solo las coordenadas. Todo se procesa en el propio
+      navegador -- ningún archivo se sube a ningún sitio.
+    </div>
+    <div class="plano-loader">
+      <input type="file" id="plano-file-input" accept=".json" multiple>
+      <span class="net-hint">Selecciona uno o varios JSON (uno por planta) -- se detecta automáticamente por nombre de archivo.</span>
+    </div>
+    <div class="floor-tabs" id="floor-tabs"></div>
+    <div id="plano-content">
+      <div class="plano-empty">Carga un archivo para ver la planta generada.</div>
+    </div>
   </div>
 
 </div>
@@ -560,6 +630,105 @@ function renderSectionSummary(){
       + programaHtml;
 }
 
+// Mismos valores EXACTOS que TABLA_1/TABLA_2 en Python (ver
+// estancia_minimum_area_validator.py, servicio_minimum_area_validator.py)
+// -- retomado a peticion del usuario: las areas editables no avisaban
+// si el valor declarado no alcanzaba el minimo real segun el numero
+// total de estancias, dejando al usuario sin saber si "se estan
+// ajustando en funcion del numero de estancias y de los requisitos".
+const TABLA_1 = {1:[25], 2:[16,12], 3:[18,12,8], 4:[20,12,8,8], 5:[22,12,8,8,6]};
+const TABLA_1_MAS_DE_CINCO = [25,12,8,8,8];
+const MINIMO_ESTANCIA_ADICIONAL = 6.0;
+const TABLA_2 = {
+  1:{cocina:5, bano:5, lavadero:1.5, tendedero:1.5, almacenamiento:1},
+  2:{cocina:7, bano:5, lavadero:1.5, tendedero:1.5, almacenamiento:2},
+  3:{cocina:7, bano:5, lavadero:1.5, tendedero:1.5, almacenamiento:3},
+  4:{cocina:9, bano:5, aseo:1.5, lavadero:1.5, tendedero:1.5, almacenamiento:4},
+  5:{cocina:9, bano:5, aseo:1.5, lavadero:1.5, tendedero:1.5, almacenamiento:5},
+};
+const TABLA_2_MAS_DE_CINCO = {cocina:10, bano:5, aseo:1.5, lavadero:1.5, tendedero:1.5, almacenamiento:6};
+
+function minimoEstancia(numEstancias, puesto){
+  if(numEstancias <= 5){
+    const fila = TABLA_1[numEstancias];
+    if(!fila || puesto > fila.length) return null;
+    return fila[puesto-1];
+  }
+  if(puesto <= 5) return TABLA_1_MAS_DE_CINCO[puesto-1];
+  return MINIMO_ESTANCIA_ADICIONAL;
+}
+
+function tablaServiciosPara(numEstancias){
+  if(TABLA_2[numEstancias]) return TABLA_2[numEstancias];
+  if(numEstancias < 1) return TABLA_2[1];
+  return TABLA_2_MAS_DE_CINCO;
+}
+
+// Calcula, para TODAS las estancias seleccionadas (todas las plantas a
+// la vez, igual que hace GenerateBuildingUseCase con el ranking global),
+// cuales no alcanzan el minimo real de Tabla 1/2 -- devuelve un Map
+// "level|type" -> mensaje de aviso, para pintar cada chip en rojo si
+// corresponde.
+function computeAreaWarnings(){
+  const allEntries = [];  // {level, type, count, area, category, subtype}
+  LEVEL_ORDER.forEach(level => {
+    const sel = ensureSectionSelected(level);
+    sel.forEach((v, t) => {
+      const p = PROPS[t];
+      if(!p) return;
+      allEntries.push({level, type:t, count:v.count, area:v.area, category:p.category, subtype:p.subtype});
+    });
+  });
+
+  // total de ESTANCIAS (categoria "estancia", cuenta cada instancia -- 2
+  // dormitorios cuentan como 2) -- mismo criterio que GenerateBuildingUseCase
+  const totalEstancias = allEntries.filter(e => e.category === 'estancia')
+    .reduce((s,e) => s + e.count, 0);
+
+  const warnings = new Map();  // "level|type" -> mensaje
+
+  // Tabla 1: ordenar TODAS las instancias de estancia por area declarada
+  // descendente, asignar puesto 1..N (una entrada con count=2 genera 2
+  // "instancias" del mismo tamano para el ranking, igual que en Python)
+  const estanciaInstances = [];
+  allEntries.filter(e => e.category === 'estancia').forEach(e => {
+    for(let i=0;i<e.count;i++) estanciaInstances.push(e);
+  });
+  estanciaInstances.sort((a,b) => b.area - a.area);
+  estanciaInstances.forEach((e, i) => {
+    const puesto = i+1;
+    const minimo = minimoEstancia(totalEstancias, puesto);
+    if(minimo !== null && e.area < minimo){
+      const key = `${e.level}|${e.type}`;
+      warnings.set(key, `Tabla 1: puesto ${puesto} de ${totalEstancias} exige ≥${minimo}m² (declarado ${e.area}m²)`);
+    }
+  });
+
+  // Tabla 2: por subtipo, minimo segun el total de estancias
+  const tabla2Fila = tablaServiciosPara(totalEstancias);
+  allEntries.filter(e => e.category === 'servicio' && e.subtype).forEach(e => {
+    const minimo = tabla2Fila[e.subtype];
+    if(minimo !== undefined && e.area < minimo){
+      const key = `${e.level}|${e.type}`;
+      warnings.set(key, `Tabla 2 (${e.subtype}): ${totalEstancias} estancias exige ≥${minimo}m² (declarado ${e.area}m²)`);
+    }
+  });
+
+  return warnings;
+}
+
+function applyAreaWarnings(){
+  const warnings = computeAreaWarnings();
+  document.querySelectorAll('.chip.selected').forEach(chip => {
+    const key = `${chip.dataset.level}|${chip.dataset.type}`;
+    const areaInput = chip.querySelector('.chip-area');
+    if(!areaInput) return;
+    const msg = warnings.get(key);
+    areaInput.classList.toggle('area-warn', !!msg);
+    areaInput.title = msg || 'Área en m² de cada una';
+  });
+}
+
 function buildSection(){
   const wrap = document.getElementById('section-wrap');
   let html = '';
@@ -611,10 +780,12 @@ function buildSection(){
       else current.area = Math.max(0.5, parseFloat(input.value) || (DEFAULT_AREA_M2[t] || 10));
       sel.set(t, current);
       renderSectionSummary();
+      applyAreaWarnings();
     });
   });
 
   renderSectionSummary();
+  applyAreaWarnings();
 }
 
 function filterSection(query){
@@ -848,6 +1019,163 @@ function buildSynergyLegend(){
   ).join('');
 }
 
+// ---------------- VISOR DE PLANO ----------------
+// (fusionado desde plano_viewer.html a peticion del usuario -- "FLOORS"
+// ya existe arriba con otro significado del todo distinto, de ahi
+// LOADED_PLANS/ACTIVE_PLAN en vez de FLOORS/ACTIVE)
+const PLANO_ZONE_COLOR = {day:'var(--zone-day)', night:'var(--zone-night)', service:'var(--zone-service)', circulation:'var(--zone-circulation)'};
+const PLANO_ZONE_LABEL = {day:'Día', night:'Noche', service:'Servicio', circulation:'Circulación'};
+
+let LOADED_PLANS = [];   // [{label, data}], data = el JSON tal cual ({rooms, doors, metadata})
+let ACTIVE_PLAN = 0;
+
+function labelForPlanFile(filename){
+  const m = filename.match(/planta_(\w+)/i) || filename.match(/(sotano|semisotano|bajo_cubierta)/i);
+  if(m) return m[0].replace(/_/g,' ').replace(/^\w/, c => c.toUpperCase());
+  return filename.replace(/\.json$/i, '');
+}
+
+function renderPlanoTabs(){
+  const wrap = document.getElementById('floor-tabs');
+  if(LOADED_PLANS.length <= 1){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = LOADED_PLANS.map((f, i) => {
+    const hv = f.data.metadata && f.data.metadata.hard_violations;
+    const badge = (hv === 0) ? '<span class="badge ok">✓</span>' : (hv > 0 ? `<span class="badge bad">${hv}</span>` : '');
+    return `<button class="floor-tab ${i===ACTIVE_PLAN?'active':''}" data-i="${i}">${f.label}${badge}</button>`;
+  }).join('');
+  wrap.querySelectorAll('.floor-tab').forEach(btn => {
+    btn.addEventListener('click', () => { ACTIVE_PLAN = parseInt(btn.dataset.i,10); renderPlanoTabs(); renderPlano(); });
+  });
+}
+
+// Punto medio del segmento de pared compartida entre dos rectangulos
+// axis-aligned (bounds [x0,y0,x1,y1]) -- para marcar puertas. Sin
+// libreria de geometria en el cliente: logica directa de bordes,
+// suficiente porque toda la geometria del proyecto es rectangular.
+function sharedWallMidpoint(a, b){
+  const EPS = 0.05;
+  if(Math.abs(a[2]-b[0]) < EPS || Math.abs(b[2]-a[0]) < EPS){
+    const x = Math.abs(a[2]-b[0]) < EPS ? a[2] : a[0];
+    const oy0 = Math.max(a[1], b[1]), oy1 = Math.min(a[3], b[3]);
+    if(oy1 > oy0) return {x, y: (oy0+oy1)/2, vertical:true};
+  }
+  if(Math.abs(a[3]-b[1]) < EPS || Math.abs(b[3]-a[1]) < EPS){
+    const y = Math.abs(a[3]-b[1]) < EPS ? a[3] : a[1];
+    const ox0 = Math.max(a[0], b[0]), ox1 = Math.min(a[2], b[2]);
+    if(ox1 > ox0) return {x: (ox0+ox1)/2, y, vertical:false};
+  }
+  return null;
+}
+
+function renderPlano(){
+  const content = document.getElementById('plano-content');
+  const floor = LOADED_PLANS[ACTIVE_PLAN];
+  if(!floor){ content.innerHTML = '<div class="plano-empty">Carga un archivo para ver la planta generada.</div>'; return; }
+
+  const rooms = floor.data.rooms.filter(r => r.bounds);
+  if(rooms.length === 0){
+    content.innerHTML = '<div class="plano-empty">Este archivo no tiene estancias con geometría resuelta.</div>';
+    return;
+  }
+
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  rooms.forEach(r => {
+    const [x0,y0,x1,y1] = r.bounds;
+    minX=Math.min(minX,x0); minY=Math.min(minY,y0); maxX=Math.max(maxX,x1); maxY=Math.max(maxY,y1);
+  });
+  const pad = Math.max((maxX-minX), (maxY-minY)) * 0.04;
+  const vbX = minX-pad, vbY = minY-pad, vbW = (maxX-minX)+pad*2, vbH = (maxY-minY)+pad*2;
+
+  // SVG usa Y creciendo hacia abajo; nuestros planos usan Y creciendo
+  // hacia arriba (norte = +y, ver Lot) -- se invierte con un transform,
+  // no recalculando coordenadas a mano (mas facil de verificar).
+  let svgBody = `<g transform="translate(0, ${vbY*2+vbH}) scale(1,-1)">`;
+  rooms.forEach(r => {
+    const [x0,y0,x1,y1] = r.bounds;
+    const color = PLANO_ZONE_COLOR[r.zone] || 'var(--ink-faint)';
+    svgBody += `<rect class="room-rect" x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" fill="${color}" fill-opacity="0.55" data-id="${r.id}"></rect>`;
+  });
+
+  (floor.data.doors || []).forEach(d => {
+    const ra = rooms.find(r => r.id === d.room_a), rb = rooms.find(r => r.id === d.room_b);
+    if(!ra || !rb) return;
+    const mid = sharedWallMidpoint(ra.bounds, rb.bounds);
+    if(!mid) return;
+    const doorWidth = 0.9;
+    if(mid.vertical) svgBody += `<line class="door-mark" x1="${mid.x}" y1="${mid.y-doorWidth/2}" x2="${mid.x}" y2="${mid.y+doorWidth/2}"></line>`;
+    else svgBody += `<line class="door-mark" x1="${mid.x-doorWidth/2}" y1="${mid.y}" x2="${mid.x+doorWidth/2}" y2="${mid.y}"></line>`;
+  });
+  svgBody += `</g>`;
+
+  // etiquetas FUERA del grupo invertido, para que el texto no salga en espejo
+  let labelsBody = '';
+  rooms.forEach(r => {
+    const [x0,y0,x1,y1] = r.bounds;
+    const cx = (x0+x1)/2, cy = vbY*2+vbH - (y0+y1)/2;
+    const w = x1-x0, h = y1-y0;
+    // el tamano de fuente considera TANTO las dimensiones de la estancia
+    // COMO la longitud del nombre (bug real encontrado en verificacion:
+    // "Dormitorio principal" desbordaba su propio rectangulo si solo se
+    // miraban las dimensiones) -- el minimo de ambos criterios.
+    const fontByRoom = Math.max(0.28, Math.min(w,h) * 0.16);
+    const fontByTextWidth = (w * 0.85) / (Math.max(r.name.length, 6) * 0.6);
+    const fontSize = Math.max(0.18, Math.min(fontByRoom, fontByTextWidth));
+    labelsBody += `<text class="room-label" x="${cx}" y="${cy}" font-size="${fontSize}">
+        <tspan class="name" x="${cx}" dy="-0.6em">${escapeXml(r.name)}</tspan>
+        <tspan class="area" x="${cx}" dy="1.3em">${r.area_m2.toFixed(1)}m²</tspan>
+      </text>`;
+  });
+
+  const svg = `<svg viewBox="${vbX} ${vbY} ${vbW} ${vbH}" xmlns="http://www.w3.org/2000/svg">${svgBody}${labelsBody}</svg>`;
+
+  const md = floor.data.metadata || {};
+  const hv = md.hard_violations ?? 0;
+  const sp = md.soft_penalty ?? 0;
+  const warnings = md.warnings ?? 0;
+  const totalArea = rooms.reduce((s,r) => s+r.area_m2, 0);
+  const zonesPresent = [...new Set(rooms.map(r=>r.zone))];
+
+  content.innerHTML = `
+    <div class="plano-stage">
+      <div class="plano-canvas">${svg}</div>
+      <div class="plano-side">
+        <div class="plano-box">
+          <h3>Resumen</h3>
+          <div class="plano-stat"><span>Estancias</span><b>${rooms.length}</b></div>
+          <div class="plano-stat"><span>Superficie total</span><b>${totalArea.toFixed(1)}m²</b></div>
+          <div class="plano-stat ${hv>0?'bad':'ok'}"><span>Violaciones duras</span><b>${hv}</b></div>
+          <div class="plano-stat"><span>Penalización blanda</span><b>${typeof sp === 'number' ? sp.toFixed(1) : sp}</b></div>
+          <div class="plano-stat"><span>Avisos</span><b>${warnings}</b></div>
+        </div>
+        <div class="plano-box">
+          <h3>Zonas</h3>
+          <div class="legend">${zonesPresent.map(z => `<span class="item"><span class="sw" style="background:${PLANO_ZONE_COLOR[z]}"></span>${PLANO_ZONE_LABEL[z]||z}</span>`).join('')}</div>
+        </div>
+        <div class="plano-box">
+          <h3>Estancias (${rooms.length})</h3>
+          ${rooms.slice().sort((a,b)=>b.area_m2-a.area_m2).map(r =>
+            `<div class="plano-room-item" data-id="${r.id}"><span><span class="sw" style="background:${PLANO_ZONE_COLOR[r.zone]}"></span>${escapeXml(r.name)}</span><span>${r.area_m2.toFixed(1)}m²</span></div>`
+          ).join('')}
+        </div>
+      </div>
+    </div>`;
+
+  content.querySelectorAll('.plano-room-item').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      const rect = content.querySelector(`.room-rect[data-id="${item.dataset.id}"]`);
+      if(rect) rect.setAttribute('fill-opacity', '0.9');
+    });
+    item.addEventListener('mouseleave', () => {
+      const rect = content.querySelector(`.room-rect[data-id="${item.dataset.id}"]`);
+      if(rect) rect.setAttribute('fill-opacity', '0.55');
+    });
+  });
+}
+
+function escapeXml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ---------------- init + tabs ----------------
 buildMatrix(); buildLegend(); buildSection(); buildCards(); buildSynergyLegend(); renderNetFilters();
 const SCORES = computeScores();
@@ -871,6 +1199,17 @@ document.querySelectorAll('.tab').forEach(tab => {
 document.getElementById('search-matrix').addEventListener('input', e => filterMatrix(e.target.value));
 document.getElementById('search-section').addEventListener('input', e => filterSection(e.target.value));
 document.getElementById('search-cards').addEventListener('input', e => filterCards(e.target.value));
+
+document.getElementById('plano-file-input').addEventListener('change', async (ev) => {
+  const files = Array.from(ev.target.files);
+  if(files.length === 0) return;
+  const loaded = await Promise.all(files.map(f => f.text().then(t => ({file: f, data: JSON.parse(t)}))));
+  loaded.sort((a,b) => a.file.name.localeCompare(b.file.name));
+  LOADED_PLANS = loaded.map(({file, data}) => ({label: labelForPlanFile(file.name), data}));
+  ACTIVE_PLAN = 0;
+  renderPlanoTabs();
+  renderPlano();
+});
 </script>
 </body>
 </html>

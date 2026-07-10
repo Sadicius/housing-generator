@@ -245,15 +245,15 @@ proyecto.
 
 ## Ver el resultado como un plano real
 
-`docs/visualizador/plano_viewer.html` — se abre directamente en un
-navegador, sin instalar nada. Carga el JSON que genera el CLI
-(`--output layout.json`, o los varios `edificio_planta_*.json` de
-`--import-seleccion`) y dibuja la planta real: rectángulos por
-estancia, color por zona (día/noche/servicio/circulación), nombre y
-superficie de cada una, y marcas de puerta en las paredes compartidas
-que de verdad tienen `Obligatorio cerca` satisfecho geométricamente.
-Todo se procesa en el propio navegador, ningún archivo se sube a
-ningún sitio.
+Pestaña "Visor de plano" de `docs/visualizador/relaciones_espaciales.html`
+(el mismo dashboard de siempre, no un archivo aparte) — carga el JSON
+que genera el CLI (`--output layout.json`, o los varios
+`edificio_planta_*.json` de `--import-seleccion`) y dibuja la planta
+real: rectángulos por estancia, color por zona
+(día/noche/servicio/circulación), nombre y superficie de cada una, y
+marcas de puerta en las paredes compartidas que de verdad tienen
+`Obligatorio cerca` satisfecho geométricamente. Todo se procesa en el
+propio navegador, ningún archivo se sube a ningún sitio.
 
 Para un edificio de varias plantas, selecciona a la vez todos los
 `edificio_planta_*.json` generados — el visor detecta la planta de cada
