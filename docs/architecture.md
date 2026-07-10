@@ -1367,3 +1367,56 @@ Probadas semillas 1-4 directamente: la 1-3 fallan, la 4 converge --
   intentos". Con `--retry-seeds 1` (reintento desactivado), falla con
   un mensaje claro que dice cuántas semillas se probaron.
 - Suite final: 325/325, `pyflakes` y `mypy` limpios.
+
+## Generación automática de selección en Sección vertical (a petición del usuario)
+
+El usuario pidió mejorar la pestaña "Sección vertical", que consideraba
+limitada: quería un panel para indicar tipo de vivienda, número de
+dormitorios y número de plantas, y que a partir de eso se autoseleccionen
+las estancias y se autocalculen las superficies mínimas -- en vez de
+tener que editarlas a mano, para cumplir normativa y optimizar espacio.
+Reglas confirmadas explícitamente antes de implementar: 1 baño si
+dormitorios≤2, +1 aseo si dormitorios≥3; con 2 plantas, día/servicio
+abajo y dormitorios/baño arriba (patrón habitual).
+
+- **[RESUELTO]** Panel "Generar selección automática": tipo de vivienda
+  (aislada/pareada/adosada -- guardado como metadato en la exportación,
+  no cambia la selección de estancias en sí, solo informa para el paso
+  posterior de `Lot.medianera_sides` al generar de verdad), número de
+  dormitorios, número de plantas.
+- Reglas de selección: programa mínimo completo (6 piezas) + 1
+  `MASTER_BEDROOM` + (dormitorios−1) `BEDROOM` + 1 `BATHROOM` (+1
+  `TOILET` si dormitorios≥3) + `CORRIDOR` si hay 2 plantas (necesario
+  para que `BanoAccesoGeneralValidator` pase en la planta superior).
+- **Bug real encontrado al probar, no al diseñar**: la primera versión
+  colocaba el aseo (`TOILET`) en la planta superior junto al resto de
+  baños -- pero el propio catálogo (`FLOORS`) ya declaraba `TOILET`
+  como "Fijo, sirve a zona social/visitas, no depende de dormitorios",
+  con `niveles: "PLANTA_BAJA"` únicamente. Colocarlo en planta superior
+  hacía que el chip NUNCA se renderizase (no está en la lista de tipos
+  candidatos de esa planta según el propio catálogo) -- el aseo
+  desaparecía en silencio, sin ningún error. Corregido moviéndolo a
+  planta baja, coherente con lo que el catálogo ya decía.
+- **Cálculo de áreas EXACTO, verificado cifra por cifra contra Tabla
+  1/2 real**, no solo plausible: para un caso de 3 dormitorios (4
+  estancias totales: salón + principal + 2 normales), confirmado que
+  genera 20/12/8/8m² (Tabla 1 fila de 4) y 9/5/1.5/1.5/1.5/4m² (Tabla 2
+  fila de 4 para cocina/baño/aseo/lavadero/tendedero/almacenamiento) --
+  coincide exactamente con los valores reales del validador Python, no
+  aproximados. Cuando varias instancias comparten una misma entrada
+  (p.ej. 2 `BEDROOM` con un único valor de área), se usa el máximo de
+  los mínimos de los puestos que ocupan, para que ninguna quede por
+  debajo de lo que le corresponde individualmente.
+- **Campos de área bloqueados por defecto tras generar** (`readonly`),
+  con checkbox explícito "permitir editar áreas manualmente" para
+  desbloquear si se quiere desviar del mínimo a propósito -- la
+  comprobación de aviso en rojo (ya existente) sigue aplicando si se
+  edita por debajo del mínimo real tras desbloquear.
+- Confirmado con el recorrido completo de extremo a extremo otra vez:
+  generación automática → exportación real capturada → `--import-seleccion`
+  → generación real con el CLI (convergió a la primera con la semilla
+  por defecto) → carga en el Visor de plano → SVG renderizado sin errores.
+  También probado el caso límite (1 dormitorio, 1 planta): todo en
+  planta baja, sin `BEDROOM` ni `TOILET` ni `CORRIDOR`, programa mínimo
+  completo.
+- Suite Python: 325/325 sin cambios (el HTML es independiente).

@@ -209,6 +209,32 @@ table.matrix th.dim{opacity:.25;}
 .section-summary .stat b{color:var(--ink);}
 .section-summary .programa-ok{color:var(--oc);}
 .section-summary .programa-falta{color:var(--pa);}
+
+.auto-config-box{
+  border:1px solid var(--cyan-dim); border-radius:4px; padding:14px 18px; margin-bottom:16px;
+  background:rgba(127,216,232,.05);
+}
+.auto-config-box h3{
+  font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase;
+  letter-spacing:.04em; color:var(--cyan); margin:0 0 12px;
+}
+.auto-config-fields{display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:10px;}
+.auto-config-fields label{
+  display:flex; flex-direction:column; gap:4px; font-family:'IBM Plex Mono',monospace;
+  font-size:11px; color:var(--ink-dim);
+}
+.auto-config-fields select, .auto-config-fields input[type=number]{
+  font-family:'IBM Plex Mono',monospace; font-size:12px; padding:6px 8px;
+  background:var(--bg-panel); border:1px solid var(--line); color:var(--ink); border-radius:2px;
+}
+.auto-config-hint{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-faint); line-height:1.6;}
+.auto-config-hint code{background:var(--bg-panel); padding:1px 4px; border-radius:2px;}
+.areas-lock-toggle{
+  display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace;
+  font-size:11px; color:var(--ink-dim); cursor:pointer;
+}
+.areas-lock-toggle input{accent-color:var(--cyan); cursor:pointer;}
+.chip-controls input[readonly]{opacity:.6; cursor:not-allowed; border-style:dashed;}
 .corridor-note{
   margin-top:16px; padding:12px 14px; border:1px dashed var(--cyan-dim); font-size:12.5px; color:var(--ink-dim);
   font-family:'IBM Plex Mono',monospace; line-height:1.6;
@@ -377,10 +403,46 @@ table.matrix th.dim{opacity:.25;}
 
   <!-- ============ TAB: SECCION ============ -->
   <div class="panel" id="panel-section">
+    <div class="auto-config-box">
+      <h3>Generar selección automática</h3>
+      <div class="auto-config-fields">
+        <label>Tipo de vivienda
+          <select id="auto-tipo-vivienda">
+            <option value="aislada">Aislada</option>
+            <option value="pareada">Pareada (1 medianera)</option>
+            <option value="adosada">Adosada (2 medianeras)</option>
+          </select>
+        </label>
+        <label>Dormitorios
+          <input type="number" id="auto-dormitorios" min="1" max="6" value="3">
+        </label>
+        <label>Plantas
+          <select id="auto-plantas">
+            <option value="1">1 (todo en planta baja)</option>
+            <option value="2" selected>2 (planta baja + superior)</option>
+          </select>
+        </label>
+        <button class="picker-btn" id="auto-apply">Generar selección</button>
+      </div>
+      <div class="auto-config-hint">
+        Reglas aplicadas: programa mínimo completo (salón, cocina, recibidor, lavadero, tendedero, almacén)
+        + 1 dormitorio principal + (dormitorios−1) dormitorios normales + 1 baño (más 1 aseo si hay
+        ≥3 dormitorios) + pasillo si hay 2 plantas (para que el baño de arriba tenga acceso general).
+        Con 2 plantas: día/servicio en planta baja, dormitorios/baño/pasillo en planta superior.
+        Las áreas se calculan con el mínimo EXACTO de Tabla 1/2 según el número real de estancias
+        resultante -- no un valor genérico. <b>Tipo de vivienda</b> no cambia la selección de
+        estancias (solo aplica al generar de verdad con el CLI, vía <code>Lot.medianera_sides</code>)
+        -- se guarda igualmente en la exportación como referencia para ese paso.
+      </div>
+    </div>
     <div class="controls">
       <input class="search" id="search-section" placeholder="Filtrar por tipo…">
       <button class="picker-btn" id="export-section">exportar selección (json)</button>
       <button class="picker-btn" id="clear-section">vaciar selección</button>
+      <label class="areas-lock-toggle">
+        <input type="checkbox" id="areas-lock-checkbox">
+        Permitir editar áreas manualmente (por defecto, bloqueadas al mínimo normativo)
+      </label>
       <span class="net-hint">clic en una estancia para activarla/desactivarla en esa planta</span>
     </div>
     <div class="section-summary" id="section-summary"></div>
@@ -576,6 +638,8 @@ const DEFAULT_AREA_M2 = {
 };
 
 const SECTION = { selected: {} };  // level -> Map(RoomType -> {count, area})
+let AREAS_LOCKED = false;  // si true, los campos de area son readonly (bloqueados al minimo normativo)
+let TIPO_VIVIENDA = 'aislada';  // metadato guardado en la exportacion, no cambia la seleccion de estancias
 
 function ensureSectionSelected(level){
   if(!SECTION.selected[level]) SECTION.selected[level] = new Map();
@@ -731,6 +795,94 @@ function applyAreaWarnings(){
   });
 }
 
+// Orden canonico para asignar "puesto" de Tabla 1 ANTES de saber areas
+// reales (la generacion automatica calcula el area a partir del
+// puesto, no al reves) -- salon siempre el mayor, luego el dormitorio
+// principal, luego el resto. Coincide con la convencion ya usada en
+// todo el proyecto (LIVING_ROOM = estancia mayor).
+const CANONICAL_ESTANCIA_ORDER = ['LIVING_ROOM', 'MASTER_BEDROOM', 'BEDROOM', 'DINING_ROOM', 'STUDY'];
+
+function recalculateAutoAreas(){
+  const allEntries = [];
+  LEVEL_ORDER.forEach(level => {
+    const sel = ensureSectionSelected(level);
+    sel.forEach((v, t) => allEntries.push({level, type:t, v}));
+  });
+
+  const estanciaEntries = allEntries.filter(e => PROPS[e.type] && PROPS[e.type].category === 'estancia');
+  estanciaEntries.sort((a,b) => CANONICAL_ESTANCIA_ORDER.indexOf(a.type) - CANONICAL_ESTANCIA_ORDER.indexOf(b.type));
+  const totalEstancias = estanciaEntries.reduce((s,e) => s + e.v.count, 0);
+
+  let puesto = 1;
+  estanciaEntries.forEach(e => {
+    // si count>1 (varios dormitorios del mismo tipo), cada instancia
+    // ocupa un puesto consecutivo -- se usa el MAS EXIGENTE (area mayor)
+    // de los puestos que ocupa, para que TODAS las instancias cumplan
+    // aunque compartan un unico valor de area en esta entrada.
+    const puestosDeEsteGrupo = [];
+    for(let i=0;i<e.v.count;i++){ puestosDeEsteGrupo.push(puesto); puesto++; }
+    const minimo = Math.max(...puestosDeEsteGrupo.map(p => minimoEstancia(totalEstancias, p) || 0));
+    e.v.area = minimo;
+  });
+
+  const tabla2Fila = tablaServiciosPara(totalEstancias);
+  allEntries.filter(e => PROPS[e.type] && PROPS[e.type].category === 'servicio').forEach(e => {
+    const subtype = PROPS[e.type].subtype;
+    e.v.area = (subtype && tabla2Fila[subtype]) || DEFAULT_AREA_M2[e.type] || 10;
+  });
+
+  // circulacion (ENTRANCE_HALL, CORRIDOR) -- sin fila de Tabla 1/2 propia
+  allEntries.filter(e => PROPS[e.type] && PROPS[e.type].category === 'circulacion').forEach(e => {
+    e.v.area = DEFAULT_AREA_M2[e.type] || 4;
+  });
+}
+
+function applyAutoConfig(){
+  const dormitorios = Math.max(1, parseInt(document.getElementById('auto-dormitorios').value, 10) || 1);
+  const plantas = parseInt(document.getElementById('auto-plantas').value, 10);
+  TIPO_VIVIENDA = document.getElementById('auto-tipo-vivienda').value;
+
+  SECTION.selected = {};
+  const pbSet = ensureSectionSelected('PLANTA_BAJA');
+  const nocheSet = plantas === 2 ? ensureSectionSelected('PLANTA_SUPERIOR') : pbSet;
+
+  // programa minimo (dia/servicio) -- siempre en planta baja
+  pbSet.set('LIVING_ROOM', {count:1, area:0});
+  pbSet.set('KITCHEN', {count:1, area:0});
+  pbSet.set('ENTRANCE_HALL', {count:1, area:0});
+  pbSet.set('LAUNDRY', {count:1, area:0});
+  pbSet.set('DRYING_AREA', {count:1, area:0});
+  pbSet.set('STORAGE', {count:1, area:0});
+
+  // dormitorios: 1 principal + (N-1) normales -- reglas confirmadas con
+  // el usuario antes de implementar, no supuestas
+  nocheSet.set('MASTER_BEDROOM', {count:1, area:0});
+  const bedCount = dormitorios - 1;
+  if(bedCount > 0) nocheSet.set('BEDROOM', {count:bedCount, area:0});
+
+  // banos: 1 bano siempre (arriba, junto a los dormitorios); +1 aseo si
+  // hay 3 o mas dormitorios -- el aseo va en PLANTA_BAJA, no arriba con
+  // el resto de banos: el propio catalogo (FLOORS) ya declara TOILET
+  // como "Fijo, sirve a zona social/visitas, no depende de dormitorios"
+  // -- bug real encontrado al probar: colocarlo en planta superior
+  // haria que el chip no se renderizase nunca (no esta en la lista de
+  // tipos candidatos de esa planta segun el propio catalogo).
+  nocheSet.set('BATHROOM', {count:1, area:0});
+  if(dormitorios >= 3) pbSet.set('TOILET', {count:1, area:0});
+
+  // pasillo en planta superior si hay 2 plantas -- necesario para que
+  // el bano de arriba tenga acceso general (BanoAccesoGeneralValidator),
+  // confirmado con un caso real que fallaba sin esto
+  if(plantas === 2) nocheSet.set('CORRIDOR', {count:1, area:0});
+
+  recalculateAutoAreas();
+
+  AREAS_LOCKED = true;
+  const lockCheckbox = document.getElementById('areas-lock-checkbox');
+  if(lockCheckbox) lockCheckbox.checked = false;
+  buildSection();
+}
+
 function buildSection(){
   const wrap = document.getElementById('section-wrap');
   let html = '';
@@ -748,10 +900,11 @@ function buildSection(){
       const title = t === 'CORRIDOR' ? 'Circulación, disponible en todas las plantas' :
         (isExtra ? 'Adicional de esta herramienta, no procede de niveles_plantas.md' : (FLOORS.find(f=>f.type===t)||{}).notas || '');
       const vals = isSel ? selected.get(t) : {count:1, area: DEFAULT_AREA_M2[t] || 10};
+      const readonlyAttr = AREAS_LOCKED ? 'readonly' : '';
       const controls = isSel ? `<span class="chip-controls">
           <input type="number" class="chip-count" min="1" step="1" value="${vals.count}" title="Cantidad de estancias de este tipo">
           <span class="unit">×</span>
-          <input type="number" class="chip-area" min="1" step="0.5" value="${vals.area}" title="Área en m² de cada una">
+          <input type="number" class="chip-area" min="1" step="0.5" value="${vals.area}" ${readonlyAttr} title="Área en m² de cada una">
           <span class="unit">m²</span>
         </span>` : '';
       html += `<span class="${cls}" data-type="${t}" data-level="${level}" title="${title}">${DISPLAY[t]}${controls}</span>`;
@@ -813,6 +966,7 @@ function exportSectionSelection(){
   const payload = {
     version: 2,
     levels,
+    tipo_vivienda: TIPO_VIVIENDA,
     nota: 'Seleccion de esta herramienta de exploracion (catalogo), con cantidad y area '
         + 'declaradas por el usuario -- ya no son valores genericos de relleno, pero siguen '
         + 'siendo una PRIMERA aproximacion a revisar antes de un proyecto real. '
@@ -1191,6 +1345,14 @@ document.getElementById('export-section').addEventListener('click', exportSectio
 document.getElementById('clear-section').addEventListener('click', () => {
   if(!confirm('¿Vaciar toda la selección de todas las plantas?')) return;
   SECTION.selected = {};
+  buildSection();
+});
+document.getElementById('auto-apply').addEventListener('click', applyAutoConfig);
+document.getElementById('auto-tipo-vivienda').addEventListener('change', (ev) => {
+  TIPO_VIVIENDA = ev.target.value;
+});
+document.getElementById('areas-lock-checkbox').addEventListener('change', (ev) => {
+  AREAS_LOCKED = !ev.target.checked;
   buildSection();
 });
 

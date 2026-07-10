@@ -267,8 +267,17 @@ en un navegador, sin instalar nada. Permite explorar:
 - Qué tipos de estancia son habituales en cada planta
 - Fichas descriptivas por tipo de estancia
 
-La pestaña de sección vertical exporta `seleccion_plantas.json` (qué
-tipos de estancia hay en cada planta) — importable directamente:
+La pestaña de sección vertical incluye un panel de **generación
+automática**: indicando tipo de vivienda, número de dormitorios y
+número de plantas, selecciona las estancias necesarias (programa
+mínimo + dormitorios + baños según reglas fijas) y calcula el área
+mínima EXACTA de cada una según Tabla 1/2 real -- los campos quedan
+bloqueados a ese mínimo, con un checkbox para desbloquear si se quiere
+declarar más superficie a propósito. Sigue existiendo la selección
+manual, chip a chip, para quien prefiera partir de cero.
+
+Exporta `seleccion_plantas.json` (tipos, cantidades y áreas por
+planta) — importable directamente:
 
 ```python
 from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
