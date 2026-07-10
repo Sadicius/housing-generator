@@ -1269,3 +1269,42 @@ requisitos reales (Tabla 1/2) según el número de estancias.
   dinámico funciona de verdad, no solo en el momento de seleccionar.
 - Retirado `plano_viewer.html` como archivo independiente, ya fusionado.
 - Suite Python: 321/321 sin cambios (el HTML es independiente).
+
+## El bug real encontrado (con ayuda del usuario probándolo de verdad)
+
+Tras la fusión, el usuario probó de verdad (descargado, navegador real,
+no la vista previa de Claude) y seguía sin funcionar: "me deja
+seleccionar los archivos... pero no hay más". Antes de asumir que el
+entorno de vista previa era el problema (hipótesis que se descartó al
+confirmar que pasaba igual en un navegador real descargado), pregunté qué archivo estaba cargando -- **"seleccion_plantas (2).json"**,
+el nombre del archivo fue la pista real.
+
+- **[RESUELTO] Confusión real entre dos formatos JSON del mismo
+  dashboard**: `seleccion_plantas.json` (exportación de la pestaña
+  "Sección vertical" -- tipos y cantidades, SIN geometría resuelta,
+  formato `{"levels": {...}}`) es un formato completamente distinto de
+  un plano YA GENERADO por el CLI (formato `{"rooms": [...], "doors":
+  [...], "metadata": {...}}`). El Visor de plano asumía sin comprobar
+  que `data.rooms` existía -- cargar el primero producía
+  `TypeError: Cannot read properties of undefined (reading 'filter')`
+  sin capturar, a medio camino del `change` handler: el archivo se
+  veía "seleccionado" (el navegador muestra su nombre) pero nada más
+  pasaba, sin ningún mensaje. **Confirmado el bug exacto con `jsdom`
+  antes de arreglar nada** -- reproducido el `TypeError` literal con el
+  mismo formato real de `seleccion_plantas.json`.
+- Corregido con detección explícita: si el JSON cargado no tiene
+  `rooms` como array, se muestra un mensaje claro -- si además tiene
+  `levels` (confirma que es una selección), indica el comando exacto
+  de `--import-seleccion` a ejecutar antes de volver a cargar aquí.
+  JSON con sintaxis inválida también capturado con `try/catch`, mensaje
+  propio. Reforzada también la prevención en origen: la nota que se
+  exporta junto a `seleccion_plantas.json` ahora advierte explícitamente
+  que no se carga directamente en el visor.
+- **Verificados los tres casos con `jsdom`, no solo el que falló**:
+  formato de selección (mensaje claro, sin excepción sin capturar),
+  JSON inválido (mensaje claro), y formato correcto cargado
+  INMEDIATAMENTE DESPUÉS de un error previo (confirma que un error no
+  deja la aplicación en un estado roto). Confirmado también que el
+  resto del dashboard (matriz, sección, fichas, red de sinergias seguía
+  intacto tras el arreglo.
+- Suite Python: 321/321 sin cambios (el HTML es independiente).

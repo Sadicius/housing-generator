@@ -258,6 +258,8 @@ table.matrix th.dim{opacity:.25;}
 .plano-room-item:hover{color:var(--ink);}
 .plano-room-item .sw{width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:6px;}
 .plano-empty{color:var(--ink-faint); font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:center; padding:60px 20px;}
+.plano-empty.plano-error{color:var(--bad); text-align:left; background:rgba(228,87,46,.08); border:1px dashed var(--bad); line-height:1.6;}
+.plano-empty.plano-error code{background:var(--bg-panel); padding:1px 5px; border-radius:2px;}
 .card:hover{border-color:var(--cyan-dim);}
 .card h3{font-family:'IBM Plex Mono',monospace; font-size:15px; margin:0 0 10px; color:var(--ink); letter-spacing:.01em;}
 .card .row{display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0; border-top:1px solid var(--line-soft);}
@@ -815,7 +817,12 @@ function exportSectionSelection(){
         + 'declaradas por el usuario -- ya no son valores genericos de relleno, pero siguen '
         + 'siendo una PRIMERA aproximacion a revisar antes de un proyecto real. '
         + 'Las estancias bajo "extra" (bajo cubierta: dormitorios/bano; semisotano: despacho) '
-        + 'son uso practico de esta herramienta, no proceden de niveles_plantas.md.',
+        + 'son uso practico de esta herramienta, no proceden de niveles_plantas.md. '
+        + 'IMPORTANTE: este archivo NO se carga directamente en la pestaña "Visor de plano" '
+        + '-- primero hay que generarlo de verdad con '
+        + '"python -m housing_generator.interface.cli.main --import-seleccion '
+        + 'seleccion_plantas.json --output edificio.json", y cargar ahi el '
+        + 'edificio_planta_*.json resultante.',
   };
 
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
@@ -1203,7 +1210,38 @@ document.getElementById('search-cards').addEventListener('input', e => filterCar
 document.getElementById('plano-file-input').addEventListener('change', async (ev) => {
   const files = Array.from(ev.target.files);
   if(files.length === 0) return;
-  const loaded = await Promise.all(files.map(f => f.text().then(t => ({file: f, data: JSON.parse(t)}))));
+
+  const content = document.getElementById('plano-content');
+  let loaded;
+  try{
+    loaded = await Promise.all(files.map(f => f.text().then(t => ({file: f, data: JSON.parse(t)}))));
+  } catch(err){
+    content.innerHTML = `<div class="plano-empty plano-error">No se pudo leer uno de los archivos como JSON válido: ${escapeXml(err.message)}</div>`;
+    return;
+  }
+
+  // BUG REAL encontrado por el usuario probando de verdad: cargar
+  // "seleccion_plantas.json" (la exportacion de la pestaña Sección
+  // vertical -- tipos y cantidades, SIN geometria resuelta) en vez de
+  // un plano ya generado por el CLI (con "rooms"/"bounds") rompia con
+  // un TypeError sin capturar a medio camino -- el archivo se veia
+  // "seleccionado" pero no pasaba nada mas, sin ningun mensaje. Son dos
+  // formatos JSON distintos que salen del mismo dashboard; ahora se
+  // detecta explicitamente cual es cual, con un mensaje que dice que
+  // hacer, en vez de fallar en silencio.
+  const invalid = loaded.filter(({data}) => !Array.isArray(data.rooms));
+  if(invalid.length > 0){
+    const names = invalid.map(({file}) => file.name).join(', ');
+    const looksLikeSeleccion = invalid.some(({data}) => data.levels);
+    content.innerHTML = `<div class="plano-empty plano-error">
+      <b>${escapeXml(names)}</b> no tiene el formato de un plano generado (falta "rooms").<br>
+      ${looksLikeSeleccion
+        ? 'Este parece ser un archivo de "selección de plantas" (de la pestaña Sección vertical) -- primero hay que generarlo de verdad: <code>python -m housing_generator.interface.cli.main --import-seleccion ' + escapeXml(invalid[0].file.name) + ' --output edificio.json</code>, y cargar aquí el <code>edificio_planta_*.json</code> resultante, no este archivo.'
+        : 'Carga el JSON que produce el CLI (<code>--output layout.json</code>, o los <code>edificio_planta_*.json</code> de <code>--import-seleccion</code>).'}
+    </div>`;
+    return;
+  }
+
   loaded.sort((a,b) => a.file.name.localeCompare(b.file.name));
   LOADED_PLANS = loaded.map(({file, data}) => ({label: labelForPlanFile(file.name), data}));
   ACTIVE_PLAN = 0;
