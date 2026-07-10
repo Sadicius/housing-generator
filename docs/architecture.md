@@ -1131,3 +1131,38 @@ datos embebidos en el HTML contra sus fuentes reales de Python.
   que faltan; selección completa confirmando 0 piezas faltantes) antes
   de darla por buena.
 - Suite Python: 321/321 sin cambios (el HTML es independiente).
+
+## Revisión completa de las cuatro pestañas del dashboard
+
+Continuación de la auditoría anterior, cubriendo Matriz, Sinergias y
+Fichas (Sección ya revisada/mejorada en la ronda previa).
+
+- **Matriz**: lógica de renderizado revisada (`buildMatrix`, `findPair`,
+  `showDetail`) -- sólida, sin hallazgos. Solo renderiza el triángulo
+  superior de la matriz (evita duplicar celdas), `findPair` resuelve
+  ambos órdenes del par correctamente.
+- **[RESUELTO] Variable CSS `--pmc` con nombre obsoleto**: definida
+  como "preferencia muy cerca" (categoría de relación fusionada en "pc"
+  hace tiempo, ya no existe en la clasificación de 5 categorías), pero
+  usada realmente como color de la categoría "estancia" en fichas y red
+  -- no rota (la variable sí estaba definida, los colores se veían
+  bien), pero confusa. Renombrada a `--cat-estancia`, verificados los 3
+  usos totales antes de tocarla.
+- **[RESUELTO] Texto explicativo de puntuación incompleto**: la pista
+  de la pestaña de sinergias explicaba 4 de los 7 pesos posibles
+  (`WEIGHT`), omitiendo "Ya cubierto" (+2) -- un peso real, no nulo.
+  Corregido para mencionar los 5 pesos no nulos y aclarar
+  explícitamente que Neutro/Condicional no puntúan.
+- **Fichas por tipo: mejora funcional real añadida** -- cada ficha
+  ahora muestra sus relaciones `Obligatorio` (cerca/lejos) directamente,
+  sin tener que cruzar con la pestaña de matriz para saber lo más
+  operativamente importante de cada tipo. Verificado con datos reales
+  extraídos del propio archivo (no simulados a mano): `LIVING_ROOM`
+  muestra exactamente sus 3 relaciones obligatorias conocidas (cerca de
+  Comedor y Recibidor, lejos de Garaje); tipos sin ninguna (`STUDY`,
+  `TECHNICAL_ROOM`, `TOILET`) omiten la sección correctamente.
+- Verificación sin navegador disponible, mismo método que rondas
+  anteriores: sintaxis con `node --check`, lógica de fichas ejecutada
+  en Node contra el `PAIRS`/`classify()` reales del propio archivo, no
+  una copia simulada.
+- Suite Python: 321/321 sin cambios (el HTML es independiente).

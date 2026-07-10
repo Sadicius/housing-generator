@@ -21,7 +21,7 @@
 
   --oc: #e4572e;   /* obligatorio cerca */
   --ol: #8b1e3f;   /* obligatorio lejos */
-  --pmc:#2fae8f;   /* preferencia muy cerca */
+  --cat-estancia:#2fae8f;   /* color de categoria "estancia" en fichas/red -- antes --pmc, nombre de una categoria de relacion (preferencia muy cerca) ya fusionada en "pc" hace tiempo; renombrada para reflejar su uso real, no una relacion */
   --pc: #4c9a8e;   /* preferencia cerca */
   --pa: #d98e4a;   /* preferencia alejar */
   --n:  #3d5266;   /* neutro */
@@ -346,7 +346,7 @@ table.matrix th.dim{opacity:.25;}
       </div>
       <div class="synergy-col">
         <h4>Puntuación de sinergia por tipo</h4>
-        <div class="score-hint">Obligatorio cerca +3 · Preferencia cerca +1 · Preferencia alejar −1 · Obligatorio lejos −3. Suma sobre sus 15 relaciones — cuanto más alto, más "central" en la red de preferencias.</div>
+        <div class="score-hint">Obligatorio cerca +3 · Ya cubierto +2 · Preferencia cerca +1 · Preferencia alejar −1 · Obligatorio lejos −3 (Neutro y Condicional no puntúan). Suma sobre sus 15 relaciones — cuanto más alto, más "central" en la red de preferencias.</div>
         <div id="score-bars"></div>
       </div>
     </div>
@@ -653,10 +653,19 @@ function exportSectionSelection(){
 // ---------------- FICHAS ----------------
 function buildCards(){
   const wrap = document.getElementById('cards-wrap');
-  const catColor = {estancia:'--pmc', servicio:'--pa', circulacion:'--cyan-dim', otros:'--n'};
+  const catColor = {estancia:'--cat-estancia', servicio:'--pa', circulacion:'--cyan-dim', otros:'--n'};
   wrap.innerHTML = TYPES.map(t => {
     const p = PROPS[t];
     const floor = FLOORS.find(f => f.type === t);
+    const obligatorias = PAIRS.filter(pr => (pr.a===t || pr.b===t) && ['oc','ol'].includes(classify(pr.relation)));
+    const obligatoriasHtml = obligatorias.length > 0 ? `<div class="floor-note" style="margin-top:8px;">
+        <b>Relaciones obligatorias:</b><br>
+        ${obligatorias.map(pr => {
+          const other = pr.a===t ? pr.b : pr.a;
+          const cls = classify(pr.relation);
+          return `<span style="color:var(${COLORVAR[cls]})">${cls==='oc'?'cerca de':'lejos de'} ${DISPLAY[other]}</span>`;
+        }).join(' · ')}
+      </div>` : '';
     return `
     <div class="card" data-type="${t}">
       <h3>${DISPLAY[t]} <span style="color:var(--ink-faint); font-size:11px; font-weight:400;">(${t.toLowerCase()})</span></h3>
@@ -666,6 +675,7 @@ function buildCards(){
       <div class="row"><span class="k">subtipo (Tabla 2)</span><span class="v">${p.subtype || '—'}</span></div>
       <div class="row"><span class="k">lados a exterior (mín.)</span><span class="v ${p.min_exterior>0?'yes':''}">${p.min_exterior}</span></div>
       ${floor ? `<div class="floor-note"><b>Planta:</b> ${floor.niveles.replace(/\*\*/g,'')} · <b>${floor.fuerza}</b><br>${floor.notas}</div>` : ''}
+      ${obligatoriasHtml}
     </div>`;
   }).join('');
 }
@@ -682,7 +692,7 @@ function filterCards(query){
 // ---------------- SINERGIAS ----------------
 const WEIGHT = {oc:3, ol:-3, pc:1, pa:-1, n:0, cond:0, cov:2};
 const ZONE_GROUP_ORDER = ['day','night','service','circulation'];
-const CAT_COLOR = {estancia:'--pmc', servicio:'--pa', circulacion:'--cyan-dim', otros:'--n'};
+const CAT_COLOR = {estancia:'--cat-estancia', servicio:'--pa', circulacion:'--cyan-dim', otros:'--n'};
 
 function computeScores(){
   const scores = {}; TYPES.forEach(t => scores[t] = 0);
