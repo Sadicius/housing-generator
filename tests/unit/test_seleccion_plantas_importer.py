@@ -69,3 +69,65 @@ def test_empty_levels_produces_empty_program():
     program = import_seleccion_plantas({"levels": {}})
     assert program.rooms == []
     assert program.adjacency_requirements == []
+
+
+def _sample_payload_v2():
+    # formato nuevo real, tal como lo exporta el dashboard extendido:
+    # cada entrada trae su propia cantidad y area, no solo el tipo.
+    return {
+        "version": 2,
+        "levels": {
+            "PLANTA_BAJA": [
+                {"type": "LIVING_ROOM", "count": 1, "area_m2": 28},
+                {"type": "KITCHEN", "count": 1, "area_m2": 11},
+            ],
+            "PLANTA_SUPERIOR": [
+                {"type": "BEDROOM", "count": 2, "area_m2": 11},
+                {"type": "BATHROOM", "count": 1, "area_m2": 5.5},
+            ],
+        },
+    }
+
+
+def test_v2_format_creates_multiple_rooms_for_count_greater_than_one():
+    # limitacion real ELIMINADA (no solo documentada): el formato
+    # antiguo nunca podia declarar dos dormitorios en la misma planta.
+    program = import_seleccion_plantas(_sample_payload_v2())
+    bedrooms = [r for r in program.rooms if r.room_type == RoomType.BEDROOM]
+    assert len(bedrooms) == 2
+    assert bedrooms[0].id != bedrooms[1].id  # ids distintos, no colision
+
+
+def test_v2_format_uses_the_real_declared_area_not_the_generic_default():
+    # segunda limitacion real ELIMINADA: el area declarada por el
+    # usuario en el dashboard se usa tal cual, no el valor generico de
+    # AREAS_POR_DEFECTO_M2 (que para LIVING_ROOM es 25.0, no 28).
+    program = import_seleccion_plantas(_sample_payload_v2())
+    living = next(r for r in program.rooms if r.room_type == RoomType.LIVING_ROOM)
+    assert living.dimensions.area_m2 == 28  # el valor declarado, no el generico (25)
+
+
+def test_v2_format_all_rooms_of_same_type_share_the_declared_area():
+    program = import_seleccion_plantas(_sample_payload_v2())
+    bedrooms = [r for r in program.rooms if r.room_type == RoomType.BEDROOM]
+    assert all(r.dimensions.area_m2 == 11 for r in bedrooms)
+
+
+def test_v2_format_missing_area_falls_back_to_generic_default():
+    # robustez: si una entrada del formato nuevo no trae area_m2 (dato
+    # incompleto), no debe fallar -- cae al mismo respaldo generico que
+    # el formato antiguo.
+    payload = {"levels": {"PLANTA_BAJA": [{"type": "STUDY", "count": 1}]}}
+    program = import_seleccion_plantas(payload)
+    study = program.rooms[0]
+    assert study.dimensions.area_m2 == AREAS_POR_DEFECTO_M2[RoomType.STUDY]
+
+
+def test_old_and_new_format_can_coexist_in_the_same_payload():
+    # robustez adicional: un archivo con algunas entradas en formato
+    # antiguo (string) y otras en nuevo (dict) no debe fallar -- por si
+    # alguien edita un JSON exportado antes a mano.
+    payload = {"levels": {"PLANTA_BAJA": ["LIVING_ROOM", {"type": "KITCHEN", "count": 2, "area_m2": 9}]}}
+    program = import_seleccion_plantas(payload)
+    assert len([r for r in program.rooms if r.room_type == RoomType.LIVING_ROOM]) == 1
+    assert len([r for r in program.rooms if r.room_type == RoomType.KITCHEN]) == 2

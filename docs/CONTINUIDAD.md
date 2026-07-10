@@ -230,13 +230,14 @@ en el CLI.
 `infrastructure/persistence/seleccion_plantas_importer.py`:
 `import_seleccion_plantas(source, areas_m2=None)`, construido contra el
 formato REAL de exportación del dashboard (verificado en el propio
-HTML, no asumido). Limitación honesta heredada del formato: selección
-de tipos por planta, no programa completo (nunca más de una estancia
-por tipo/planta, áreas genéricas por defecto a revisar) -- las
-adyacencias sí se derivan del todo, sin esa limitación. Conectado
-también en el CLI (`--import-seleccion`). Confirmado con generación
-real de extremo a extremo, éxito y fallo honesto (selección incompleta
-falla con mensaje claro, no en silencio).
+HTML, no asumido). **Las dos limitaciones originales (una sola
+estancia por tipo/planta, áreas genéricas) se eliminaron en el propio
+dashboard** -- cada chip seleccionado ahora captura cantidad real y
+área en m² declarada por el usuario (formato `version: 2`),
+compatibilidad conservada con JSON exportados antes de este cambio.
+Conectado también en el CLI (`--import-seleccion`). Confirmado con
+generación real de extremo a extremo: 2 dormitorios reales en la misma
+planta, con áreas declaradas por el usuario, no genéricas.
 
 ## Pendiente real, si se retoma
 

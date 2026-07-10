@@ -2,18 +2,16 @@
 pestaña "Sección vertical") hacia un `Program` real utilizable por el
 generador -- retomado de docs/CONTINUIDAD.md, ultimo pendiente real.
 
-LIMITACION HONESTA, heredada del propio formato exportado (el dashboard
-ya lo advierte en su campo "nota"): el JSON es una SELECCION DE TIPOS
-por planta (que tipos de estancia hay en cada planta), no un programa
-completo -- no lleva cuenta de CUANTAS estancias de cada tipo (nunca
-mas de una por tipo y planta, aunque una vivienda real pueda querer
-dos dormitorios en la misma planta) ni sus AREAS reales. Este
-importador construye UNA `Room` por cada (tipo, planta) del JSON, con
-un area por defecto razonable pero generica (`AREAS_POR_DEFECTO_M2`) --
-pensada para revisar y ajustar despues, no para usar tal cual en un
-proyecto real. Las relaciones de adyacencia SI se derivan del todo,
-automaticamente, via el catalogo formalizado
-(`generate_adjacency_requirements`) -- eso no tiene esta limitacion.
+**[RESUELTO] Limitaciones eliminadas de raiz, no solo documentadas**: el
+dashboard ahora captura CANTIDAD real (cuantas estancias de cada tipo
+por planta, ya no maximo 1) y AREA real declarada por el usuario (ya no
+un valor generico de relleno) -- ver `docs/architecture.md`. El formato
+nuevo (`version: 2`) trae `{"type": ..., "count": ..., "area_m2": ...}`
+por entrada en vez de un simple nombre de tipo. Compatibilidad hacia
+atras con el formato anterior (solo nombres de tipo, sin version)
+preservada -- por si existe algun `seleccion_plantas.json` exportado
+antes de este cambio: en ese caso SI se sigue usando
+`AREAS_POR_DEFECTO_M2` como aproximacion, exactamente como antes.
 """
 import json
 from pathlib import Path
@@ -24,12 +22,11 @@ from housing_generator.domain.value_objects.dimensions import Dimensions
 from housing_generator.domain.enums import RoomType, NivelPlanta
 from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
 
-# Areas por defecto, genericas -- NO derivadas de Tabla 1/2 (esas dependen
-# del numero total de estancias del programa completo, que este importador
-# no puede conocer de antemano sin ya haber decidido las areas). Valores
-# razonables de partida para que el Program resultante sea generable sin
-# fallar por superficie insuficiente en la mayoria de casos tipicos --
-# no un sustituto de revisar las areas reales del proyecto.
+# Areas por defecto, genericas -- solo se usan con el formato ANTIGUO
+# (sin cantidad/area declaradas) o si una entrada del formato nuevo no
+# trae area_m2 valida. NO derivadas de Tabla 1/2 (esas dependen del
+# numero total de estancias del programa completo, que no se puede
+# conocer de antemano sin ya haber decidido las areas).
 AREAS_POR_DEFECTO_M2: Dict[RoomType, float] = {
     RoomType.LIVING_ROOM: 25.0,
     RoomType.DINING_ROOM: 14.0,
@@ -57,7 +54,11 @@ def import_seleccion_plantas(
     """Construye un `Program` real a partir del JSON exportado por el
     dashboard. `source` puede ser una ruta de archivo o el dict ya
     cargado. `areas_m2` sobreescribe `AREAS_POR_DEFECTO_M2` por tipo,
-    para los casos donde el valor generico no sea razonable.
+    usado como respaldo si una entrada no trae area propia.
+
+    Soporta el formato nuevo (`version: 2`, con cantidad y area reales
+    por entrada) y el antiguo (lista plana de nombres de tipo, sin
+    cantidad ni area -- una estancia por tipo/planta, area generica).
 
     Las relaciones de adyacencia del `Program` resultante se derivan
     automaticamente del catalogo formalizado
@@ -69,21 +70,34 @@ def import_seleccion_plantas(
     else:
         payload = source
 
-    areas = {**AREAS_POR_DEFECTO_M2, **(areas_m2 or {})}
+    default_areas = {**AREAS_POR_DEFECTO_M2, **(areas_m2 or {})}
     rooms: List[Room] = []
 
-    for level_name, type_names in payload.get("levels", {}).items():
+    for level_name, entries in payload.get("levels", {}).items():
         level = NivelPlanta[level_name]
-        for type_name in type_names:
+        for entry in entries:
+            if isinstance(entry, str):
+                # formato antiguo: solo el nombre de tipo, sin cantidad ni area
+                type_name, count, area = entry, 1, None
+            else:
+                # formato nuevo: {"type": ..., "count": ..., "area_m2": ...}
+                type_name = entry["type"]
+                count = max(1, int(entry.get("count", 1)))
+                area = entry.get("area_m2")
+
             room_type = RoomType[type_name]
-            room_id = f"{type_name.lower()}_{level_name.lower()}"
-            rooms.append(Room(
-                id=room_id,
-                name=room_id,
-                room_type=room_type,
-                dimensions=Dimensions(area_m2=areas.get(room_type, 10.0)),
-                level=level,
-            ))
+            final_area = area if area else default_areas.get(room_type, 10.0)
+
+            for i in range(1, count + 1):
+                suffix = f"_{i}" if count > 1 else ""
+                room_id = f"{type_name.lower()}_{level_name.lower()}{suffix}"
+                rooms.append(Room(
+                    id=room_id,
+                    name=room_id,
+                    room_type=room_type,
+                    dimensions=Dimensions(area_m2=final_area),
+                    level=level,
+                ))
 
     adjacency = generate_adjacency_requirements(rooms)
     return Program(rooms=rooms, adjacency_requirements=adjacency)

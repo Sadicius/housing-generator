@@ -1059,3 +1059,39 @@ Suite final: 295/295, `pyflakes` y `mypy` limpios.
 - Suite final: 315/315, `pyflakes` y `mypy` limpios.
 
 Con esto, `docs/CONTINUIDAD.md` queda sin pendientes reales conocidos.
+
+## Dashboard mejorado: cantidad y área reales (ambas limitaciones eliminadas)
+
+- **[RESUELTO]** A petición explícita del usuario ("mejorar lo que
+  tenemos en el dashboard y eliminar las limitaciones declaradas") --
+  las dos limitaciones del importador (nunca más de una estancia por
+  tipo/planta, áreas genéricas) venían del propio formato exportado, no
+  del importador en sí. Corregido en la raíz: el dashboard
+  (`relaciones_espaciales.html`) ahora muestra, en cada chip
+  seleccionado, dos campos numéricos en línea -- cantidad (por defecto
+  1, editable) y área en m² (con un valor de partida de
+  `DEFAULT_AREA_M2`, mismos valores que `AREAS_POR_DEFECTO_M2` en
+  Python, para que ambos coincidan).
+- Estado JS cambiado de `Set<tipo>` a `Map<tipo, {count, area}>` por
+  planta. Exportación (`version: 2`) trae
+  `{"type":..., "count":..., "area_m2":...}` por entrada, en vez de un
+  simple nombre de tipo.
+- **Verificación real, no solo revisión visual del código** (sin
+  entorno de navegador disponible en este proyecto): sintaxis JS
+  comprobada con `node --check` sobre el script extraído; la lógica de
+  exportación en sí ejecutada en Node con un estado simulado (dos
+  dormitorios, áreas distintas por tipo), confirmando el JSON exportado
+  real antes de tocar el importador Python.
+- `seleccion_plantas_importer.py` actualizado para consumir el formato
+  nuevo: genera tantas `Room` como `count` declare (con ids
+  distinguibles, `_1`/`_2`...), usando el `area_m2` real declarado.
+  **Compatibilidad hacia atrás preservada** con el formato antiguo
+  (entradas de solo texto, sin versión) -- por si existe algún
+  `seleccion_plantas.json` exportado antes de este cambio; en ese caso
+  sigue aplicando `AREAS_POR_DEFECTO_M2` como antes. Ambos formatos
+  pueden convivir en el mismo payload sin fallar.
+- Confirmado con generación real de extremo a extremo: edificio de 2
+  plantas con **2 dormitorios reales** en la misma planta (antes
+  imposible) y **áreas declaradas por el usuario** (28m² de salón,
+  12.5m² cada dormitorio -- no los valores genéricos de relleno).
+- Suite final: 321/321, `pyflakes` y `mypy` limpios.

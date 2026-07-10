@@ -265,17 +265,17 @@ O desde el CLI:
 python -m housing_generator.interface.cli.main --import-seleccion seleccion_plantas.json --output edificio.json
 ```
 
-**Limitación honesta, heredada del propio formato exportado** (el
-dashboard ya lo advierte al exportar): el JSON es una selección de
-*tipos* por planta, no un programa completo — nunca más de una
-estancia por tipo y planta (aunque quieras dos dormitorios en la misma
-planta), y sin áreas reales (usa valores genéricos de
-`AREAS_POR_DEFECTO_M2`, pensados para revisar y ajustar, no para usar
-tal cual). Las relaciones de adyacencia sí se derivan del todo,
-automáticamente, del catálogo formalizado. Si la selección no incluye
-`CORRIDOR`/`ENTRANCE_HALL` en una planta con baño, la generación falla
-con un mensaje claro (no genera algo incorrecto en silencio) — añadir
-la circulación que falte y reintentar.
+**[RESUELTO]** Las dos limitaciones originales del formato exportado (una
+sola estancia por tipo/planta, áreas genéricas) se eliminaron en el
+propio dashboard: cada chip seleccionado ahora muestra un campo de
+**cantidad** (para declarar, por ejemplo, dos dormitorios en la misma
+planta) y un campo de **área en m²** (con un valor de partida sensato
+que se puede ajustar). El importador usa esos valores reales
+directamente. Compatibilidad conservada con JSON exportados antes de
+este cambio (formato antiguo: una estancia por tipo, área genérica).
+Si la selección no incluye `CORRIDOR`/`ENTRANCE_HALL` en una planta con
+baño, la generación sigue fallando con un mensaje claro (no genera algo
+incorrecto en silencio) — añadir la circulación que falte y reintentar.
 
 ## Errores más comunes
 
