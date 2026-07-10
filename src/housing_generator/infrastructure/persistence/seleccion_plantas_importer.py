@@ -19,7 +19,7 @@ from typing import Dict, List, Optional, Union
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.value_objects.dimensions import Dimensions
-from housing_generator.domain.enums import RoomType, NivelPlanta
+from housing_generator.domain.enums import RoomType, NivelPlanta, DISPLAY_NAMES
 from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
 
 # Areas por defecto, genericas -- solo se usan con el formato ANTIGUO
@@ -91,9 +91,12 @@ def import_seleccion_plantas(
             for i in range(1, count + 1):
                 suffix = f"_{i}" if count > 1 else ""
                 room_id = f"{type_name.lower()}_{level_name.lower()}{suffix}"
+                display_name = DISPLAY_NAMES.get(room_type, room_type.value)
+                if count > 1:
+                    display_name = f"{display_name} {i}"
                 rooms.append(Room(
                     id=room_id,
-                    name=room_id,
+                    name=display_name,
                     room_type=room_type,
                     dimensions=Dimensions(area_m2=final_area),
                     level=level,

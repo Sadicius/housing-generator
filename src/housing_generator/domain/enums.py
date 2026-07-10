@@ -180,6 +180,34 @@ DEFAULT_SERVICE_SUBTYPE = {
 # admite override explicito (`Room(room_type=GARAGE, ...,
 # min_exterior_sides=1)`) para quien quiera exigirlo por motivos
 # practicos propios, sin que sea la exigencia por defecto del sistema.
+# Nombres legibles en espanol -- mismo mapeo EXACTO que DISPLAY en
+# docs/visualizador/relaciones_espaciales.html (las dos copias deben
+# coincidir; si una cambia, cambiar la otra). Bug real encontrado
+# haciendo el recorrido de extremo a extremo: seleccion_plantas_importer.py
+# usaba el nombre TECNICO del tipo ("living_room") como `Room.name`
+# tambien, en vez de un nombre legible -- se veia en el plano final,
+# no solo en el JSON intermedio. STAIRCASE incluido aqui (no aparece en
+# el catalogo del dashboard, que es solo de los 16 tipos no-circulacion).
+DISPLAY_NAMES = {
+    RoomType.LIVING_ROOM: "Salón",
+    RoomType.DINING_ROOM: "Comedor",
+    RoomType.KITCHEN: "Cocina",
+    RoomType.BEDROOM: "Dormitorio",
+    RoomType.MASTER_BEDROOM: "Dormitorio principal",
+    RoomType.BATHROOM: "Baño",
+    RoomType.TOILET: "Aseo",
+    RoomType.ENTRANCE_HALL: "Recibidor",
+    RoomType.STUDY: "Despacho",
+    RoomType.LAUNDRY: "Lavadero",
+    RoomType.DRYING_AREA: "Tendedero",
+    RoomType.STORAGE: "Almacén",
+    RoomType.STORAGE_ROOM: "Trastero",
+    RoomType.GARAGE: "Garaje",
+    RoomType.TECHNICAL_ROOM: "Cuarto técnico",
+    RoomType.CORRIDOR: "Pasillo",
+    RoomType.STAIRCASE: "Escalera",
+}
+
 DEFAULT_MIN_EXTERIOR_SIDES = {
     RoomType.LIVING_ROOM: 1,
     RoomType.DINING_ROOM: 1,

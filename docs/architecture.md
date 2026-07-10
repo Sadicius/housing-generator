@@ -1308,3 +1308,36 @@ el nombre del archivo fue la pista real.
   resto del dashboard (matriz, sección, fichas, red de sinergias seguía
   intacto tras el arreglo.
 - Suite Python: 321/321 sin cambios (el HTML es independiente).
+
+## Recorrido de extremo a extremo real (a petición explícita del usuario)
+
+Ejecutado el flujo COMPLETO tal como lo haría un usuario real, sin
+saltarse ningún paso: seleccionar estancias en "Sección vertical"
+(con clics y cambios de campo simulados vía `jsdom`, no solo llamadas
+directas a funciones) → exportar de verdad (capturando el `Blob` real
+que generaría la descarga) → ejecutar el comando real de
+`--import-seleccion` con ESE archivo exportado → cargar los
+`edificio_planta_*.json` reales resultantes en el Visor de plano →
+confirmar render, cambio de pestaña de planta, y datos correctos.
+
+- **[RESUELTO] Bug real encontrado solo al hacer el recorrido
+  completo** (invisible probando piezas sueltas): los nombres de
+  estancia en el plano final mostraban ids técnicos
+  (`living_room_planta_baja`) en vez de nombres legibles en español
+  (`Salón`) -- `seleccion_plantas_importer.py` usaba el mismo valor
+  para `Room.id` y `Room.name`. Ningún test anterior comprobaba
+  `Room.name` en absoluto (todos comprobaban tipo/nivel/área/cantidad),
+  por eso pasó desapercibido pese a la cobertura ya alta del módulo.
+  Añadido `DISPLAY_NAMES` en `enums.py` (mismo mapeo exacto que
+  `DISPLAY` en el dashboard JS, mismo idioma) + numeración legible
+  cuando hay varias del mismo tipo ("Dormitorio 1"/"Dormitorio 2", no
+  solo el id). Confirmado con dos tests nuevos, y visualmente con el
+  recorrido completo repetido tras la corrección.
+- **Re-revisados los repositorios de investigación centrados en
+  representación**, con la lente específica de "cómo dibujan un plano
+  2D" -- House-GAN confirma el mismo enfoque que ya usamos (rectángulo
+  + color por tipo), sin aportar ninguna técnica nueva de
+  representación no incorporada ya. BuildingNodes (fachadas 3D) y
+  real-3D-house-animation (animación decorativa) confirmados de nuevo
+  como no aplicables a un plano 2D.
+- Suite final: 323/323, `pyflakes` y `mypy` limpios.

@@ -131,3 +131,24 @@ def test_old_and_new_format_can_coexist_in_the_same_payload():
     program = import_seleccion_plantas(payload)
     assert len([r for r in program.rooms if r.room_type == RoomType.LIVING_ROOM]) == 1
     assert len([r for r in program.rooms if r.room_type == RoomType.KITCHEN]) == 2
+
+
+def test_rooms_get_readable_spanish_names_not_the_technical_id():
+    # BUG REAL encontrado haciendo el recorrido completo de extremo a
+    # extremo: el nombre legible (Room.name) usaba el mismo id tecnico
+    # que Room.id ("living_room_planta_baja") en vez de un nombre en
+    # espanol ("Salon") -- se veia asi en el plano final generado, no
+    # solo en datos intermedios. Ningun test anterior comprobaba
+    # Room.name en absoluto, por eso paso desapercibido.
+    payload = {"levels": {"PLANTA_BAJA": [{"type": "LIVING_ROOM", "count": 1, "area_m2": 25}]}}
+    program = import_seleccion_plantas(payload)
+    living = program.rooms[0]
+    assert living.name == "Salón"
+    assert living.name != living.id  # el id tecnico y el nombre legible deben ser distintos
+
+
+def test_multiple_instances_get_numbered_readable_names():
+    payload = {"levels": {"PLANTA_SUPERIOR": [{"type": "BEDROOM", "count": 2, "area_m2": 12}]}}
+    program = import_seleccion_plantas(payload)
+    names = sorted(r.name for r in program.rooms)
+    assert names == ["Dormitorio 1", "Dormitorio 2"]
