@@ -1095,3 +1095,39 @@ Con esto, `docs/CONTINUIDAD.md` queda sin pendientes reales conocidos.
   imposible) y **áreas declaradas por el usuario** (28m² de salón,
   12.5m² cada dormitorio -- no los valores genéricos de relleno).
 - Suite final: 321/321, `pyflakes` y `mypy` limpios.
+
+## Auditoría y mejora del dashboard (a petición del usuario, "corto de funciones y desactualizado")
+
+Revisión sistemática, no solo impresión visual: comparados TODOS los
+datos embebidos en el HTML contra sus fuentes reales de Python.
+
+- **[RESUELTO] Dato real desactualizado encontrado**: `PROPS.GARAGE.min_exterior`
+  seguía en `1` en el dashboard, pese a que Python lo corrigió a `0`
+  hace varias rondas (investigación de garajes colectivos vs.
+  unifamiliar). Único dato realmente obsoleto -- comparados
+  sistemáticamente `min_exterior`, `zone`, `is_wet`, `category`,
+  `subtype` de los 16 tipos contra `enums.py`, el resto coincidía.
+- **Catálogo de 120 pares (`PAIRS`) verificado consistente, 0
+  discrepancias**: comparación programática completa entre el `PAIRS`
+  embebido en JS y `DEFAULT_TYPE_ADJACENCY` + `CONDICIONAL_PAIRS` +
+  `YA_CUBIERTO_PAIRS` de Python -- las dos copias independientes del
+  mismo catálogo (generadas en momentos distintos de la sesión)
+  seguían de acuerdo en las 120 relaciones.
+- **Tres funciones nuevas añadidas** (genuina falta de capacidad, no
+  solo limpieza): (1) resumen en vivo por planta y total (nº de
+  estancias, superficie) mientras se selecciona, antes inexistente;
+  (2) comprobación de programa mínimo en tiempo real (las mismas 6
+  piezas que `ViviendaMinimaValidator`), para descubrir que falta algo
+  ANTES de exportar, no solo al fallar la generación en Python; (3)
+  botón "vaciar selección" (no existía ninguna forma de reiniciar sin
+  recargar la página).
+- Añadida también una nota de conexión directa con `--import-seleccion`
+  del CLI, para que quede claro que esto ya no es una herramienta de
+  exploración aislada del generador real.
+- **Verificación sin entorno de navegador disponible**, mismo método
+  que la ronda anterior: sintaxis JS con `node --check`, y la lógica
+  del resumen/programa mínimo ejecutada en Node con estado simulado
+  (dos casos: selección incompleta detectando exactamente las 3 piezas
+  que faltan; selección completa confirmando 0 piezas faltantes) antes
+  de darla por buena.
+- Suite Python: 321/321 sin cambios (el HTML es independiente).
