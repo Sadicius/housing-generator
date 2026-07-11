@@ -61,10 +61,11 @@ def main():
     parser.add_argument("--output", default="layout.json", help="Ruta de salida del layout generado")
     parser.add_argument(
         "--seed", type=int, default=1,
-        help="Semilla del recocido simulado (por defecto 1, fija -- determinista; "
-             "confirmada estable con el movimiento 'slide_wall' anadido tras "
-             "investigar Merrell et al. 2010). Usa otro valor para explorar "
-             "variantes distintas.",
+        help="Semilla del recocido simulado (por defecto 1, fija -- determinista. "
+             "Estable de nuevo tras anadir la heuristica de 'cortar por el lado mas "
+             "largo' -- Marson & Musse 2010 -- que redujo la aparicion de estancias "
+             "como tiras finas lo suficiente para que la semilla 1 volviera a "
+             "converger facil). Usa otro valor para explorar variantes distintas.",
     )
     parser.add_argument("--max-iterations", type=int, default=3000, help="Iteraciones del recocido simulado")
     parser.add_argument(
@@ -95,11 +96,22 @@ def main():
              "margen de busqueda de forma habitual, no como excepcion. Poner a 1 para "
              "desactivar el reintento y usar solo --seed tal cual.",
     )
+    parser.add_argument(
+        "--lot-size", metavar="ANCHOxFONDO", default=None,
+        help="Con --import-seleccion, tamano de parcela en metros (p.ej. '14x16') en vez "
+             "del tamano de ejemplo por defecto (14x16, el mismo valor) -- util para "
+             "acercarse al tamano real de tu parcela, o para dar mas margen si el "
+             "programa importado es grande.",
+    )
     args = parser.parse_args()
 
     if args.import_seleccion:
         program = import_seleccion_plantas(args.import_seleccion)
-        lot = build_sample_lot()
+        if args.lot_size:
+            w_str, h_str = args.lot_size.lower().split("x")
+            lot = Lot(boundary=Boundary(polygon=box(0, 0, float(w_str), float(h_str))))
+        else:
+            lot = build_sample_lot()
 
         building = None
         last_error = None

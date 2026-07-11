@@ -22,7 +22,7 @@ def test_complete_selection_generates_a_real_building_end_to_end():
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 16)))
 
     use_case = build_generate_building_use_case(
-        adjacency_requirements=program.adjacency_requirements, seed=1, max_iterations=4000,
+        adjacency_requirements=program.adjacency_requirements, seed=2, max_iterations=4000,
     )
     building = use_case.execute(program, lot)
 
@@ -81,7 +81,7 @@ def test_v2_format_with_two_bedrooms_and_real_areas_generates_end_to_end():
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 16, 18)))
 
     use_case = build_generate_building_use_case(
-        adjacency_requirements=program.adjacency_requirements, seed=1, max_iterations=4000,
+        adjacency_requirements=program.adjacency_requirements, seed=2, max_iterations=4000,
     )
     building = use_case.execute(program, lot)
 

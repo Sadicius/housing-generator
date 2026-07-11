@@ -32,7 +32,7 @@ application/       casos de uso, coordinan dominio + infraestructura via ports
 infrastructure/    implementaciones concretas de los ports
   algorithms/
     layout_generation/   SimulatedAnnealingLayoutGenerator, partition_tree
-    constraints/          18 validadores normativos
+    constraints/          19 validadores normativos/practicos
     adjacency/             GeometryAdjacencyGraphBuilder, door_graph
     zoning/                TreemapZoningStrategy
   geometry/          shapely_utils (funciones geométricas compartidas)
@@ -58,17 +58,29 @@ rectángulo entre sus dos subárboles, proporcionalmente al área total
 de estancias de cada lado (`partition_tree.place_tree`).
 
 1. Se construye un árbol inicial con topología aleatoria
-   (`build_random_tree`).
+   (`build_random_tree`) -- cada corte empieza en modo automático
+   (`direction=None`).
 2. En cada iteración, se genera un "vecino" mutando el árbol actual con
    uno de 4 movimientos aleatorios (`random_neighbor`):
    - `swap_leaves`: intercambia dos estancias de sitio
-   - `flip_direction`: invierte un corte horizontal↔vertical
+   - `flip_direction`: cicla la dirección de un corte por 3 estados
+     (automático → horizontal forzado → vertical forzado → automático)
    - `swap_children`: espeja un subárbol
    - `slide_wall`: desliza un corte existente ±8% desde su proporción
      actual (técnica de Merrell et al. 2010)
 3. Se acepta o rechaza el vecino según el criterio de Metropolis
    (`SimulatedAnnealingLayoutGenerator.generate`), con temperatura que
    decae en cada iteración (`cooling_rate`).
+
+**Dirección automática = cortar por el lado más largo.** Un corte en
+modo automático (`direction=None`, el punto de partida por defecto)
+no decide horizontal/vertical al construir el árbol -- lo decide
+`place_tree`, en el momento de colocar, según cuál sea el lado más
+largo del rectángulo real en ese punto (técnica de squarified treemap,
+Marson & Musse 2010). Reduce la aparición de estancias como tiras
+finas frente a elegir la dirección al azar -- confirmado con un caso
+real donde añadir un mínimo de ancho práctico volvió la búsqueda
+mucho más difícil hasta aplicar esta técnica.
 
 ### Función objetivo: duro + blando, comparación lexicográfica
 
@@ -111,14 +123,14 @@ Tras generar todas las plantas, dos comprobaciones de ámbito EDIFICIO
 mínimo, unión de todas las plantas) y `BanoAccesoGeneralValidator` (al
 menos un baño con acceso general en **alguna** planta).
 
-## Los 18 validadores normativos (+ 1 combinador)
+## Los 19 validadores normativos/prácticos (+ 1 combinador)
 
 Implementan `ConstraintValidatorPort.validate(layout) -> ValidationResult`
 (listas de `violations` y `warnings` — las violaciones bloquean la
 generación, los avisos no). `CompositeConstraintValidator` no es una
 regla normativa en sí -- agrupa una lista de validadores y expone la
 misma interfaz, para que el generador solo necesite hablar con "un"
-validador aunque por dentro sean 14 clases distintas (17 instancias
+validador aunque por dentro sean 15 clases distintas (18 instancias
 por planta, contando las 4 de `GroupingConstraintValidator`).
 
 **Por planta** (`build_per_floor_validators` en `container.py`):
@@ -131,7 +143,8 @@ por planta, contando las 4 de `GroupingConstraintValidator`).
 | `ServicioMinimumAreaValidator` | Tabla 2: superficie mínima por tipo de servicio |
 | `DormitorioArmarioValidator` | hueco de armario empotrado por dormitorio |
 | `TrasteroMinimumAreaValidator` | superficie fija de trastero (B.2.5) |
-| `AnchoLibreEstanciaValidator` | ancho libre mínimo (A.3.2.1) |
+| `AnchoLibreEstanciaValidator` | ancho libre mínimo normativo (A.3.2.1) -- salón, dormitorios, cocina, baño |
+| `AnchoLibrePracticoValidator` | ancho libre mínimo **NO normativo** (1.20m, decisión de ingeniería confirmada) para los tipos que el decreto deja sin ancho especificado -- evita estancias como tiras finas (p.ej. un almacén de 49cm de fondo, caso real encontrado) |
 | `AnchoLibrePasilloValidator` | ancho libre de pasillo (A.3.2.3) |
 | `AlturaLibreValidator` | altura libre mínima (A.3.1.1), con reducción directa a 2.20m en las piezas que el decreto nombra explícitamente |
 | `ExteriorContactValidator` | lados de contacto exterior mínimos por tipo |

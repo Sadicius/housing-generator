@@ -207,3 +207,90 @@ def test_slide_wall_starts_from_current_effective_ratio_not_fixed_value():
             )
             return
     pytest.fail("ningun seed activo slide_wall en el rango probado")
+
+
+def test_direction_none_cuts_vertically_on_wide_rectangle():
+    # retomado de un caso real: cortar por el lado mas largo (Marson &
+    # Musse 2010, squarified treemap) reduce la aparicion de estancias
+    # como tiras finas. Rectangulo ancho (10x4) -- debe cortar VERTICAL
+    # (reparte a lo largo de X, produciendo dos mitades mas cuadradas
+    # que un corte horizontal aqui).
+    tree = PartitionNode(
+        direction=None,  # automatico
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 50.0, "b": 50.0}
+    placements = place_tree(tree, box(0, 0, 10, 4), areas)
+
+    a_bounds = placements["a"].bounds
+    # corte vertical: ambas mitades ocupan la altura completa (4), se
+    # reparten en X -- confirmamos que ninguna abarca los 10m de ancho
+    assert a_bounds[3] - a_bounds[1] == pytest.approx(4.0)
+    assert (a_bounds[2] - a_bounds[0]) < 10.0
+
+
+def test_direction_none_cuts_horizontally_on_tall_rectangle():
+    tree = PartitionNode(
+        direction=None,
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 50.0, "b": 50.0}
+    placements = place_tree(tree, box(0, 0, 4, 10), areas)
+
+    a_bounds = placements["a"].bounds
+    # corte horizontal: ambas mitades ocupan el ancho completo (4)
+    assert a_bounds[2] - a_bounds[0] == pytest.approx(4.0)
+    assert (a_bounds[3] - a_bounds[1]) < 10.0
+
+
+def test_explicit_direction_overrides_the_automatic_longest_side_choice():
+    # con direction="h" FORZADO, debe cortar horizontal aunque el
+    # rectangulo sea ancho (donde lo automatico elegiria vertical)
+    tree = PartitionNode(
+        direction="h",
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 50.0, "b": 50.0}
+    placements = place_tree(tree, box(0, 0, 10, 4), areas)
+
+    a_bounds = placements["a"].bounds
+    assert a_bounds[2] - a_bounds[0] == pytest.approx(10.0)  # ancho completo = corte horizontal
+
+
+def test_build_random_tree_defaults_to_automatic_direction():
+    # ya no elige h/v al azar al construir -- el azar de direccion es
+    # responsabilidad exclusiva de flip_direction durante la busqueda
+    tree = build_random_tree(["a", "b", "c", "d"], random.Random(1))
+    for node in tree.internal_nodes():
+        assert node.direction is None
+
+
+def test_flip_direction_cycles_through_three_states_not_toggle():
+    # None (automatico) -> "h" -> "v" -> None -- ya no es un toggle
+    # ciego h<->v, porque la direccion "natural" depende del rectangulo
+    # real en el momento de colocar, no se puede saber solo con el nodo
+    tree = PartitionNode(
+        direction=None,
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 50.0, "b": 50.0}
+
+    seen_directions = []
+    current = tree
+    for _ in range(3):
+        # forzar el movimiento flip_direction repetidamente sobre el MISMO nodo
+        rng = random.Random(0)
+        while True:
+            candidate = random_neighbor(current, rng, areas)
+            if candidate.internal_nodes()[0].direction != current.internal_nodes()[0].direction:
+                current = candidate
+                break
+        seen_directions.append(current.internal_nodes()[0].direction)
+
+    # tras 3 flips desde None, debe haber pasado por los 3 estados sin repetir consecutivos
+    assert seen_directions[0] != seen_directions[1] != seen_directions[2]
+    assert set(seen_directions) <= {None, "h", "v"}

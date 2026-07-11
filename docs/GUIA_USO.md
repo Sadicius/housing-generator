@@ -290,6 +290,11 @@ O desde el CLI:
 python -m housing_generator.interface.cli.main --import-seleccion seleccion_plantas.json --output edificio.json
 ```
 
+Por defecto usa una parcela de ejemplo (14x16m) — `--lot-size ANCHOxFONDO`
+(p.ej. `--lot-size 12x18`) permite ajustarla a una parcela real. Si la
+primera semilla no converge, el CLI reintenta solas hasta 5 semillas
+consecutivas antes de rendirse (`--retry-seeds`, ver más abajo).
+
 **[RESUELTO]** Las dos limitaciones originales del formato exportado (una
 sola estancia por tipo/planta, áreas genéricas) se eliminaron en el
 propio dashboard: cada chip seleccionado ahora muestra un campo de

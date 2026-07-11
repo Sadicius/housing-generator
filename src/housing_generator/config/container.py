@@ -39,6 +39,9 @@ from housing_generator.infrastructure.algorithms.constraints.trastero_minimum_ar
 from housing_generator.infrastructure.algorithms.constraints.ancho_libre_estancia_validator import (
     AnchoLibreEstanciaValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.ancho_libre_practico_validator import (
+    AnchoLibrePracticoValidator,
+)
 from housing_generator.infrastructure.algorithms.constraints.ancho_libre_pasillo_validator import (
     AnchoLibrePasilloValidator,
 )
@@ -118,6 +121,7 @@ def build_per_floor_validators(
         DormitorioArmarioValidator(),
         TrasteroMinimumAreaValidator(),
         AnchoLibreEstanciaValidator(),
+        AnchoLibrePracticoValidator(),
         AnchoLibrePasilloValidator(),
         AlturaLibreValidator(),
         ExteriorContactValidator(),

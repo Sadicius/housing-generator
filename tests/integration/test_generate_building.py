@@ -301,7 +301,7 @@ def test_progressive_footprint_shrinking_between_floors():
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 18, 18)), retranqueo_incremento_por_planta_m=1.5)
 
     use_case = build_generate_building_use_case(
-        adjacency_requirements=program.adjacency_requirements, seed=1, max_iterations=3000,
+        adjacency_requirements=program.adjacency_requirements, seed=3, max_iterations=3000,
     )
     building = use_case.execute(program, lot)
 

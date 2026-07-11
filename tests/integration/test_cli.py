@@ -120,12 +120,15 @@ def test_cli_with_import_seleccion_as_a_real_subprocess(tmp_path):
 
 
 def test_cli_retries_seeds_automatically_when_the_first_one_does_not_converge(tmp_path):
-    # retomado de un caso real: un usuario cargo un seleccion_plantas.json
-    # real (planta baja con salon/comedor/cocina/dorm.ppal/bano/recibidor/
-    # lavadero/tendedero/almacen, SIN corridor) y la semilla 1 (la que
-    # usa el CLI por defecto) no convergia -- la semilla 4 si. Confirma
-    # que ahora el CLI reintenta solo, sin que el usuario tenga que
-    # buscar una semilla a mano.
+    # Este escenario concreto se volvio MAS FACIL tras anadir la
+    # heuristica de "cortar por el lado mas largo" (Marson & Musse
+    # 2010) -- buena senal, pero significa que ya no sirve para
+    # demostrar el reintento con la parcela de ejemplo (14x16) por
+    # defecto. Usamos --lot-size para recrear una parcela realmente
+    # ajustada (11x10) donde la dificultad es real y estable (por
+    # espacio, no por una coincidencia de forma que una mejora futura
+    # pueda volver a resolver) -- confirmado que semilla 1 falla,
+    # semilla 3 converge, dentro del margen de reintento por defecto.
     import json as json_module
 
     seleccion_path = tmp_path / "seleccion_plantas.json"
@@ -151,7 +154,7 @@ def test_cli_retries_seeds_automatically_when_the_first_one_does_not_converge(tm
         [
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
-            "--max-iterations", "5000", "--seed", "1",
+            "--lot-size", "11x10", "--max-iterations", "5000", "--seed", "1",
         ],
         capture_output=True, text=True, timeout=90,
     )
@@ -162,9 +165,9 @@ def test_cli_retries_seeds_automatically_when_the_first_one_does_not_converge(tm
 
 
 def test_cli_fails_clearly_when_retry_seeds_is_exhausted(tmp_path):
-    # con retry_seeds=1 (sin reintento), el mismo escenario que arriba
-    # SI debe fallar con la semilla 1 -- confirma que el mensaje de
-    # fallo tras agotar los reintentos es claro, no una traza confusa.
+    # mismo escenario ajustado (11x10) que el test anterior, pero con
+    # retry_seeds=1 (sin reintento) -- confirma que el mensaje de fallo
+    # tras agotar los reintentos es claro, no una traza confusa.
     import json as json_module
 
     seleccion_path = tmp_path / "seleccion_plantas.json"
@@ -190,10 +193,52 @@ def test_cli_fails_clearly_when_retry_seeds_is_exhausted(tmp_path):
         [
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
-            "--max-iterations", "5000", "--seed", "1", "--retry-seeds", "1",
+            "--lot-size", "11x10", "--max-iterations", "5000", "--seed", "1", "--retry-seeds", "1",
         ],
         capture_output=True, text=True, timeout=60,
     )
 
     assert result.returncode != 0
     assert "No se pudo generar tras probar 1 semillas" in result.stderr
+
+
+def test_cli_lot_size_option_changes_the_actual_parcel_dimensions(tmp_path):
+    # --lot-size es nuevo: --import-seleccion usaba siempre la parcela
+    # de ejemplo fija (14x16), sin ninguna forma de ajustarla al tamano
+    # real de la parcela del usuario, ni de recrear un caso ajustado
+    # para pruebas. Confirma que el tamano declarado se refleja de
+    # verdad en el area edificable resultante (no solo que el flag se
+    # acepta sin fallar).
+    import json as json_module
+
+    seleccion_path = tmp_path / "seleccion_plantas.json"
+    seleccion_path.write_text(json_module.dumps({
+        "version": 2,
+        "levels": {"PLANTA_BAJA": [
+            {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
+            {"type": "KITCHEN", "count": 1, "area_m2": 10},
+            {"type": "BATHROOM", "count": 1, "area_m2": 5},
+            {"type": "ENTRANCE_HALL", "count": 1, "area_m2": 4.5},
+            {"type": "LAUNDRY", "count": 1, "area_m2": 3},
+            {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
+            {"type": "STORAGE", "count": 1, "area_m2": 3},
+        ]},
+    }), encoding="utf-8")
+    output_path = tmp_path / "edificio.json"
+
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "housing_generator.interface.cli.main",
+            "--import-seleccion", str(seleccion_path), "--output", str(output_path),
+            "--lot-size", "10x9", "--max-iterations", "5000", "--seed", "1", "--retry-seeds", "8",
+        ],
+        capture_output=True, text=True, timeout=90,
+    )
+
+    assert result.returncode == 0, f"El CLI con --lot-size fallo: {result.stderr}"
+    data = json.loads((tmp_path / "edificio_planta_baja.json").read_text(encoding="utf-8"))
+    all_bounds = [r["bounds"] for r in data["rooms"]]
+    max_x = max(b[2] for b in all_bounds)
+    max_y = max(b[3] for b in all_bounds)
+    assert max_x <= 10.01  # dentro de la parcela de 10m declarada, no la de ejemplo (14m)
+    assert max_y <= 9.01
