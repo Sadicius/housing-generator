@@ -1678,3 +1678,56 @@ unifamiliar). Accesibilidad SÍ encaja: mismo tipo de restricción
   caso normal). Confirmado también vía subprocess real del CLI.
 - Suite final: 358 (326 unitarios + 32 integración), pyflakes y mypy
   limpios (78 archivos).
+
+## Rediseño completo del dashboard ("no tiene alma o personalidad")
+
+El usuario pidió rediseñar toda la interfaz del dashboard -- consultada
+`docs/frontend-design/SKILL.md` antes de empezar, evitando
+deliberadamente los dos clichés de IA que la propia guía señala
+(crema+terracota+serif con acento cercano a #D97757; negro casi puro +
+un único acento brillante -- el dashboard anterior, navy+cian, caía
+cerca del segundo).
+
+- **[RESUELTO] Dirección: cianotipo técnico real**, no otro dashboard
+  oscuro genérico -- fundamentado en el propio contenido (esta
+  herramienta genera planos). Paleta de 6 tonos con nombre (azul
+  cianotipo profundo, papel de calco SOLO en superficies de tarjeta,
+  terracota como acento de firma usado con moderación, óxido para
+  alertas). Tipografía: Space Grotesk (títulos, carácter técnico) +
+  Archivo (cuerpo) + Space Mono (datos/medidas) -- sustituye IBM Plex
+  por completo. Firma: cada pestaña pasa a ser una LÁMINA numerada
+  (01-05) con cajetín de título, como una lámina real de un juego de
+  planos -- estructura que informa (el número es real), no decoración.
+- **Riesgo controlado antes de tocar nada**: inventario completo de
+  todos los `id`/clases que el JS referencia (`getElementById`,
+  `querySelector`, `COLORVAR`, `CAT_COLOR`) para preservarlos
+  exactamente -- los NOMBRES de las variables CSS (`--bg`, `--oc`,
+  `--cat-estancia`...) se mantuvieron sin cambios, solo se
+  reescribieron sus VALORES hexadecimales.
+- **Hallazgo real de paso, no buscado**: el texto de aviso de la
+  pestaña Matriz seguía diciendo que "Preferencia" no tenía efecto en
+  el generador y que "el sistema genera una sola planta" -- ambas cosas
+  llevaban muchas rondas resueltas (`SoftConstraintScorer`,
+  multi-planta). Corregido de paso.
+- **Verificación en tres capas, sin navegador real disponible**:
+  (1) `jsdom` (motor JS moderno) -- cero errores, las 5 pestañas
+  funcionales, conteos de elementos correctos, generación automática y
+  visor de plano probados de extremo a extremo tras el rediseño;
+  (2) `wkhtmltoimage` (motor real pero antiguo, sin soporte de JS
+  ES6+) -- confirma el HTML/CSS estático (cajetín, pestañas, aviso)
+  con la paleta nueva real, aunque no el contenido generado
+  dinámicamente; (3) extracción del HTML ya generado por `jsdom` +
+  render aislado vía `wkhtmltoimage`/`cairosvg` -- confirma
+  visualmente que la matriz (120 celdas reales) y la red de sinergias
+  usan los colores de clasificación correctos de la paleta nueva.
+- Limpiado un resto real: 5 usos del navy antiguo (`#0d1b2a`) como
+  tinta de contraste sobre insignias/etiquetas de colores, sin
+  actualizar durante el resto del rediseño -- sustituidos por la nueva
+  tinta cálida (`#2B2622`) para coherencia.
+- Añadidos 2 tests de sanidad nuevos (`test_dashboard_sanity.py`):
+  confirma que no queda ninguna referencia a las fuentes anteriores, y
+  que los nombres de variable CSS que el JS necesita siguen presentes
+  -- cierra el mismo hueco de "verificación exploratoria nunca hecha
+  permanente" ya encontrado en auditorías previas.
+- Suite Python: 328/328 unitarios sin cambios de comportamiento (el
+  HTML es independiente).

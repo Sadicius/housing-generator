@@ -76,3 +76,34 @@ def test_garage_min_exterior_matches_python_default():
         f"PROPS.GARAGE.min_exterior ({dashboard_value}) no coincide con "
         f"DEFAULT_MIN_EXTERIOR_SIDES[GARAGE] en Python ({python_value})"
     )
+
+
+def test_redesign_uses_the_new_typefaces_not_the_old_ones():
+    # rediseño completo (paleta cianotipo + Space Grotesk/Archivo/Space
+    # Mono), a peticion del usuario ("no tiene alma o personalidad") --
+    # confirma que no quedo ninguna referencia a las fuentes anteriores
+    # (IBM Plex) mezclada por error con las nuevas.
+    html = _read_dashboard()
+    assert "IBM Plex" not in html.replace("sustituye IBM Plex", "")  # exceptua el propio comentario que lo explica
+    assert "Space Grotesk" in html
+    assert "Archivo" in html
+    assert "Space Mono" in html
+
+
+def test_redesign_css_variable_names_preserved_for_javascript():
+    # el rediseño cambio los VALORES hexadecimales de la paleta, pero
+    # los NOMBRES de las variables CSS deben seguir siendo exactamente
+    # los que el JS referencia (COLORVAR, CAT_COLOR, generacion de SVG
+    # del plano) -- si un nombre cambia sin actualizar el JS, los
+    # colores se romperian en silencio (var() no definida = color por
+    # defecto del navegador, sin error visible).
+    html = _read_dashboard()
+    required_var_names = [
+        "--bg:", "--bg-panel:", "--bg-panel-2:", "--line:", "--line-soft:",
+        "--ink:", "--ink-dim:", "--ink-faint:", "--cyan:", "--cyan-dim:",
+        "--oc:", "--ol:", "--cat-estancia:", "--pc:", "--pa:", "--n:", "--cond:",
+        "--zone-day:", "--zone-night:", "--zone-service:", "--zone-circulation:",
+        "--ok:", "--warn:", "--bad:",
+    ]
+    for name in required_var_names:
+        assert name in html, f"variable CSS {name} no encontrada -- el JS podria depender de ella"
