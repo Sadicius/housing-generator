@@ -19,13 +19,15 @@
 Sistema generativo de plantas residenciales en Python, cumplimiento del
 Decreto 29/2010 de Galicia (habitabilidad, modificado por Decreto 128/2023).
 Arquitectura hexagonal estricta. Generación por recocido simulado sobre un
-árbol de partición. 18 validadores normativos + 1 combinador, multi-planta
-con escalera y contorno progresivo, vivienda aislada y pareada/adosada.
+árbol de partición (con heurística de "cortar por el lado más largo",
+Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
+multi-planta con escalera y contorno progresivo, vivienda aislada y
+pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 315/315 tests, working tree
-limpio. Estas cifras quedarán obsoletas en cuanto se añada algo más --
-si no coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar
-en el comando, no en este número.
+**Estado en el momento de escribir esto**: 342/342 tests (46 commits).
+Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
+coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
+comando, no en este número.
 
 ## Convención de documentación — evitar que esto se repita
 
@@ -147,7 +149,8 @@ docs/
   relaciones_espaciales.md   catálogo de 120 pares de adyacencia + huecos de modelo
   niveles_plantas.md         niveles, escalera (CTE DB-SUA 1), bajantes
 
-docs/visualizador/relaciones_espaciales.html   dashboard standalone (4 pestañas)
+docs/visualizador/relaciones_espaciales.html   dashboard standalone (5 pestañas,
+                                                 incluido el Visor de plano)
 ```
 
 Para entender el estado real, **`docs/architecture.md` es la fuente de verdad**
@@ -155,14 +158,16 @@ Para entender el estado real, **`docs/architecture.md` es la fuente de verdad**
 se encontró roto, y por qué. Merece la pena leerlo entero antes de tocar nada
 grande.
 
-## Los 18 validadores normativos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
+## Los 19 validadores normativos/prácticos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
 
-Por planta (`build_per_floor_validators` en `container.py`, 14 clases,
-17 instancias contando las 4 de `GroupingConstraintValidator`): Adjacency,
+Por planta (`build_per_floor_validators` en `container.py`, 15 clases,
+18 instancias contando las 4 de `GroupingConstraintValidator`): Adjacency,
 NucleoHumedo, zonificación día/noche/servicio, EstanciaMinimumArea (Tabla 1),
 ServicioMinimumArea (Tabla 2), DormitorioArmario, TrasteroMinimumArea,
-AnchoLibreEstancia, AnchoLibrePasillo, AlturaLibre, ExteriorContact,
-CocinaIntegrada, EspacioAcceso, EscaleraAnchoLibre, PasilloTopologia.
+AnchoLibreEstancia, AnchoLibrePractico (NO normativo, 1.20m confirmado
+explícitamente, ver sección de aprendizajes), AnchoLibrePasillo, AlturaLibre,
+ExteriorContact, CocinaIntegrada, EspacioAcceso, EscaleraAnchoLibre,
+PasilloTopologia.
 
 De ámbito EDIFICIO (no por planta, se comprueban aparte en
 `GenerateBuildingUseCase`): ViviendaMinima (programa mínimo, une todas las
@@ -173,7 +178,7 @@ Entre plantas consecutivas (parametrizados con la planta ya resuelta):
 EscaleraAlineacion (huella ≥90% de solape), NucleoHumedoVertical (bajantes).
 
 `CompositeConstraintValidator` agrupa todos los anteriores tras la misma
-interfaz -- no es una regla normativa en sí, es el combinador (14+2+2=18
+interfaz -- no es una regla normativa en sí, es el combinador (15+2+2=19
 reglas). Detalle completo con tabla resumen en `docs/COMO_FUNCIONA.md`.
 
 ## Multi-planta — cómo funciona
@@ -235,9 +240,16 @@ estancia por tipo/planta, áreas genéricas) se eliminaron en el propio
 dashboard** -- cada chip seleccionado ahora captura cantidad real y
 área en m² declarada por el usuario (formato `version: 2`),
 compatibilidad conservada con JSON exportados antes de este cambio.
-Conectado también en el CLI (`--import-seleccion`). Confirmado con
-generación real de extremo a extremo: 2 dormitorios reales en la misma
-planta, con áreas declaradas por el usuario, no genéricas.
+Nombres legibles en español (`DISPLAY_NAMES` en `enums.py`, mismo
+mapeo que el dashboard) -- bug real encontrado en el recorrido
+completo: usaba el id técnico como nombre visible.
+
+Conectado en el CLI (`--import-seleccion`), con `--lot-size ANCHOxFONDO`
+(parcela de ejemplo fija por defecto, 14x16) y `--retry-seeds` (5 por
+defecto -- los programas de `--import-seleccion` no están curados a
+mano, necesitan más margen de búsqueda de forma habitual, confirmado
+con un caso real donde la semilla 1 no convergía). Confirmado con
+generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
@@ -289,8 +301,9 @@ se retoma -- no es un pendiente activo, es una decisión de alcance.
 - **Cuando cambias qué movimientos aleatorios usa el recocido simulado
   (o cualquier cosa que consuma la secuencia de `random.Random`), las
   semillas fijas dejan de reproducir el mismo resultado** — hay que
-  rebuscar una semilla estable cada vez que esto cambia (pasó dos veces
-  en esta sesión).
+  rebuscar una semilla estable cada vez que esto cambia (pasó muchas
+  veces ya en el proyecto; dejar de contarlas y asumirlo como algo
+  habitual, no una sorpresa cada vez).
 - **Investigar cómo resuelven el mismo problema otros proyectos antes de
   construir algo desde cero** dio resultado real, no solo referencias
   bonitas: la técnica de "deslizar pared" (Merrell et al. 2010), el
@@ -317,13 +330,46 @@ se retoma -- no es un pendiente activo, es una decisión de alcance.
   actualizar. Ninguno de estos números se mantiene solo -- cada vez que
   alguien pregunta "¿seguro que es lo único pendiente?", vale la pena
   releer el documento entero, no solo la sección de pendientes.
+- **`jsdom` (cargar y ejecutar el HTML real, simular clics/eventos
+  reales) encuentra bugs que `node --check` nunca puede** — `--check`
+  solo valida sintaxis, nunca comportamiento en tiempo de ejecución
+  contra un DOM real. Encontró una colisión de nombres real (`FLOORS`
+  con dos significados distintos en los dos archivos fusionados) y un
+  `TypeError` sin capturar (cargar el formato de archivo equivocado en
+  el visor) que ninguna lectura de código habría detectado con la misma
+  certeza.
+- **En un SVG, `stroke-width` se interpreta en las mismas unidades que
+  el `viewBox`.** Si el `viewBox` está en metros (coordenadas reales de
+  una vivienda, no píxeles de pantalla), un `stroke-width` pensado como
+  "un valor razonable en píxeles" se convierte en metros de grosor --
+  bug real que generaba curvas/círculos gigantes tragándose el plano.
+  Cualquier valor de grosor de línea en un SVG con coordenadas no-pixel
+  hay que pensarlo explícitamente en esas unidades, no copiarlo de un
+  ejemplo pensado para píxeles.
+- **Cuando una captura de pantalla real del usuario revela un problema
+  que ninguna verificación automatizada detectó, no asumir que el
+  problema es "solo esta vez" -- preguntarse si hay una categoría
+  entera de problemas (aspecto visual, proporciones, unidades) que
+  ninguna de las herramientas de verificación disponibles puede cubrir
+  en absoluto**, y decirlo con esa misma claridad en vez de fingir
+  cobertura completa.
+- **Antes de relajar un umbral que "hace la búsqueda más difícil",
+  investigar si hay una técnica conocida para resolver la causa
+  estructural, no solo el síntoma.** `AnchoLibrePracticoValidator` por
+  sí solo hizo que un caso real dejara de converger incluso con 30.000
+  iteraciones -- la heurística de "cortar por el lado más largo"
+  (Marson & Musse 2010, ya citados antes en este mismo proyecto para
+  el treemap de zonificación) lo redujo a 5.000, sin bajar ningún
+  mínimo. Aislar la causa (quitando temporalmente el validador nuevo,
+  confirmando que SIN él la misma semilla converge rápido) confirmó que
+  era la causa real antes de invertir tiempo en la investigación.
 
 ## Cómo verificar que todo sigue en orden
 
 ```bash
 cd housing_generator
-python -m pytest -q                                          # deberia dar 305 passed (o mas)
-python -m pytest --cov=housing_generator --cov-report=term-missing -q  # 98% (o mas)
+python -m pytest -q                                          # deberia dar 342 passed (o mas) -- tarda varios minutos, los tests de --import-seleccion/reintento son lentos (subprocess real)
+python -m pytest --cov=housing_generator --cov-report=term-missing -q  # 85%+ (o mas)
 python -m housing_generator.interface.cli.main --output /tmp/x.json    # CLI real
 git log --oneline | head -5                                   # historial reciente
 ```

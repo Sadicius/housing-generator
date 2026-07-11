@@ -1506,3 +1506,37 @@ prácticamente inservible.
   de reintento de semillas.
 - Suite final: 339/339 (309 unitarios + 30 integración), `pyflakes` y
   `mypy` limpios (77 archivos).
+
+## Auditoría completa tras el tramo de trabajo intenso (visor, validador práctico, heurística de partición)
+
+A petición del usuario, tras un tramo largo de cambios rápidos
+(visor de plano, fusión de dashboard, `AnchoLibrePracticoValidator`,
+heurística de lado más largo, `--lot-size`/`--retry-seeds`).
+
+- **Suite completa**: 342/342 (312 unitarios + 30 integración, dividida
+  en lotes por el límite de tiempo de ejecución -- los tests de
+  `--import-seleccion`/reintento son lentos, subprocess real).
+  `pyflakes`, `mypy` (77 archivos) y `radon` (sin D/E/F) limpios.
+- **[RESUELTO] `CONTINUIDAD.md` desactualizado sobre sí mismo, otra vez**
+  (mismo patrón ya documentado antes, confirma que sigue siendo el
+  punto de fallo más recurrente): "18 validadores" (ya 19), "315/315
+  tests" (ya 342), "dashboard... 4 pestañas" (ya 5), sección del
+  importador sin mencionar nombres legibles/`--lot-size`/`--retry-seeds`
+  (añadidos después de escribirse esa sección). Corregido todo.
+- **[RESUELTO] Aplicada la propia convención de tests del proyecto
+  retroactivamente**: la verificación del bug de `stroke-width` en
+  metros se hizo con `cairosvg` de forma exploratoria en su momento,
+  pero nunca se convirtió en test permanente -- hueco real detectado
+  al auditar contra la propia regla 1 de "Convención de tests".
+  Añadido `tests/unit/test_dashboard_sanity.py` (3 tests, sin necesitar
+  Node/navegador): grosor de línea en metros razonables, número de
+  pestañas coincide con número de paneles, `GARAGE.min_exterior` del
+  dashboard coincide con Python -- los dos últimos cierran el mismo
+  hueco de "verificación manual que nunca se hizo permanente" para
+  hallazgos de auditorías anteriores.
+- Añadidas lecciones nuevas a "Cosas aprendidas por las malas":
+  `jsdom` encuentra bugs que `node --check` no puede; unidades de
+  `stroke-width` en SVG con `viewBox` no-píxel; capturas de pantalla
+  reales revelan categorías enteras de problemas sin cobertura
+  automatizada; investigar la causa estructural antes de relajar un
+  umbral que rompe la convergencia.
