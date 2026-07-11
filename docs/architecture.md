@@ -1540,3 +1540,35 @@ heurística de lado más largo, `--lot-size`/`--retry-seeds`).
   reales revelan categorías enteras de problemas sin cobertura
   automatizada; investigar la causa estructural antes de relajar un
   umbral que rompe la convergencia.
+
+## Posicionamiento por rango en el diagrama de red (matriz de relaciones ponderadas)
+
+A petición del usuario, que aportó la metodología formal de "matriz de
+relaciones ponderadas" (clásica en programación arquitectónica): el
+orden descendente de la suma de relaciones de cada estancia define su
+rango de jerarquía y posición central o periférica.
+
+- **[RESUELTO] `computeRanks(scores)`** (nuevo): convierte las
+  puntuaciones ya existentes (`WEIGHT`, sin cambios) en un rango
+  0-indexado, con empates compartiendo el rango PROMEDIO del grupo
+  ("competition ranking" estándar) -- misma jerarquía, misma posición,
+  no un desempate arbitrario por orden alfabético o de aparición.
+- **`buildNetwork` ya no usa un radio fijo para todos los nodos** --
+  la distancia al centro ahora interpola entre `MIN_R` (rango 0, más
+  central) y `MAX_R` (último rango, más periférico) según el rango de
+  cada tipo. La posición ANGULAR se mantiene por zona
+  (`networkOrder()`, sin cambios) para conservar la lectura por
+  agrupación día/noche/servicio/circulación que ya existía. Añadidos
+  anillos guía discontinuos para que el patrón centro/periferia se
+  perciba de un vistazo, no solo por el tamaño de los nodos (que ya
+  codificaba la puntuación, sin cambios).
+- **Verificado con datos reales, no solo revisión de código**: extraídas
+  las posiciones reales renderizadas vía `jsdom` y comparada la
+  distancia al centro contra la puntuación real de cada tipo --
+  confirmado monótono (a menor puntuación, mayor distancia SIEMPRE) y
+  que los empates de puntuación comparten exactamente la misma
+  distancia (p.ej. `LAUNDRY`/`DRYING_AREA`, ambos con puntuación 4,
+  ambos a 114.3px del centro).
+- Suite Python: sin cambios (312/312 unitarios, el HTML es
+  independiente). Tests de sanidad del dashboard (`test_dashboard_sanity.py`)
+  siguen intactos.
