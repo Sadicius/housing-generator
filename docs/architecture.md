@@ -1572,3 +1572,28 @@ rango de jerarquía y posición central o periférica.
 - Suite Python: sin cambios (312/312 unitarios, el HTML es
   independiente). Tests de sanidad del dashboard (`test_dashboard_sanity.py`)
   siguen intactos.
+
+## Exportación de tabla (Schedule) en Sinergias
+
+A petición del usuario, tras comparar el flujo de trabajo con Revit
+(elementos Room/Area con parámetros, add-ins de diagramación de
+burbujas, Schedules exportadas a Excel para el cruce manual de
+valores 4/2/0 y suma de rangos): la comparación confirmó que ya
+teníamos el equivalente automatizado de las tres piezas de ese flujo
+(parámetros de Room ~ `PROPS`, diagrama de burbujas ~ nuestra red de
+sinergias, cruce+suma en Excel ~ `computeScores`/`computeRanks`,
+calculados automáticamente en vez de a mano) -- pero faltaba la
+exportación final a una tabla real, útil para trabajar fuera del
+dashboard.
+
+- **[RESUELTO] `exportScheduleCSV()`** (nuevo): vuelca a CSV los 16
+  tipos con tipo, nombre, zona, categoría, área representativa,
+  puntuación de sinergia y rango -- reutilizando `computeScores`/
+  `computeRanks` ya existentes (sin cálculo nuevo, solo exportación).
+  Ordenado por rango, mismo criterio que el diagrama de red.
+- Verificado con `jsdom`: CSV real capturado (17 filas, cabecera + 16
+  tipos), confirmado que coincide exactamente con los rangos/empates ya
+  verificados para el diagrama de red (mismo `LAUNDRY`/`DRYING_AREA`
+  empatados en 3.5, etc.) -- misma fuente de datos, sin duplicar lógica.
+- Suite Python sin cambios (312/312), tests de sanidad del dashboard
+  intactos.

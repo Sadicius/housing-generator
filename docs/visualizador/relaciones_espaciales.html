@@ -469,6 +469,7 @@ table.matrix th.dim{opacity:.25;}
   <div class="panel" id="panel-synergy">
     <div class="controls">
       <div class="legend" id="legend-synergy"></div>
+      <button class="picker-btn" id="export-schedule">exportar tabla (csv)</button>
     </div>
     <div class="synergy-grid">
       <div class="synergy-col">
@@ -1208,6 +1209,39 @@ function rankItemHtml(p){
   </div>`;
 }
 
+function csvEscape(v){
+  const s = String(v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+
+function exportScheduleCSV(){
+  // "tabla de planificacion" (Schedule, en terminologia Revit) -- a
+  // diferencia del flujo manual habitual (exportar a Excel, cruzar
+  // valores 4/2/0 y sumar rangos a mano), aqui la puntuacion y el
+  // rango ya estan calculados automaticamente (computeScores/
+  // computeRanks) -- esta exportacion solo vuelca esos datos ya
+  // calculados a una tabla real, para usar fuera del dashboard.
+  const scores = computeScores();
+  const ranks = computeRanks(scores);
+  const rows = [['tipo','nombre','zona','categoria','area_representativa_m2','puntuacion_sinergia','rango']];
+
+  TYPES.slice().sort((a,b) => ranks[a]-ranks[b]).forEach(t => {
+    const p = PROPS[t];
+    rows.push([t, DISPLAY[t], p.zone, p.category, DEFAULT_AREA_M2[t] || '', scores[t], ranks[t]]);
+  });
+
+  const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tabla_estancias.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function buildRankings(){
   const withW = PAIRS.map(p => ({...p, w: WEIGHT[classify(p.relation)]}));
   const top = withW.filter(p=>p.w>0).sort((a,b)=>b.w-a.w).slice(0,5);
@@ -1391,6 +1425,7 @@ document.getElementById('clear-section').addEventListener('click', () => {
   buildSection();
 });
 document.getElementById('auto-apply').addEventListener('click', applyAutoConfig);
+document.getElementById('export-schedule').addEventListener('click', exportScheduleCSV);
 document.getElementById('auto-tipo-vivienda').addEventListener('change', (ev) => {
   TIPO_VIVIENDA = ev.target.value;
 });
