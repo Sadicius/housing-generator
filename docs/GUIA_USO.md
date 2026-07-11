@@ -276,16 +276,26 @@ bloqueados a ese mínimo, con un checkbox para desbloquear si se quiere
 declarar más superficie a propósito. Sigue existiendo la selección
 manual, chip a chip, para quien prefiera partir de cero.
 
-Exporta `seleccion_plantas.json` (tipos, cantidades y áreas por
-planta) — importable directamente:
+Exporta `seleccion_plantas.json` (tipos, cantidades, áreas y tipo de
+vivienda por planta) — importable directamente:
 
 ```python
 from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
+from housing_generator.domain.entities.lot import Lot
+from housing_generator.domain.value_objects.boundary import Boundary
+from shapely.geometry import box
 
-program = import_seleccion_plantas("seleccion_plantas.json")
+seleccion = import_seleccion_plantas("seleccion_plantas.json")
+program = seleccion.program
+lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 16)), medianera_sides=seleccion.medianera_sides)
 ```
 
-O desde el CLI:
+`seleccion.medianera_sides` viene resuelto del `tipo_vivienda` elegido
+en el panel automático (aislada → sin medianera; pareada → 1 lado;
+adosada → 2 lados opuestos) — listo para pasárselo directamente a
+`Lot`, sin tener que traducirlo a mano.
+
+O desde el CLI, donde esta traducción ya ocurre automáticamente:
 ```bash
 python -m housing_generator.interface.cli.main --import-seleccion seleccion_plantas.json --output edificio.json
 ```

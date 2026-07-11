@@ -18,7 +18,7 @@ def test_complete_selection_generates_a_real_building_end_to_end():
             "PLANTA_SUPERIOR": ["BEDROOM", "MASTER_BEDROOM", "BATHROOM", "CORRIDOR"],
         },
     }
-    program = import_seleccion_plantas(payload)
+    program = import_seleccion_plantas(payload).program
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 16)))
 
     use_case = build_generate_building_use_case(
@@ -43,7 +43,7 @@ def test_incomplete_selection_fails_honestly_not_silently():
             "PLANTA_SUPERIOR": ["BEDROOM", "MASTER_BEDROOM", "BATHROOM"],  # sin CORRIDOR
         },
     }
-    program = import_seleccion_plantas(payload)
+    program = import_seleccion_plantas(payload).program
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 16)))
 
     use_case = build_generate_building_use_case(
@@ -77,7 +77,7 @@ def test_v2_format_with_two_bedrooms_and_real_areas_generates_end_to_end():
             ],
         },
     }
-    program = import_seleccion_plantas(payload)
+    program = import_seleccion_plantas(payload).program
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 16, 18)))
 
     use_case = build_generate_building_use_case(

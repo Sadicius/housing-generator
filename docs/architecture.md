@@ -1597,3 +1597,37 @@ dashboard.
   empatados en 3.5, etc.) -- misma fuente de datos, sin duplicar lógica.
 - Suite Python sin cambios (312/312), tests de sanidad del dashboard
   intactos.
+
+## tipo_vivienda conectado de verdad (hallazgo #1 de la auditoría de flujo completo)
+
+El usuario pidió una recopilación de fallos/huecos de flujo, y confirmó
+empezar por el más engañoso: `tipo_vivienda` (aislada/pareada/adosada)
+se exportaba desde el dashboard desde hace varias rondas, pero **ningún
+sitio de Python lo leía** -- elegir "adosada" en el panel automático no
+tenía ningún efecto real al generar, se perdía en silencio sin ningún
+aviso.
+
+- **[RESUELTO] `import_seleccion_plantas` ahora devuelve
+  `SeleccionImportada(program, medianera_sides)`** (antes devolvía solo
+  `Program` -- cambio de tipo de retorno, todos los llamadores
+  actualizados). `medianera_sides` se resuelve del `tipo_vivienda` del
+  JSON vía `MEDIANERA_SIDES_BY_TIPO_VIVIENDA` (aislada→vacío,
+  pareada→1 lado, adosada→2 lados opuestos este/oeste) -- listo para
+  pasarse directamente a `Lot(medianera_sides=...)`.
+- CLI actualizado: al usar `--import-seleccion`, el `Lot` construido
+  (con o sin `--lot-size`) ahora incluye `medianera_sides` real,
+  informando por consola qué lados se aplicaron.
+- **De paso, otro hallazgo menor de la misma auditoría**: el texto de
+  ayuda de `--import-seleccion` seguía diciendo "el JSON es solo una
+  selección de tipos... nunca cuenta ni áreas reales" -- ya resuelto
+  hace varias rondas (formato v2 con cantidad/área reales). Corregido.
+- **Confirmado con el recorrido completo real, no solo tests**:
+  generada una selección "adosada" de verdad desde el dashboard
+  (`jsdom`, clics reales) → exportación real capturada → CLI real →
+  confirmado GEOMÉTRICAMENTE que las estancias llegan exactas a x=0.0
+  y x=14.0 (este/oeste) sin retranqueo, mientras que en el eje
+  norte/sur sí se respeta -- la elección del usuario en el dashboard
+  ahora sí determina la geometría real generada.
+- Añadidos 5 tests nuevos (`test_tipo_vivienda_*`, cero cobertura
+  antes). Suite final: 347 (317 unitarios + 30 integración), pyflakes
+  y mypy limpios.

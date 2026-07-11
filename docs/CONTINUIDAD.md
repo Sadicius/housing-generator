@@ -24,7 +24,7 @@ Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
 multi-planta con escalera y contorno progresivo, vivienda aislada y
 pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 342/342 tests (46 commits).
+**Estado en el momento de escribir esto**: 347/347 tests (50 commits).
 Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
 coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
 comando, no en este número.
@@ -253,13 +253,40 @@ generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
-Ninguno conocido en el momento de escribir esto -- y este número, como
-cualquier otro de este documento, se quedará obsoleto en cuanto haya
-un incremento nuevo (ver "Cosas aprendidas por las malas" más abajo).
-Antes de asumir que sigue siendo así, releer el documento entero, no
-solo esta sección. El único punto aparcado deliberadamente es
-`SolarExposureValidator`, documentado abajo con referencia externa si
-se retoma -- no es un pendiente activo, es una decisión de alcance.
+Auditoría de flujo completo realizada a petición del usuario (recopilar
+fallos/huecos de flujo, no solo bugs sueltos). El hallazgo #1
+(`tipo_vivienda` sin conectar) ya está RESUELTO -- ver
+`docs/architecture.md`. Quedan estos, por orden de cómo se listaron:
+
+- **`retranqueo_m` (retranqueo básico de vivienda aislada) no es
+  configurable desde el CLI** -- toda vivienda generada por CLI tiene
+  retranqueo cero, aunque el concepto está implementado y probado.
+  Necesitaría un `--retranqueo N` análogo a `--lot-size`.
+- **`retranqueo_incremento_por_planta_m` (contorno progresivo entre
+  plantas) tampoco tiene ninguna opción de CLI** -- función construida
+  e investigada (Devans, Infinigen) pero solo accesible escribiendo
+  Python a mano.
+- **El panel de generación automática de "Sección vertical" solo cubre
+  1-2 plantas** (planta baja/superior) -- sótano, semisótano y bajo
+  cubierta quedan fuera de la generación automática (sí accesibles a
+  mano, chip a chip, sin cambios).
+- **`AnchoLibrePracticoValidator` (1.20m) no aparece mencionado en
+  ningún sitio del dashboard** -- el usuario no tiene forma de saber,
+  desde la interfaz, que esta restricción existe y puede estar
+  bloqueando una generación.
+- **Las puertas del visor son una marca genérica (0.9m) en la pared
+  compartida, no una posición/ancho/sentido de apertura real** --
+  documentado como limitación en su momento, pero fácil de olvidar.
+- **`CocinaIntegrada` (cocina abierta al salón) no tiene ninguna forma
+  de activarse ni explicarse desde el dashboard.**
+
+Y este número, como cualquier otro de este documento, se quedará
+obsoleto en cuanto haya un incremento nuevo (ver "Cosas aprendidas por
+las malas" más abajo). Antes de asumir que sigue siendo así, releer el
+documento entero, no solo esta sección. El único punto aparcado
+deliberadamente (distinto de los de arriba, que sí son pendientes
+activos) es `SolarExposureValidator`, documentado abajo con referencia
+externa si se retoma -- decisión de alcance, no un hueco.
 - **`SolarExposureValidator`** (asoleamiento/orientación) — sigue
   deliberadamente aparcado, pero con una referencia externa concreta
   encontrada si se retoma: `github.com/SeanWong17/building-sunlight-simulator`

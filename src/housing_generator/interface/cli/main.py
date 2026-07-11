@@ -79,12 +79,13 @@ def main():
     parser.add_argument(
         "--import-seleccion", metavar="RUTA", default=None,
         help="Importar 'seleccion_plantas.json' (exportacion del dashboard) en vez del "
-             "programa de ejemplo -- genera un edificio multi-planta real. LIMITACION "
-             "HONESTA: el JSON es solo una seleccion de tipos por planta (nunca cuenta "
-             "ni areas reales), asi que el Program resultante usa areas genericas por "
-             "defecto (ver AREAS_POR_DEFECTO_M2) -- revisar antes de usar en un proyecto "
-             "real, tal como advierte el propio dashboard al exportar. Ignora "
-             "--auto-adjacency (las adyacencias siempre se derivan del catalogo aqui).",
+             "programa de ejemplo -- genera un edificio multi-planta real. Con el formato "
+             "nuevo (version 2) usa la cantidad y area reales declaradas en el dashboard; "
+             "con el formato antiguo (solo nombres de tipo), usa AREAS_POR_DEFECTO_M2 como "
+             "aproximacion generica -- revisar antes de un proyecto real en ese caso. "
+             "'tipo_vivienda' del JSON (aislada/pareada/adosada) se traduce automaticamente "
+             "a Lot.medianera_sides. Ignora --auto-adjacency (las adyacencias siempre se "
+             "derivan del catalogo aqui).",
     )
     parser.add_argument(
         "--retry-seeds", type=int, default=5,
@@ -106,12 +107,19 @@ def main():
     args = parser.parse_args()
 
     if args.import_seleccion:
-        program = import_seleccion_plantas(args.import_seleccion)
+        seleccion = import_seleccion_plantas(args.import_seleccion)
+        program = seleccion.program
         if args.lot_size:
             w_str, h_str = args.lot_size.lower().split("x")
-            lot = Lot(boundary=Boundary(polygon=box(0, 0, float(w_str), float(h_str))))
+            lot = Lot(
+                boundary=Boundary(polygon=box(0, 0, float(w_str), float(h_str))),
+                medianera_sides=seleccion.medianera_sides,
+            )
         else:
-            lot = build_sample_lot()
+            base_lot = build_sample_lot()
+            lot = Lot(boundary=base_lot.boundary, medianera_sides=seleccion.medianera_sides)
+        if seleccion.medianera_sides:
+            print(f"(tipo_vivienda del JSON -> medianera en: {', '.join(sorted(seleccion.medianera_sides))})")
 
         building = None
         last_error = None
