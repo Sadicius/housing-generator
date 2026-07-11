@@ -42,6 +42,9 @@ from housing_generator.infrastructure.algorithms.constraints.ancho_libre_estanci
 from housing_generator.infrastructure.algorithms.constraints.ancho_libre_practico_validator import (
     AnchoLibrePracticoValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.vivienda_accesible_validator import (
+    ViviendaAccesibleValidator,
+)
 from housing_generator.infrastructure.algorithms.constraints.ancho_libre_pasillo_validator import (
     AnchoLibrePasilloValidator,
 )
@@ -90,6 +93,7 @@ ADJACENCY_MIN_SHARED_EDGE_M = 0.1
 
 def build_per_floor_validators(
     adjacency_requirements, graph_builder, total_num_estancias=None, global_rank=None,
+    vivienda_accesible: bool = False,
 ) -> List:
     """Validadores que tiene sentido aplicar a UNA SOLA planta (Layout).
 
@@ -107,6 +111,13 @@ def build_per_floor_validators(
     [RESUELTOS] ahora. `None` (por defecto, caso de una sola planta)
     preserva el comportamiento anterior: se calcula localmente, que en
     ese caso coincide exactamente con el total/ranking del edificio.
+
+    `vivienda_accesible`: OPT-IN (por defecto False, sin cambio de
+    comportamiento) -- activa `ViviendaAccesibleValidator` (circulo de
+    giro Ø1.50m + pasillo 1.20m, DB-SUA/Base 5.4), retomado de un
+    modulo Lua de un proyecto anterior del usuario. La gran mayoria de
+    viviendas NO estan obligadas a esto, de ahi que no sea el
+    comportamiento por defecto.
     """
     return [
         AdjacencyConstraintValidator(adjacency_requirements),
@@ -129,6 +140,7 @@ def build_per_floor_validators(
         EspacioAccesoValidator(),
         EscaleraAnchoLibreValidator(),
         PasilloTopologiaValidator(graph_builder),
+        ViviendaAccesibleValidator(activo=vivienda_accesible),
     ]
 
 
@@ -136,6 +148,7 @@ def build_generate_layout_use_case(
     adjacency_requirements: Optional[List] = None,
     max_iterations: int = 2000,
     seed: Optional[int] = None,
+    vivienda_accesible: bool = False,
 ) -> GenerateLayoutUseCase:
     """Fabrica el caso de uso GenerateLayout con TODAS las reglas
     construidas hasta ahora, combinadas via CompositeConstraintValidator:
@@ -144,6 +157,9 @@ def build_generate_layout_use_case(
     armario empotrado por dormitorio, trastero (B.2.5), ancho libre por
     estancia (A.3.2.1), ancho libre de pasillo (A.3.2.3) y altura libre
     (A.3.1.1).
+
+    `vivienda_accesible`: OPT-IN (por defecto False) -- ver docstring de
+    `build_per_floor_validators`.
 
     Para vivienda de UNA sola planta (caso de uso original, sin cambios
     de comportamiento): usa `build_per_floor_validators` + los dos que
@@ -159,7 +175,9 @@ def build_generate_layout_use_case(
     """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
-    validators = build_per_floor_validators(adjacency_requirements, graph_builder) + [
+    validators = build_per_floor_validators(
+        adjacency_requirements, graph_builder, vivienda_accesible=vivienda_accesible,
+    ) + [
         ViviendaMinimaValidator(),
         BanoAccesoGeneralValidator(graph_builder),
     ]
@@ -184,12 +202,21 @@ def build_generate_building_use_case(
     adjacency_requirements: Optional[List] = None,
     max_iterations: int = 2000,
     seed: Optional[int] = None,
+    vivienda_accesible: bool = False,
 ) -> GenerateBuildingUseCase:
     """Fabrica GenerateBuildingUseCase con las fabricas concretas
     (per_floor_validators_factory, layout_generator_factory) ya
     resueltas -- unico punto del sistema que conecta el caso de uso
     multi-planta con las clases de infraestructura reales, siguiendo el
-    mismo patron que build_generate_layout_use_case."""
+    mismo patron que build_generate_layout_use_case.
+
+    `vivienda_accesible`: OPT-IN (por defecto False) -- ver docstring de
+    `build_per_floor_validators`. Si la vivienda tiene mas de una
+    planta, el requisito de circulo de giro/pasillo accesible se aplica
+    en TODAS las plantas por igual (la fuente Lua original distinguia
+    "vivienda accesible duplex" como caso aparte -- aqui no se modela
+    esa distincion, toda planta declarada accesible se comprueba igual).
+    """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
     def per_floor_validators_factory(
@@ -197,6 +224,7 @@ def build_generate_building_use_case(
     ):
         validators = build_per_floor_validators(
             level_adjacency, graph_builder, total_num_estancias, global_rank,
+            vivienda_accesible=vivienda_accesible,
         ) + [
             EscaleraAlineacionValidator(
                 reference_boundary=reference_stair, floor_below_exists=floor_below_exists,

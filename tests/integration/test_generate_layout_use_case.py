@@ -188,3 +188,34 @@ def test_vivienda_adosada_respects_medianera_sides_end_to_end():
     assert max_x == pytest.approx(8.0, abs=0.01)   # llega al linde este (medianera, sin retranqueo)
     assert min_y >= 3.0 - 0.01   # respeta el retranqueo de 3m en el sur
     assert max_y <= 17.0 + 0.01  # respeta el retranqueo de 3m en el norte
+
+
+def test_vivienda_accesible_end_to_end_all_scoped_rooms_admit_the_turning_circle():
+    # retomado de un modulo Lua de un proyecto anterior del usuario
+    # (accesibilidad.lua) -- confirma con generacion real que
+    # vivienda_accesible=True de verdad afecta al resultado: todas las
+    # estancias del alcance (TIPOS_CON_CIRCULO_GIRO) admiten el circulo
+    # de giro de 1.50m, no solo que el validador exista.
+    from housing_generator.interface.cli.main import build_sample_program, build_sample_lot
+    from housing_generator.infrastructure.algorithms.constraints.vivienda_accesible_validator import (
+        TIPOS_CON_CIRCULO_GIRO, CIRCULO_GIRO_ACCESIBLE_M,
+    )
+
+    program = build_sample_program()
+    lot = build_sample_lot()
+
+    use_case = build_generate_layout_use_case(
+        adjacency_requirements=program.adjacency_requirements, seed=1, max_iterations=5000,
+        vivienda_accesible=True,
+    )
+    layout = use_case.execute(GenerationRequest(program=program, lot=lot))
+
+    assert layout.metadata["hard_violations"] == 0
+    for room in layout.rooms:
+        if room.room_type in TIPOS_CON_CIRCULO_GIRO:
+            b = room.boundary.polygon.bounds
+            min_side = min(b[2] - b[0], b[3] - b[1])
+            assert min_side >= CIRCULO_GIRO_ACCESIBLE_M - 0.01, (
+                f"{room.id}: lado minimo {min_side:.2f}m no admite el circulo de "
+                f"{CIRCULO_GIRO_ACCESIBLE_M}m pese a estar en el alcance de vivienda accesible"
+            )

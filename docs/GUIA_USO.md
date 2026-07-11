@@ -36,6 +36,7 @@ python -m housing_generator.interface.cli.main --output layout.json
 | `--seed` | `1` | Semilla del recocido simulado. Misma semilla → mismo resultado siempre (determinista). Cambiarla explora variantes distintas |
 | `--max-iterations` | `3000` | Iteraciones del recocido simulado. Más iteraciones = más tiempo, más probabilidad de converger en casos difíciles |
 | `--auto-adjacency` | desactivado | Deriva las relaciones de adyacencia automáticamente del catálogo de 120 pares en vez de la declaración manual del ejemplo (ver más abajo) |
+| `--vivienda-accesible` | desactivado | Exige círculo de giro Ø1.50m en estancias habitables + baño, y pasillo ≥1.20m (DB-SUA + Base 5.4 Galicia) — ver más abajo |
 
 ```bash
 # variante con mas busqueda y catalogo completo (busqueda mas dificil, ver mas abajo)
@@ -304,6 +305,28 @@ Por defecto usa una parcela de ejemplo (14x16m) — `--lot-size ANCHOxFONDO`
 (p.ej. `--lot-size 12x18`) permite ajustarla a una parcela real. Si la
 primera semilla no converge, el CLI reintenta solas hasta 5 semillas
 consecutivas antes de rendirse (`--retry-seeds`, ver más abajo).
+
+## Vivienda accesible (opcional)
+
+`--vivienda-accesible` exige círculo de giro Ø1.50m inscribible en
+salón, comedor, dormitorios, cocina y baño, y pasillo ≥1.20m (más
+exigente que el mínimo general de 1.00m) — DB-SUA (Anejo A) + Base 5.4
+del Código de Accesibilidad de Galicia. **Desactivado por defecto**:
+la gran mayoría de viviendas no están obligadas a esto (DB-SUA 9.1:
+"las condiciones de accesibilidad únicamente son exigibles en aquellas
+[viviendas] que deban ser accesibles").
+
+Retomado de un módulo Lua de un proyecto anterior del usuario
+(`accesibilidad.lua`), que investigaba esto con más detalle
+(mobiliario: altura de encimera, aproximación lateral a la cama, hueco
+bajo fregadero, barras de apoyo del aseo...). Aquí solo se modela lo
+**geométricamente verificable** con nuestras estancias (rectángulos con
+área, sin mobiliario) — el resto exigiría modelar fixtures como piezas
+propias dentro de cada estancia, fuera del alcance actual.
+
+```bash
+python -m housing_generator.interface.cli.main --output layout.json --vivienda-accesible --max-iterations 5000
+```
 
 **[RESUELTO]** Las dos limitaciones originales del formato exportado (una
 sola estancia por tipo/planta, áreas genéricas) se eliminaron en el

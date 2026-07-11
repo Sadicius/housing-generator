@@ -242,3 +242,29 @@ def test_cli_lot_size_option_changes_the_actual_parcel_dimensions(tmp_path):
     max_y = max(b[3] for b in all_bounds)
     assert max_x <= 10.01  # dentro de la parcela de 10m declarada, no la de ejemplo (14m)
     assert max_y <= 9.01
+
+
+def test_cli_vivienda_accesible_flag_as_a_real_subprocess(tmp_path):
+    # retomado de un modulo Lua de un proyecto anterior del usuario
+    # (accesibilidad.lua) -- confirma que --vivienda-accesible conectado
+    # de verdad al CLI produce estancias que admiten el circulo de giro
+    # de 1.50m, via subprocess real, no solo la funcion Python.
+    output_path = tmp_path / "layout.json"
+
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "housing_generator.interface.cli.main",
+            "--output", str(output_path), "--vivienda-accesible",
+            "--max-iterations", "5000", "--seed", "1",
+        ],
+        capture_output=True, text=True, timeout=60,
+    )
+
+    assert result.returncode == 0, f"El CLI con --vivienda-accesible fallo: {result.stderr}"
+    data = json.loads(output_path.read_text(encoding="utf-8"))
+    tipos_con_alcance = {"living_room", "dining_room", "bedroom", "master_bedroom", "kitchen", "bathroom"}
+    for room in data["rooms"]:
+        if room["type"] in tipos_con_alcance:
+            x0, y0, x1, y1 = room["bounds"]
+            min_side = min(x1 - x0, y1 - y0)
+            assert min_side >= 1.49, f"{room['name']}: lado minimo {min_side:.2f}m no admite el circulo de 1.50m"

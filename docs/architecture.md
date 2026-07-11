@@ -1631,3 +1631,50 @@ aviso.
 - Añadidos 5 tests nuevos (`test_tipo_vivienda_*`, cero cobertura
   antes). Suite final: 347 (317 unitarios + 30 integración), pyflakes
   y mypy limpios.
+
+## ViviendaAccesibleValidator (retomado de un proyecto Lua anterior del usuario)
+
+El usuario compartió 10 archivos Lua de un proyecto anterior propio --
+un sistema de validación (no generación) que cubre NHV, accesibilidad
+(DB-SUA + Código de Accesibilidad de Galicia), térmica (DB-HE1),
+acústica (DB-HR), cubierta (DB-HS1), incendios (DB-SI) y turismo
+(Decreto 12/2017). Evaluación honesta: térmica/acústica/cubierta/
+incendios son sobre MATERIALES Y ELEMENTOS CONSTRUCTIVOS (transmitancia
+de muros, resistencia al fuego en minutos EI/R, pendientes por tipo de
+teja) -- una capa de dominio que `Room` no tiene y no modela, no
+transferible sin un salto de arquitectura mayor. Turismo es un tipo de
+edificio distinto (apartamentos turísticos) al alcance actual (vivienda
+unifamiliar). Accesibilidad SÍ encaja: mismo tipo de restricción
+(anchos/círculos de giro) que ya teníamos.
+
+- **[RESUELTO] `ViviendaAccesibleValidator`** (20º validador, **opt-in**
+  -- `activo=False` por defecto, sin cambio de comportamiento existente):
+  círculo de giro Ø1.50m inscribible en salón, comedor, dormitorios,
+  cocina y baño (`TIPOS_CON_CIRCULO_GIRO`) + pasillo ≥1.20m (más
+  exigente que el general de `AnchoLibrePasilloValidator`, 1.00m --
+  ambos conviven, no se sustituyen). DB-SUA Anejo A + Base 5.4 del
+  Código de Accesibilidad de Galicia (Decreto 35/2000, actualizado por
+  el Decreto 74/2013), investigación normativa ya hecha en el propio
+  Lua original (incluye resolución explícita de conflictos entre la
+  fuente gallega y la estatal, con cita del Decreto 74/2013 que
+  actualizó las cabinas de ascensor de Galicia para converger con
+  EN 81-70).
+- **Alcance recortado deliberadamente**: la fuente Lua también verifica
+  mobiliario (altura de encimera, aproximación lateral a la cama, hueco
+  bajo fregadero, barras de apoyo del aseo) -- fuera de alcance aquí,
+  ya que `Room` no modela fixtures/mobiliario en absoluto. Se documenta
+  la limitación explícitamente en vez de fingir una comprobación sin
+  los datos reales, mismo principio que C.10/parámetro D de patios.
+- Conectado de extremo a extremo desde el primer commit, aplicando la
+  lección de la auditoría anterior (features construidas sin conectar
+  al CLI): `vivienda_accesible` propagado por `build_per_floor_validators`
+  → `build_generate_layout_use_case`/`build_generate_building_use_case`
+  → `--vivienda-accesible` en el CLI.
+- **Confirmado con generación real, no solo el validador aislado**:
+  comparado el mismo programa de 11 estancias con y sin el flag --
+  con `--vivienda-accesible`, TODAS las estancias del alcance tienen su
+  lado más corto ≥1.50m; sin él, varias caen muy por debajo (p.ej.
+  `bed1` a 4.96m de ancho pero con proporciones muy alargadas en el
+  caso normal). Confirmado también vía subprocess real del CLI.
+- Suite final: 358 (326 unitarios + 32 integración), pyflakes y mypy
+  limpios (78 archivos).

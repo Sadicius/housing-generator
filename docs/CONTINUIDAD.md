@@ -24,7 +24,7 @@ Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
 multi-planta con escalera y contorno progresivo, vivienda aislada y
 pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 347/347 tests (50 commits).
+**Estado en el momento de escribir esto**: 358/358 tests (51 commits).
 Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
 coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
 comando, no en este número.
@@ -158,16 +158,18 @@ Para entender el estado real, **`docs/architecture.md` es la fuente de verdad**
 se encontró roto, y por qué. Merece la pena leerlo entero antes de tocar nada
 grande.
 
-## Los 19 validadores normativos/prácticos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
+## Los 20 validadores normativos/prácticos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
 
-Por planta (`build_per_floor_validators` en `container.py`, 15 clases,
-18 instancias contando las 4 de `GroupingConstraintValidator`): Adjacency,
+Por planta (`build_per_floor_validators` en `container.py`, 16 clases,
+19 instancias contando las 4 de `GroupingConstraintValidator`): Adjacency,
 NucleoHumedo, zonificación día/noche/servicio, EstanciaMinimumArea (Tabla 1),
 ServicioMinimumArea (Tabla 2), DormitorioArmario, TrasteroMinimumArea,
 AnchoLibreEstancia, AnchoLibrePractico (NO normativo, 1.20m confirmado
 explícitamente, ver sección de aprendizajes), AnchoLibrePasillo, AlturaLibre,
 ExteriorContact, CocinaIntegrada, EspacioAcceso, EscaleraAnchoLibre,
-PasilloTopologia.
+PasilloTopologia, ViviendaAccesible (**opt-in**, `vivienda_accesible=True` --
+inactivo por defecto, círculo de giro Ø1.50m + pasillo 1.20m, DB-SUA/Base
+5.4, retomado de un proyecto Lua anterior del usuario -- ver architecture.md).
 
 De ámbito EDIFICIO (no por planta, se comprueban aparte en
 `GenerateBuildingUseCase`): ViviendaMinima (programa mínimo, une todas las
@@ -178,7 +180,7 @@ Entre plantas consecutivas (parametrizados con la planta ya resuelta):
 EscaleraAlineacion (huella ≥90% de solape), NucleoHumedoVertical (bajantes).
 
 `CompositeConstraintValidator` agrupa todos los anteriores tras la misma
-interfaz -- no es una regla normativa en sí, es el combinador (15+2+2=19
+interfaz -- no es una regla normativa en sí, es el combinador (16+2+2=20
 reglas). Detalle completo con tabla resumen en `docs/COMO_FUNCIONA.md`.
 
 ## Multi-planta — cómo funciona
@@ -279,6 +281,34 @@ fallos/huecos de flujo, no solo bugs sueltos). El hallazgo #1
   documentado como limitación en su momento, pero fácil de olvidar.
 - **`CocinaIntegrada` (cocina abierta al salón) no tiene ninguna forma
   de activarse ni explicarse desde el dashboard.**
+- **`--vivienda-accesible` (nuevo) tampoco aparece mencionado en el
+  dashboard** -- mismo patrón que `AnchoLibrePracticoValidator`, un
+  flag real del CLI sin ningún reflejo en la interfaz.
+
+**Proyecto Lua anterior del usuario, evaluado (10 archivos: nhv.lua ya
+conocido + main.lua, accesibilidad.lua, termica.lua, acustica.lua,
+cubierta.lua, incendios.lua, turismo.lua, ejemplo_planta.lua,
+test_framework.lua, volcado_constantes.lua)**: accesibilidad ya
+conectada (`ViviendaAccesibleValidator`, ver arriba). **NO transferible
+sin un salto de arquitectura mayor**: térmica (DB-HE1), acústica
+(DB-HR), cubierta (DB-HS1) e incendios (DB-SI) son sobre MATERIALES Y
+ELEMENTOS CONSTRUCTIVOS (transmitancia de muros, resistencia al fuego
+en EI/R, pendiente de cubierta por tipo de teja) -- una capa de dominio
+que `Room` no tiene (no modela paredes/materiales/estructura, solo
+geometría de estancias). No descartar de raíz si el proyecto alguna
+vez amplía su alcance a elementos constructivos, pero no es una
+extensión natural de lo que hay hoy. Turismo (Decreto 12/2017) es un
+tipo de edificio distinto (apartamentos turísticos), fuera del alcance
+de vivienda unifamiliar estándar.
+
+**Optimización de orientaciones + generación de fachada con patrones
+solares reales** (`main.lua`, funciones `optimizarOrientaciones` y
+`generarFachada`) -- prior art concreto y ya funcionando para
+`SolarExposureValidator` (ver más abajo, sigue aparcado): sombra
+estacional verano/equinoccio/invierno, no solo una idea de
+investigación externa como la referencia de `building-sunlight-simulator`
+ya documentada. Si se retoma `SolarExposureValidator`, revisar esto
+primero -- puede ahorrar la investigación desde cero.
 
 Y este número, como cualquier otro de este documento, se quedará
 obsoleto en cuanto haya un incremento nuevo (ver "Cosas aprendidas por

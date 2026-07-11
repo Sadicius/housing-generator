@@ -77,6 +77,17 @@ def main():
              "puede necesitar --max-iterations mayor o probar otra --seed.",
     )
     parser.add_argument(
+        "--vivienda-accesible", action="store_true",
+        help="Exigir circulo de giro Ø1.50m en estancias habitables + bano, y pasillo "
+             "≥1.20m (mas exigente que el general 1.00m) -- DB-SUA Anejo A + Base 5.4 "
+             "Galicia (vivienda adaptada para usuarios de silla de ruedas). OPT-IN: la "
+             "gran mayoria de viviendas NO estan obligadas a esto. Retomado de un modulo "
+             "Lua de un proyecto anterior del usuario (accesibilidad.lua) -- solo cubre "
+             "lo geometricamente verificable con este proyecto (circulo/ancho), no "
+             "mobiliario (altura de encimera, aproximacion a la cama...), que no se "
+             "modela aqui.",
+    )
+    parser.add_argument(
         "--import-seleccion", metavar="RUTA", default=None,
         help="Importar 'seleccion_plantas.json' (exportacion del dashboard) en vez del "
              "programa de ejemplo -- genera un edificio multi-planta real. Con el formato "
@@ -129,6 +140,7 @@ def main():
                 adjacency_requirements=program.adjacency_requirements,
                 seed=seed,
                 max_iterations=args.max_iterations,
+                vivienda_accesible=args.vivienda_accesible,
             )
             try:
                 building = use_case.execute(program, lot)
@@ -161,6 +173,7 @@ def main():
         adjacency_requirements=program.adjacency_requirements,
         seed=args.seed,
         max_iterations=args.max_iterations,
+        vivienda_accesible=args.vivienda_accesible,
     )
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 

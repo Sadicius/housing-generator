@@ -32,7 +32,7 @@ application/       casos de uso, coordinan dominio + infraestructura via ports
 infrastructure/    implementaciones concretas de los ports
   algorithms/
     layout_generation/   SimulatedAnnealingLayoutGenerator, partition_tree
-    constraints/          19 validadores normativos/practicos
+    constraints/          20 validadores normativos/practicos (1 opt-in)
     adjacency/             GeometryAdjacencyGraphBuilder, door_graph
     zoning/                TreemapZoningStrategy
   geometry/          shapely_utils (funciones geométricas compartidas)
@@ -123,14 +123,14 @@ Tras generar todas las plantas, dos comprobaciones de ámbito EDIFICIO
 mínimo, unión de todas las plantas) y `BanoAccesoGeneralValidator` (al
 menos un baño con acceso general en **alguna** planta).
 
-## Los 19 validadores normativos/prácticos (+ 1 combinador)
+## Los 20 validadores normativos/prácticos (+ 1 combinador, 1 opt-in)
 
 Implementan `ConstraintValidatorPort.validate(layout) -> ValidationResult`
 (listas de `violations` y `warnings` — las violaciones bloquean la
 generación, los avisos no). `CompositeConstraintValidator` no es una
 regla normativa en sí -- agrupa una lista de validadores y expone la
 misma interfaz, para que el generador solo necesite hablar con "un"
-validador aunque por dentro sean 15 clases distintas (18 instancias
+validador aunque por dentro sean 16 clases distintas (19 instancias
 por planta, contando las 4 de `GroupingConstraintValidator`).
 
 **Por planta** (`build_per_floor_validators` en `container.py`):
@@ -152,6 +152,7 @@ por planta, contando las 4 de `GroupingConstraintValidator`).
 | `EspacioAccesoValidator` | cuadrado inscribible de 1.50m en el vestíbulo |
 | `EscaleraAnchoLibreValidator` | ancho libre de escalera (CTE DB-SUA 1, uso restringido) |
 | `PasilloTopologiaValidator` | ninguna estancia (salvo salón/comedor) es paso obligado hacia otra |
+| `ViviendaAccesibleValidator` | **opt-in** (`vivienda_accesible=True`), inactivo por defecto -- círculo de giro Ø1.50m + pasillo 1.20m (DB-SUA/Base 5.4, vivienda adaptada) |
 
 **De ámbito edificio** (tras generar todas las plantas):
 `ViviendaMinimaValidator`, `BanoAccesoGeneralValidator`.
