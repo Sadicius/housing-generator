@@ -339,6 +339,16 @@ Por defecto usa una parcela de ejemplo (14x16m) — `--lot-size ANCHOxFONDO`
 primera semilla no converge, el CLI reintenta solas hasta 5 semillas
 consecutivas antes de rendirse (`--retry-seeds`, ver más abajo).
 
+## Modo espejo (Visor de plano)
+
+Si el plano generado es funcionalmente bueno pero la orientación no
+conviene (p.ej. la zona de día queda mirando al lado equivocado para
+el sol), el Visor de plano tiene botones de espejo horizontal,
+espejo vertical y rotar 90° -- transforman el dibujo sin volver a
+generar nada, conservando exactamente las relaciones de adyacencia
+(las puertas se recalculan solas). "Restablecer" vuelve al plano
+original en cualquier momento.
+
 ## Vivienda accesible (opcional)
 
 `--vivienda-accesible` exige círculo de giro Ø1.50m inscribible en

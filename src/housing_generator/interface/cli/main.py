@@ -60,12 +60,14 @@ def main():
     parser = argparse.ArgumentParser(description="Generador de viviendas por zonificacion dia/noche/servicio")
     parser.add_argument("--output", default="layout.json", help="Ruta de salida del layout generado")
     parser.add_argument(
-        "--seed", type=int, default=1,
-        help="Semilla del recocido simulado (por defecto 1, fija -- determinista. "
-             "Estable de nuevo tras anadir la heuristica de 'cortar por el lado mas "
-             "largo' -- Marson & Musse 2010 -- que redujo la aparicion de estancias "
-             "como tiras finas lo suficiente para que la semilla 1 volviera a "
-             "converger facil). Usa otro valor para explorar variantes distintas.",
+        "--seed", type=int, default=4,
+        help="Semilla del recocido simulado (por defecto 4, fija -- determinista. "
+             "Actualizada tras anadir ProporcionMaximaValidator (2.5:1, red de "
+             "seguridad geometrica confirmada con el usuario tras encontrar "
+             "estancias de hasta 9.5:1 en una bateria de casos reales) -- la "
+             "semilla 1 anterior dejo de converger con esta restriccion nueva, "
+             "mismo patron ya documentado varias veces. Usa otro valor para "
+             "explorar variantes distintas.",
     )
     parser.add_argument("--max-iterations", type=int, default=3000, help="Iteraciones del recocido simulado")
     parser.add_argument(

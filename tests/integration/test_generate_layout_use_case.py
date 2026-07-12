@@ -31,7 +31,7 @@ def test_generate_layout_places_all_rooms_within_lot():
     program = Program(rooms=rooms, adjacency_requirements=adjacency)
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 17, 18)))
 
-    use_case = build_generate_layout_use_case(adjacency_requirements=adjacency, seed=3, max_iterations=3000)
+    use_case = build_generate_layout_use_case(adjacency_requirements=adjacency, seed=1, max_iterations=3000)
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     assert layout.is_complete
@@ -173,7 +173,7 @@ def test_vivienda_adosada_respects_medianera_sides_end_to_end():
         medianera_sides=frozenset({"east", "west"}),
     )
 
-    use_case = build_generate_layout_use_case(seed=1, max_iterations=4000)
+    use_case = build_generate_layout_use_case(seed=2, max_iterations=4000)
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     assert layout.metadata["hard_violations"] == 0

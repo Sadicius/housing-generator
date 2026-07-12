@@ -24,7 +24,7 @@ Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
 multi-planta con escalera y contorno progresivo, vivienda aislada y
 pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 372/372 tests (53 commits).
+**Estado en el momento de escribir esto**: 381/381 tests (54 commits).
 Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
 coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
 comando, no en este número.
@@ -158,10 +158,10 @@ Para entender el estado real, **`docs/architecture.md` es la fuente de verdad**
 se encontró roto, y por qué. Merece la pena leerlo entero antes de tocar nada
 grande.
 
-## Los 20 validadores normativos/prácticos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
+## Los 21 validadores normativos/prácticos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
 
-Por planta (`build_per_floor_validators` en `container.py`, 16 clases,
-19 instancias contando las 4 de `GroupingConstraintValidator`): Adjacency,
+Por planta (`build_per_floor_validators` en `container.py`, 17 clases,
+20 instancias contando las 4 de `GroupingConstraintValidator`): Adjacency,
 NucleoHumedo, zonificación día/noche/servicio, EstanciaMinimumArea (Tabla 1),
 ServicioMinimumArea (Tabla 2), DormitorioArmario, TrasteroMinimumArea,
 AnchoLibreEstancia, AnchoLibrePractico (NO normativo, 1.20m confirmado
@@ -169,7 +169,11 @@ explícitamente, ver sección de aprendizajes), AnchoLibrePasillo, AlturaLibre,
 ExteriorContact, CocinaIntegrada, EspacioAcceso, EscaleraAnchoLibre,
 PasilloTopologia, ViviendaAccesible (**opt-in**, `vivienda_accesible=True` --
 inactivo por defecto, círculo de giro Ø1.50m + pasillo 1.20m, DB-SUA/Base
-5.4, retomado de un proyecto Lua anterior del usuario -- ver architecture.md).
+5.4, retomado de un proyecto Lua anterior del usuario -- ver architecture.md),
+ProporcionMaxima (NO normativo, 2.5:1 confirmado explícitamente, siempre
+activo -- red de seguridad contra estancias tipo "tira fina" que cumplen
+el ancho mínimo pero son absurdas en proporción, encontrado con una batería
+de casos reales, ver architecture.md).
 
 De ámbito EDIFICIO (no por planta, se comprueban aparte en
 `GenerateBuildingUseCase`): ViviendaMinima (programa mínimo, une todas las
@@ -180,7 +184,7 @@ Entre plantas consecutivas (parametrizados con la planta ya resuelta):
 EscaleraAlineacion (huella ≥90% de solape), NucleoHumedoVertical (bajantes).
 
 `CompositeConstraintValidator` agrupa todos los anteriores tras la misma
-interfaz -- no es una regla normativa en sí, es el combinador (16+2+2=20
+interfaz -- no es una regla normativa en sí, es el combinador (17+2+2=21
 reglas). Detalle completo con tabla resumen en `docs/COMO_FUNCIONA.md`.
 
 ## Multi-planta — cómo funciona
@@ -269,6 +273,17 @@ extremo a extremo. Alta confianza en que funcione (documentación
 oficial con fecha, no una suposición), pero sigue siendo, técnicamente,
 sin confirmar en el escenario real. Ver `docs/architecture.md`, sección
 "Generador real en el navegador (Pyodide)".
+
+**Zona de desembarco de escalera separada del pasillo principal**:
+señalado en una crítica externa que el usuario compartió (parcialmente
+acertada, parcialmente ya cubierta o sin fundamento -- ver el
+intercambio donde se evaluó punto por punto). No tenemos nada
+explícito que exija un espacio de llegada diferenciado en la unión
+escalera-planta superior -- `EscaleraAlineacionValidator` solo
+comprueba solape de huella entre plantas, `PasilloTopologiaValidator`
+evita puntos muertos pero no exige esta distinción concreta. No
+investigado a fondo todavía si es un hueco genuino o si el
+comportamiento actual ya lo resuelve indirectamente.
 
 Auditoría de flujo completo realizada a petición del usuario (recopilar
 fallos/huecos de flujo, no solo bugs sueltos). El hallazgo #1

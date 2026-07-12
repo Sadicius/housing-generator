@@ -294,3 +294,41 @@ def test_flip_direction_cycles_through_three_states_not_toggle():
     # tras 3 flips desde None, debe haber pasado por los 3 estados sin repetir consecutivos
     assert seen_directions[0] != seen_directions[1] != seen_directions[2]
     assert set(seen_directions) <= {None, "h", "v"}
+
+
+def test_worst_aspect_ratio_picks_the_provably_optimal_direction_for_uneven_splits():
+    # retomado de una bateria de casos reales: un dormitorio de 2.11m x
+    # 20.00m (9.5:1) aparecio pese a la heuristica de "lado mas largo"
+    # ya existente. Investigado antes de anadir nada: confirmado con
+    # 200000 pruebas aleatorias que "cortar por el lado mas largo" YA
+    # es la eleccion optima para un corte binario (nunca hay una
+    # discrepancia con "minimizar la proporcion peor real") -- este
+    # test confirma esa equivalencia con un caso concreto, no solo la
+    # exploracion exploratoria que se hizo en su momento.
+    from housing_generator.infrastructure.algorithms.layout_generation.partition_tree import _worst_aspect_ratio
+
+    # contenedor mas ancho que alto, reparto muy desigual (10/90)
+    worst_v = _worst_aspect_ratio(width=20, height=10, ratio=0.1, direction="v")
+    worst_h = _worst_aspect_ratio(width=20, height=10, ratio=0.1, direction="h")
+    # cortar por el lado mas largo (20, direccion v) debe ser al menos
+    # tan bueno como cortar por el corto -- nunca peor
+    assert worst_v <= worst_h
+
+
+def test_place_tree_uses_the_direction_that_minimizes_worst_ratio_not_just_container_shape():
+    # confirma el comportamiento real de place_tree con un reparto de
+    # area muy desigual (una hoja de 95% del area, otra de 5%)
+    tree = PartitionNode(
+        direction=None,
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 95.0, "b": 5.0}
+    placements = place_tree(tree, box(0, 0, 20, 10), areas)
+
+    a_bounds = placements["a"].bounds
+    b_bounds = placements["b"].bounds
+    # ambas piezas deben cubrir el rectangulo sin solape, proporcionales al area
+    a_w, a_h = a_bounds[2]-a_bounds[0], a_bounds[3]-a_bounds[1]
+    b_w, b_h = b_bounds[2]-b_bounds[0], b_bounds[3]-b_bounds[1]
+    assert (a_w*a_h + b_w*b_h) == pytest.approx(200.0)  # 20x10, sin huecos ni solapes

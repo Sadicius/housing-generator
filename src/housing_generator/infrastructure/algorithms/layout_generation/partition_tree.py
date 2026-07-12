@@ -22,26 +22,26 @@ class PartitionNode:
     """Nodo del arbol. Una hoja tiene `room_id`; un nodo interno tiene
     `direction` y dos subarboles `first`/`second`.
 
-    `direction`: **[RESUELTO, retomado tras un caso real]** `None` (por
-    defecto) significa "automatica -- cortar siempre por el lado MAS
-    LARGO del rectangulo, en el momento de colocar" (investigacion
-    externa: Marson & Musse 2010, tecnica de squarified treemap para
-    generar plantas con estancias de proporcion cercana a 1:1). Un
-    valor explicito ("h"/"v") FUERZA esa direccion, anulando el
-    automatismo -- usado por el movimiento `flip_direction` como via de
-    escape para que el recocido pueda explorar topologias distintas a
-    la "natural" cuando haga falta.
+    `direction`: **[RESUELTO, corregido dos veces sobre un caso real]**
+    `None` (por defecto) significa "automatica -- elegir, en el momento
+    de colocar, la orientacion que MINIMIZA la peor proporcion
+    ancho:alto resultante entre las dos piezas" (regla real de
+    squarified treemap, Bruls/Huizing/van Wijk 2000, aplicada a plantas
+    por Marson & Musse 2010 -- la primera version de este proyecto
+    simplificaba esto a "cortar por el lado mas largo del contenedor",
+    que resulto ser INSUFICIENTE: no mira el reparto de area real del
+    corte, y un contenedor casi cuadrado partido 90/10 sigue dando una
+    tira fina en cualquier direccion). Un valor explicito ("h"/"v")
+    FUERZA esa direccion, anulando el automatismo -- usado por el
+    movimiento `flip_direction` como via de escape para que el recocido
+    pueda explorar topologias distintas a la "natural" cuando haga falta.
 
-    Encontrado con un caso real: con la direccion puramente aleatoria
-    de antes, estancias pequeñas emparejadas por azar con una estancia
-    grande podian acabar como tiras finas (ancho libre insuficiente),
-    y anadir una restriccion de ancho minimo practico
-    (AnchoLibrePracticoValidator) volvio esto una dificultad de
-    busqueda mucho mayor -- confirmado que quitando el validador la
-    misma semilla convergia en 22s, con el activo fallaba incluso con
-    30000 iteraciones. Cortar por el lado mas largo por defecto reduce
-    la aparicion de tiras finas desde el propio punto de partida, en
-    vez de depender de que el recocido las evite por pura suerte.
+    Encontrado con casos reales (bateria de 5 escenarios generados con
+    el propio panel automatico del dashboard, no sinteticos): incluso
+    con la primera correccion (lado mas largo), una vivienda de 5
+    dormitorios (14 estancias) seguia produciendo dormitorios de hasta
+    9.5:1 -- confirmado que la causa era mirar solo la forma del
+    contenedor, no el reparto de area real de cada corte concreto.
 
     `ratio_override`: proporcion del corte FORZADA manualmente (0-1,
     fraccion de `first`), en vez de derivarla siempre del area declarada
@@ -87,11 +87,11 @@ def build_random_tree(room_ids: List[str], rng: random.Random) -> PartitionNode:
     """Construye un arbol de topologia aleatoria que contiene cada
     room_id exactamente una vez (punto de partida para la busqueda).
 
-    `direction=None` (automatica, corta por el lado mas largo -- ver
-    docstring de PartitionNode) es el punto de partida por defecto,
-    no un valor h/v elegido al azar como antes -- el azar de direccion
-    ahora es responsabilidad exclusiva del movimiento `flip_direction`
-    durante la busqueda, no de la construccion inicial."""
+    `direction=None` (automatica, minimiza la peor proporcion resultante
+    -- ver docstring de PartitionNode) es el punto de partida por
+    defecto, no un valor h/v elegido al azar como antes -- el azar de
+    direccion ahora es responsabilidad exclusiva del movimiento
+    `flip_direction` durante la busqueda, no de la construccion inicial."""
     if len(room_ids) == 1:
         return PartitionNode(room_id=room_ids[0])
 
@@ -108,6 +108,26 @@ def _leaf_area(leaf: "PartitionNode", areas: Dict[str, float]) -> float:
     _current_ratio, evita repetir el assert de invariante en cada sitio."""
     assert leaf.room_id is not None, "Nodo no-hoja pasado a _leaf_area -- invariante violada"
     return areas[leaf.room_id]
+
+
+def _worst_aspect_ratio(width: float, height: float, ratio: float, direction: str) -> float:
+    """Peor (mayor) proporcion ancho:alto entre las DOS piezas resultantes
+    de cortar un rectangulo width x height en la proporcion `ratio`
+    (fraccion de `first`), en la `direction` dada. Helper de la regla
+    real de squarified treemap en `place_tree` -- NO es solo mirar la
+    forma del contenedor (lo que se hacia antes), hay que mirar tambien
+    como de desigual es el reparto de area, porque un contenedor casi
+    cuadrado partido 90/10 puede seguir dando una tira fina en cualquier
+    direccion."""
+    if direction == "v":
+        w1, h1 = width * ratio, height
+        w2, h2 = width * (1 - ratio), height
+    else:
+        w1, h1 = width, height * ratio
+        w2, h2 = width, height * (1 - ratio)
+    r1 = max(w1, h1) / max(min(w1, h1), 1e-6)
+    r2 = max(w2, h2) / max(min(w2, h2), 1e-6)
+    return max(r1, r2)
 
 
 def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float]) -> Dict[str, Polygon]:
@@ -127,14 +147,24 @@ def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float])
     ratio = node.ratio_override if node.ratio_override is not None else (first_area / total)
 
     # direccion EFECTIVA: si no hay override explicito ("h"/"v" forzado
-    # por flip_direction), cortar por el lado mas largo del rectangulo
-    # actual -- tecnica de squarified treemap (Marson & Musse 2010),
-    # ver docstring de PartitionNode para el porque real de este cambio.
+    # por flip_direction), elegir la que MINIMIZA la peor proporcion
+    # resultante -- la regla real de squarified treemap (Bruls/Huizing/
+    # van Wijk 2000, aplicada a plantas por Marson & Musse 2010), no
+    # solo "cortar por el lado mas largo del contenedor" (simplificacion
+    # anterior de este mismo proyecto). Encontrado con casos reales
+    # (5 dormitorios, 14 estancias): la simplificacion anterior seguia
+    # produciendo tiras finas (hasta 9.5:1) cuando dos hojas de area muy
+    # distinta caian como hermanas en el arbol -- mirar solo la forma
+    # del contenedor no basta, un contenedor casi cuadrado partido 90/10
+    # sigue dando una tira fina en cualquier direccion; hay que mirar
+    # tambien el reparto de area real de ESE corte.
+    width, height = maxx - minx, maxy - miny
     if node.direction is not None:
         effective_direction = node.direction
     else:
-        width, height = maxx - minx, maxy - miny
-        effective_direction = "v" if width > height else "h"
+        ratio_v = _worst_aspect_ratio(width, height, ratio, "v")
+        ratio_h = _worst_aspect_ratio(width, height, ratio, "h")
+        effective_direction = "v" if ratio_v <= ratio_h else "h"
 
     if effective_direction == "v":  # corte vertical: reparte a lo largo de X
         split_x = minx + (maxx - minx) * ratio

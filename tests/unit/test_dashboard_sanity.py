@@ -142,6 +142,12 @@ def test_generate_now_button_and_status_area_exist():
     assert 'id="generate-config"' in html
 
 
+def test_mirror_mode_controls_exist():
+    html = _read_dashboard()
+    for control_id in ["mirror-h", "mirror-v", "mirror-rotate", "mirror-reset"]:
+        assert f'id="{control_id}"' in html
+
+
 def test_pyodide_bundle_is_not_stale_against_the_real_source():
     # riesgo real de mantenimiento: si alguien edita un .py del
     # generador despues de esto sin regenerar el bundle embebido, el

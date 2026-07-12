@@ -45,6 +45,9 @@ from housing_generator.infrastructure.algorithms.constraints.ancho_libre_practic
 from housing_generator.infrastructure.algorithms.constraints.vivienda_accesible_validator import (
     ViviendaAccesibleValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.proporcion_maxima_validator import (
+    ProporcionMaximaValidator,
+)
 from housing_generator.infrastructure.algorithms.constraints.ancho_libre_pasillo_validator import (
     AnchoLibrePasilloValidator,
 )
@@ -141,6 +144,7 @@ def build_per_floor_validators(
         EscaleraAnchoLibreValidator(),
         PasilloTopologiaValidator(graph_builder),
         ViviendaAccesibleValidator(activo=vivienda_accesible),
+        ProporcionMaximaValidator(),
     ]
 
 

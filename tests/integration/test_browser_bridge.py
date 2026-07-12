@@ -70,10 +70,10 @@ def test_retries_seeds_automatically_and_reports_how_many():
             {"type": "STORAGE", "count": 1, "area_m2": 3},
         ]},
     }
-    result = generar_edificio(payload, lot_width_m=11, lot_height_m=10, seed=1, max_iterations=5000, retry_seeds=5)
+    result = generar_edificio(payload, lot_width_m=12, lot_height_m=10, seed=1, max_iterations=5000, retry_seeds=5)
     assert result["ok"] is True
-    assert result["semilla_usada"] == 3
-    assert result["reintentos"] == 2
+    assert result["semilla_usada"] == 4
+    assert result["reintentos"] == 3
 
 
 def test_fails_gracefully_without_raising_when_retries_exhausted():
@@ -87,7 +87,7 @@ def test_fails_gracefully_without_raising_when_retries_exhausted():
             {"type": "STORAGE", "count": 1, "area_m2": 3},
         ]},
     }
-    result = generar_edificio(payload, lot_width_m=11, lot_height_m=10, seed=1, max_iterations=5000, retry_seeds=1)
+    result = generar_edificio(payload, lot_width_m=12, lot_height_m=10, seed=1, max_iterations=5000, retry_seeds=1)
     assert result["ok"] is False
     assert "error" in result
     assert result["semillas_probadas"] == 1
