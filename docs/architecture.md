@@ -1846,3 +1846,51 @@ pero absurdas.
   demostrando el reintento automático).
 - Suite final: pyflakes y mypy limpios (82 archivos). Ver commit para
   el recuento total de tests.
+
+## Separación de archivos del dashboard (HTML/CSS/JS/bundle)
+
+El usuario, tras revisar el HTML, preguntó si no sería mejor separar
+CSS/JS del HTML y reducir la cantidad de información comentada.
+
+- **[RESUELTO] Investigación técnica antes de separar, no asumido**:
+  el riesgo real era romper la promesa de "abrir con doble clic, sin
+  servidor" que el proyecto mantiene desde el principio. Confirmado con
+  fuentes concretas: los scripts CLÁSICOS (`<script src="archivo.js">`,
+  sin `type="module"`) y las hojas de estilo (`<link rel="stylesheet">`)
+  SÍ funcionan desde `file://` sin servidor -- es específicamente
+  `fetch()` y los módulos ES los que se bloquean (origen `null` de
+  `file://`, tratado como no confiable por CORS). El proyecto ya evitaba
+  `fetch()` para el bundle (usaba una constante JS embebida
+  precisamente por esto) -- separar en archivos clásicos no cambia nada
+  de esa propiedad.
+- **4 archivos en vez de 1**: `relaciones_espaciales.html` (11KB,
+  antes 560KB+), `.css` (23KB), `.js` (lógica principal), `py_bundle.js`
+  (el código Python embebido, en su propio archivo -- regenerado con
+  `scripts/regenerar_bundle_pyodide.py`, actualizado para escribir ahí
+  en vez de dentro del HTML).
+- **Verificado que sigue funcionando sin servidor, no solo asumido**:
+  `wkhtmltoimage` (motor real) bloqueó inicialmente el acceso a los
+  `.js` locales -- resultó ser una política de seguridad PROPIA de esa
+  herramienta (más estricta que un navegador real por defecto,
+  documentada con su propio flag `--enable-local-file-access`), no una
+  limitación de `file://` en sí -- confirmado con investigación
+  específica y con el flag correcto, la carga funciona igual que en un
+  navegador real. `jsdom` (motor moderno) confirmó cero errores y toda
+  la funcionalidad intacta (chips, generación automática, visor, modo
+  espejo) cargando los 3 archivos por separado desde disco.
+- Comentarios: revisados los bloques más largos del JS -- ninguno
+  resultó excesivo por sí solo (5-12 líneas), el volumen percibido
+  venía sobre todo del tamaño total del archivo (resuelto con la
+  separación). No se hizo una poda agresiva de comentarios existentes:
+  documentan decisiones reales trazables (bugs encontrados, fuentes
+  citadas, confirmaciones explícitas con el usuario) que el propio
+  proyecto depende de no tener que re-investigar -- mismo principio que
+  "Cosas aprendidas por las malas" en CONTINUIDAD.md.
+- `tests/unit/test_dashboard_sanity.py` reescrito para leer cada
+  comprobación del archivo correcto (HTML/CSS/JS/bundle) en vez de
+  todo del HTML monolítico -- incluye un test nuevo que confirma que
+  el HTML referencia los 3 archivos con etiquetas clásicas, nunca
+  `type="module"`.
+- Suite Python: 343 unitarios (uno nuevo), sin cambios de
+  comportamiento (separación de archivos, no de lógica). pyflakes y
+  mypy limpios (82 archivos).

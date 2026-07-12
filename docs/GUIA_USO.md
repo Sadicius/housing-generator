@@ -339,6 +339,18 @@ Por defecto usa una parcela de ejemplo (14x16m) — `--lot-size ANCHOxFONDO`
 primera semilla no converge, el CLI reintenta solas hasta 5 semillas
 consecutivas antes de rendirse (`--retry-seeds`, ver más abajo).
 
+## Estructura del dashboard (4 archivos, no 1)
+
+`docs/visualizador/` tiene 4 archivos: `relaciones_espaciales.html`
+(estructura), `.css` (estilos), `.js` (lógica) y `py_bundle.js` (el
+código Python embebido para Pyodide). Separados a petición del usuario
+tras el rediseño -- **sigue abriéndose igual, con doble clic sobre el
+`.html`, sin servidor**: los 3 archivos se cargan con `<link>`/`<script
+src="">` clásicos, que sí funcionan desde `file://` (a diferencia de
+`fetch()` o los módulos ES, que si se necesitarían un servidor -- se
+comprobó esto explícitamente antes de separar, no se asumió). Si
+mueves el `.html` a otro sitio, mueve los otros 3 con él.
+
 ## Modo espejo (Visor de plano)
 
 Si el plano generado es funcionalmente bueno pero la orientación no
