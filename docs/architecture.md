@@ -1921,3 +1921,29 @@ separado) -- `PYTHON_SOURCES` no se usaba en ningún sitio.
   revisar entonces. Vale la pena comprobar tamaños de archivo tras
   cualquier refactor grande, no solo confiar en que "funciona" como
   señal de que está limpio.
+
+## División de `relaciones_espaciales.js` por pestaña/concepto
+
+Confirmado con el usuario tras revisar el repositorio `RedM-Website-
+Template` (único hallazgo genuinamente aplicable de esa exploración:
+separar cada pieza reutilizable en su propio archivo pequeño, aunque
+ese proyecto use páginas de Next.js, no aplicable directamente).
+
+- Dividido en 8 archivos dentro de `docs/visualizador/js/`, por los
+  marcadores de sección ya existentes en el código: `00-shared.js`
+  (PAIRS/FLOORS/PROPS/DISPLAY y utilidades comunes -- debe cargar
+  primero, todo lo demás depende de sus globals), `01-matriz.js`,
+  `02-seccion.js`, `03-fichas.js`, `04-sinergias.js`, `05-visor.js`
+  (visor de plano + modo espejo, fusionados por ser la misma pestaña),
+  `06-pyodide.js` (generador real en el navegador), `07-init.js`
+  (arranca todo -- debe cargar último, llama funciones definidas en
+  todos los demás archivos).
+- Sin módulos ES (mismo motivo que la separación anterior: deben
+  funcionar desde `file://` sin servidor) -- scripts clásicos que
+  comparten el mismo scope global de `window`, cargados en orden fijo
+  vía `<script src="">` en el HTML. Verificado que el orden se respeta
+  con un test permanente (`test_html_references_js_files_via_classic_tags_in_order`).
+- Verificado con `jsdom` y `wkhtmltoimage` (con `--enable-local-file-
+  access`) que todo funciona exactamente igual tras la división: cero
+  errores, matriz/sección/fichas/sinergias/visor/modo espejo/botón
+  generar, todos intactos.

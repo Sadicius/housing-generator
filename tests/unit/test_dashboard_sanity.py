@@ -13,12 +13,20 @@ from pathlib import Path
 VISUALIZADOR_DIR = Path(__file__).parents[2] / "docs" / "visualizador"
 HTML_PATH = VISUALIZADOR_DIR / "relaciones_espaciales.html"
 CSS_PATH = VISUALIZADOR_DIR / "relaciones_espaciales.css"
-JS_PATH = VISUALIZADOR_DIR / "relaciones_espaciales.js"
+JS_DIR = VISUALIZADOR_DIR / "js"
 BUNDLE_PATH = VISUALIZADOR_DIR / "py_bundle.js"
 
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _read_js() -> str:
+    # el JS principal ahora vive en varios archivos (js/00-shared.js,
+    # js/01-matriz.js...), uno por pestana -- concatenados para
+    # comprobaciones de contenido que no dependen de en cual vive algo
+    # concreto, robusto ante reorganizar la division en el futuro.
+    return "\n".join(_read(p) for p in sorted(JS_DIR.glob("*.js")))
 
 
 def test_room_and_door_stroke_width_is_in_meters_not_pixels():
@@ -69,7 +77,7 @@ def test_garage_min_exterior_matches_python_default():
     # cerrado con un test permanente para que no se repita en silencio.
     from housing_generator.domain.enums import DEFAULT_MIN_EXTERIOR_SIDES, RoomType
 
-    js = _read(JS_PATH)
+    js = _read_js()
     match = re.search(r'"GARAGE":\s*\{[^}]*"min_exterior":\s*(\d+)', js)
     assert match, "no se encontro la entrada de GARAGE en PROPS"
 
@@ -141,18 +149,27 @@ def test_pyodide_cdn_script_tag_present_with_a_pinned_version():
     assert match, "no se encontro el script de Pyodide con una version fija (vX.Y.Z)"
 
 
-def test_html_references_the_three_separate_files_via_classic_tags():
-    # separacion de archivos (CSS/JS/bundle) a peticion del usuario --
-    # confirma que el HTML los referencia con <link>/<script src="">
-    # CLASICOS (nunca type="module"), que son los unicos que funcionan
-    # abriendo el archivo directamente con file:// sin servidor
-    # (confirmado con investigacion antes de separar: los modulos ES y
-    # fetch() SI se bloquean desde file://, los scripts/link clasicos no).
+def test_html_references_js_files_via_classic_tags_in_order():
+    # separacion de archivos (CSS/JS por pestana/bundle) a peticion del
+    # usuario -- confirma que el HTML los referencia con <link>/<script
+    # src=""> CLASICOS (nunca type="module"), que son los unicos que
+    # funcionan abriendo el archivo directamente con file:// sin
+    # servidor (confirmado con investigacion antes de separar: los
+    # modulos ES y fetch() SI se bloquean desde file://, los scripts/
+    # link clasicos no). El orden importa: 00-shared antes que el
+    # resto (todas dependen de sus globals), 07-init al final (llama
+    # funciones de todos los demas al arrancar).
     html = _read(HTML_PATH)
     assert '<link rel="stylesheet" href="relaciones_espaciales.css">' in html
     assert '<script src="py_bundle.js"></script>' in html
-    assert '<script src="relaciones_espaciales.js"></script>' in html
     assert 'type="module"' not in html
+
+    expected_order = [
+        "py_bundle.js", "js/00-shared.js", "js/01-matriz.js", "js/02-seccion.js",
+        "js/03-fichas.js", "js/04-sinergias.js", "js/05-visor.js", "js/06-pyodide.js", "js/07-init.js",
+    ]
+    positions = [html.index(f'<script src="{name}">') for name in expected_order]
+    assert positions == sorted(positions), "los scripts JS no estan en el orden esperado en el HTML"
 
 
 def test_generate_now_button_and_status_area_exist():
