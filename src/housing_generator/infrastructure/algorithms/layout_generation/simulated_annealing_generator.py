@@ -22,37 +22,10 @@ from housing_generator.infrastructure.algorithms.layout_generation.soft_constrai
 
 
 class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
-    """Genera el layout construyendo un arbol de particion recursivo sobre
-    TODAS las estancias del programa a la vez (sin fase previa de reparto
-    por macro-zona geometrica) y buscando la mejor topologia mediante
-    recocido simulado.
-
-    La funcion objetivo combina violaciones DURAS (siempre dominantes)
-    con una penalizacion BLANDA opcional (Preferencia cerca/alejar) --
-    ver `_score`. Comparacion LEXICOGRAFICA real (tupla `(duro, blando)`),
-    no suma ponderada: una primera version sumaba `duro*peso_grande +
-    blando`, que garantiza el orden final correcto pero rompe la
-    dinamica de aceptacion del recocido (`exp(-delta/temperatura)`
-    reacciona a la magnitud absoluta del delta, no solo al orden
-    relativo -- confirmado que rompia tests que no tocaban nada de las
-    restricciones blandas). Con la tupla, cuando lo duro cambia entre
-    candidato y actual, la aceptacion se decide SOLO por ese delta (a su
-    escala natural, igual que antes de anadir nada blando); lo blando
-    solo entra en juego cuando lo duro empata.
-
-    DIFERENCIA DE ARQUITECTURA respecto a GraphBasedLayoutGenerator: este
-    generador recibe el ConstraintValidatorPort como dependencia PROPIA
-    (no solo GenerateLayoutUseCase), porque necesita invocarlo miles de
-    veces durante la busqueda interna. Generacion y validacion quedan
-    acopladas dentro de esta clase concreta -- ambas siguen siendo
-    intercambiables por separado en el resto del sistema (siguen siendo
-    ports), pero esta implementacion en particular necesita las dos.
-
-    `zones` (el parametro del puerto `LayoutGeneratorPort`) se ignora
-    deliberadamente: este generador no reparte geometria por macro-zona,
-    construye su propia agrupacion interna a partir de `room.zone` solo
-    para poblar `Layout.zones` (compatibilidad con el resto del sistema),
-    no para particionar el solar.
+    """Genera el layout con un árbol de partición sobre todas las
+    estancias a la vez, buscando la mejor topología mediante recocido
+    simulado. Función objetivo: comparación lexicográfica (duro,
+    blando), duro siempre dominante. Ver [ARCH:simulated-annealing].
     """
 
     def __init__(
@@ -72,17 +45,8 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
         self._soft_scorer = soft_constraint_scorer
 
     def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout:
-        # BUG REAL encontrado en auditoria: antes, `self._rng` se creaba
-        # UNA sola vez en __init__ y esta misma instancia se reutilizaba
-        # entre llamadas -- `seed` solo garantizaba un resultado
-        # reproducible en la PRIMERA llamada a generate(); cualquier
-        # llamada posterior sobre el MISMO generador continuaba desde
-        # donde quedo la secuencia aleatoria anterior, no desde la
-        # semilla, rompiendo el determinismo que el resto del proyecto
-        # da por hecho (confirmado: llamar generate() dos veces seguidas
-        # con seed=1 daba resultados distintos la segunda vez). Reiniciar
-        # aqui, en cada llamada, hace que la semilla sea reproducible
-        # SIEMPRE, no solo la primera vez.
+        # rng recreado en cada llamada, para que seed sea reproducible
+        # siempre, no solo la primera vez. Ver [ARCH:simulated-annealing].
         self._rng = random.Random(self._seed)
 
         room_ids = [r.id for r in program.rooms]
@@ -104,21 +68,9 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
             candidate_layout = self._materialize(candidate_tree, program, lot, areas)
             candidate_hard, candidate_soft = self._score(candidate_layout)
 
-            # BUG REAL encontrado al conectar las restricciones blandas:
-            # una primera version combinaba duro+blando en un UNICO
-            # numero (hard*1000 + soft) para la aceptacion del recocido.
-            # Esto garantiza el orden final correcto, pero ROMPE la
-            # dinamica de aceptacion: exp(-delta/temperatura) reacciona a
-            # la MAGNITUD absoluta del delta, no solo al orden relativo
-            # -- multiplicar por 1000 hacia practicamente imposible
-            # aceptar CUALQUIER movimiento que empeorase lo duro, incluso
-            # al principio con temperatura alta, cambiando el
-            # comportamiento ya afinado de todo el proyecto (confirmado:
-            # rompio un test de multi-planta que no tocaba nada de esto).
-            # Corregido con comparacion LEXICOGRAFICA real: si lo duro
-            # cambia, la aceptacion se decide SOLO por el delta duro (a
-            # su escala natural, pequeña, igual que antes de tocar nada
-            # de esto); solo se mira lo blando cuando lo duro empata.
+            # comparacion lexicografica: si lo duro cambia, decide solo
+            # el delta duro; lo blando solo cuenta si empata. Ver
+            # [ARCH:simulated-annealing].
             if candidate_hard != current_hard:
                 delta = candidate_hard - current_hard
             else:
@@ -151,9 +103,8 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
         lot: Lot,
         areas: Dict[str, float],
     ) -> Layout:
-        # area edificable: la parcela completa si no hay retranqueo
-        # declarado, o la parcela reducida por el retranqueo si lo hay
-        # (vivienda unifamiliar aislada -- ver Lot.buildable_area).
+        # area edificable: parcela completa, o reducida por retranqueo
+        # (ver Lot.buildable_area).
         placements = place_tree(tree, lot.buildable_area.polygon, areas)
 
         placed_rooms = []

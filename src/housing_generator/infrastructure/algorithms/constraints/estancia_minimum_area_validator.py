@@ -38,39 +38,10 @@ def minimo_estancia(num_estancias: int, indice: int) -> Optional[float]:
 
 
 class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
-    """Tabla 1: superficie minima por puesto de tamano entre las estancias
-    (space_category == ESTANCIA). Ni cocina, ni bano/aseo/lavadero, ni
-    circulacion cuentan aqui -- solo estar/comedor/dormitorios/despacho.
-
-    La "estancia mayor" para el cuadrado inscribible (A.3.2.1.a) es
-    SIEMPRE el salon (RoomType.LIVING_ROOM) -- confirmado como regla de
-    proyecto, no una derivacion automatica por area. El ranking de
-    Tabla 1 (puesto 1..N) sigue siendo por tamano real, sin relacion con
-    cual sea la estancia mayor; son dos conceptos independientes.
-    - Si no hay salon declarado entre las estancias: se usa la de mayor
-      area como alternativa, pero se marca como AVISO (no se asume en
-      silencio que la sustitucion es equivalente).
-    - Si la estancia mayor esta colocada (`boundary` real) y es
-      rectangular, se verifica el cuadrado inscribible de forma exacta.
-    - Si esta colocada pero NO es rectangular: AVISO, nunca violacion.
-    - Si no esta colocada todavia: no se comprueba aqui.
-
-    `total_num_estancias_override`: para vivienda MULTI-PLANTA (ver
-    GenerateBuildingUseCase) -- este validador se aplica UNA planta a la
-    vez, pero Tabla 1 depende del numero de estancias del EDIFICIO
-    COMPLETO, no solo de las de esta planta (bug real encontrado al
-    construir el primer edificio de 2 plantas de prueba: una planta con
-    1 sola estancia aplicaba la fila de "vivienda de 1 estancia" (25m2)
-    en vez de la fila real del edificio). Si se declara, sustituye
-    `len(ordenadas)` para elegir la FILA de Tabla 1 correcta.
-
-    `global_rank_override`: **[RESUELTO]** dict room_id -> puesto GLOBAL
-    (1=mayor del EDIFICIO completo, no solo de esta planta). Corrige la
-    limitacion senalada en el incremento anterior (el ranking quedaba
-    atado solo a las estancias de la planta local, podia exigir un
-    minimo mas estricto del que corresponderia). `GenerateBuildingUseCase`
-    lo precalcula una vez, antes de generar ninguna planta, porque las
-    areas son DECLARADAS (no dependen de la geometria ya colocada).
+    """Tabla 1: superficie mínima por puesto de tamaño entre las
+    estancias (space_category ESTANCIA). La estancia mayor para el
+    cuadrado inscribible (A.3.2.1.a) es siempre el salón. Ver
+    [ARCH:estancia-minimum-area].
     """
 
     def __init__(
@@ -82,12 +53,6 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
         self._global_rank = global_rank_override
 
     def validate(self, layout: Layout) -> ValidationResult:
-        # Refactor por complejidad (radon cc: 16, "C" -- el mas alto del
-        # proyecto junto a CocinaIntegradaValidator): este metodo hacia
-        # DOS cosas independientes a la vez (ranking de Tabla 1 por
-        # puesto, y cuadrado inscribible de la estancia mayor). Separado
-        # en dos metodos con responsabilidad unica, sin cambiar el
-        # comportamiento -- mismas violaciones/avisos, mismo orden.
         estancias = [r for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA]
         if not estancias:
             return ValidationResult()
@@ -126,18 +91,8 @@ class EstanciaMinimumAreaValidator(ConstraintValidatorPort):
         mayor = next((r for r in estancias if r.room_type == RoomType.LIVING_ROOM), None)
         if mayor is None:
             if self._total_override is not None:
-                # BUG REAL encontrado en auditoria de logica: en
-                # multi-planta, "no hay living_room EN ESTA PLANTA" es
-                # el caso NORMAL para plantas superiores (dormitorios),
-                # no una anomalia -- el salon esta legitimamente en OTRA
-                # planta. Sustituir por la mayor estancia LOCAL y
-                # comprobarle el cuadrado inscribible de 3.30m (regla
-                # que solo aplica al salon) generaba avisos enganosos y,
-                # peor, podia generar una VIOLACION FALSA si esa
-                # estancia local no cumplia un requisito que nunca le
-                # correspondio. La planta que SI tiene el salon real ya
-                # lo comprueba correctamente por su cuenta (mas abajo,
-                # sin pasar por esta rama) -- no hace falta sustituto.
+                # multi-planta sin salon en ESTA planta = caso normal
+                # (esta en otra planta). Ver [ARCH:estancia-minimum-area].
                 return violations, warnings
             mayor = ordenadas[0]
             warnings.append(

@@ -2119,3 +2119,61 @@ opt-in, por defecto False.
 planta, el requisito de vivienda accesible se aplica en todas las
 plantas por igual (la fuente Lua original distinguía "duplex" como
 caso aparte, aquí no).
+
+## [ARCH:estancia-minimum-area] EstanciaMinimumAreaValidator
+
+Tabla 1 (A.3.2.1): superficie mínima por puesto de tamaño entre las
+estancias (space_category ESTANCIA). La "estancia mayor" para el
+cuadrado inscribible (A.3.2.1.a) es SIEMPRE el salón -- regla de
+proyecto, no derivación automática por área; el ranking de Tabla 1 es
+un concepto independiente. Si no hay salón: usa la de mayor área como
+alternativa, marcado como AVISO, nunca aprobación silenciosa.
+
+`total_num_estancias_override`/`global_rank_override`: número y
+ranking del EDIFICIO completo, no solo de esta planta -- dos bugs
+reales corregidos al construir el primer edificio de 2 plantas de
+prueba (una planta con 1 estancia aplicaba la fila de "vivienda de 1
+estancia" en vez de la fila real del edificio).
+
+En multi-planta, "no hay salón en esta planta" es el caso NORMAL para
+plantas superiores (el salón está en otra planta) -- sustituir por la
+mayor estancia local generaba violaciones falsas; corregido para no
+sustituir en ese caso, la planta con el salón real ya lo comprueba
+por su cuenta.
+
+## [ARCH:simulated-annealing] SimulatedAnnealingLayoutGenerator
+
+Árbol de partición sobre todas las estancias a la vez (sin fase previa
+de macro-zona), recocido simulado sobre la topología. Función objetivo:
+comparación LEXICOGRÁFICA real, tupla `(duro, blando)`, no suma
+ponderada -- una versión anterior sumaba `duro*peso + blando`, que
+garantiza el orden final pero rompe la dinámica de aceptación del
+recocido (`exp(-delta/temperatura)` reacciona a la magnitud absoluta
+del delta, no solo al orden relativo; confirmado que rompía tests que
+no tocaban restricciones blandas). Con la tupla, si lo duro cambia, la
+aceptación se decide solo por ese delta; lo blando solo entra cuando
+lo duro empata.
+
+Recibe `ConstraintValidatorPort` como dependencia propia (no solo
+`GenerateLayoutUseCase`) porque lo invoca miles de veces durante la
+búsqueda -- generación y validación acopladas en esta implementación
+concreta, aunque ambas siguen siendo ports intercambiables en el
+resto del sistema. `zones` del puerto se ignora deliberadamente.
+
+`self._rng` se recrea en CADA llamada a `generate()` (bug real
+corregido: antes se creaba una sola vez en `__init__`, así que `seed`
+solo era reproducible en la primera llamada sobre el mismo generador).
+
+## [ARCH:shapely-utils] geometry/shapely_utils.py
+
+`count_exterior_sides`: umbral de contacto exterior (0.3m) distinto y
+mayor que el de adyacencia interior (0.1m), confirmado con el usuario.
+`excluded_segments` excluye lados de medianera (vivienda pareada/
+adosada) -- una pared de medianera no tiene luz ni ventilación propia
+aunque geométricamente sea un borde de parcela.
+
+`evaluate_minimum_width`: helper compartido, extraído tras encontrar
+duplicación real (detección sistemática de bloques repetidos): tres
+validadores distintos (pasillo, escalera, trastero) repetían
+exactamente el manejo de los 3 estados de `meets_minimum_width`, solo
+cambiaba el umbral y el texto del mensaje.

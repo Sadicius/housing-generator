@@ -67,25 +67,10 @@ def count_exterior_sides(
     min_contact_m: float = 0.3,
     excluded_segments: Optional[List[LineString]] = None,
 ) -> Optional[int]:
-    """Cuenta cuantos de los 4 lados de `room_polygon` tienen contacto
-    real con el limite de `lot_polygon` (al menos `min_contact_m` de
-    borde compartido -- umbral distinto y mayor que el de adyacencia
-    interior entre estancias, 0.1m, confirmado por el usuario para
-    contacto con el exterior).
-
-    `excluded_segments`: lados de la parcela que NO cuentan como
-    contacto exterior real aunque toquen `lot_polygon.boundary` --
-    retomado de docs/CONTINUIDAD.md ("vivienda pareada/adosada"): una
-    pared de medianera (`Lot.medianera_boundary_segments()`) no tiene
-    luz ni ventilacion propia, aunque geometricamente sea un "borde de
-    la parcela" igual que cualquier otro. `None` (por defecto) preserva
-    el comportamiento anterior sin cambios (vivienda aislada, todos los
-    lados de la parcela cuentan).
-
-    Devuelve None (no verificable) si `room_polygon` no es rectangular,
-    igual que el resto de utilidades de este modulo -- nunca se asume
-    un numero de lados exteriores sin poder confirmarlo geometricamente.
-    """
+    """Cuenta cuántos de los 4 lados de `room_polygon` tienen contacto
+    real con el límite de `lot_polygon` (`min_contact_m` de borde
+    compartido). `excluded_segments`: lados de medianera, no cuentan
+    como exterior real. Ver [ARCH:shapely-utils]."""
     if not _is_axis_or_rotated_rectangle(room_polygon):
         return None
 
@@ -112,25 +97,9 @@ def evaluate_minimum_width(
     violation_message: str,
     warning_message: str,
 ) -> tuple:
-    """Evalua el ancho libre minimo (meets_minimum_width, 3 estados) de
-    una estancia y devuelve (violaciones, avisos) -- listas de 0 o 1
-    elemento cada una, listas para que el llamador haga
-    `violations.extend(v); warnings.extend(w)`.
-
-    `violation_message`/`warning_message` ya vienen formateados por
-    completo por el llamador (incluido el umbral y cualquier referencia
-    normativa) -- este helper solo antepone `'{room_id}': ` y decide
-    cual de los dos usar segun el resultado de 3 estados. Diseño
-    deliberadamente flexible tras un primer intento mas rigido (umbral
-    siempre al final entre parentesis) que no encajaba con
-    EscaleraAnchoLibreValidator, cuyo mensaje pone la referencia
-    normativa DENTRO del mismo parentesis que el umbral.
-
-    DUPLICACION REAL encontrada en auditoria (deteccion sistematica de
-    bloques repetidos entre archivos, no solo intuicion): tres
-    validadores distintos (pasillo A.3.2.3, escalera CTE DB-SUA 1,
-    trastero B.2.5) repetian exactamente el manejo de los 3 estados de
-    `meets_minimum_width`, solo cambiaba el umbral y el texto."""
+    """Evalúa el ancho libre mínimo (3 estados) y devuelve
+    (violaciones, avisos), listo para `violations.extend(v)`. Helper
+    compartido por varios validadores. Ver [ARCH:shapely-utils]."""
     cumple = meets_minimum_width(polygon, threshold_m)
     if cumple is False:
         return ([f"'{room_id}': {violation_message}"], [])
