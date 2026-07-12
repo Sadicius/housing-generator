@@ -277,6 +277,39 @@ bloqueados a ese mínimo, con un checkbox para desbloquear si se quiere
 declarar más superficie a propósito. Sigue existiendo la selección
 manual, chip a chip, para quien prefiera partir de cero.
 
+## Generar el plano directamente (sin terminal)
+
+**Esta es la forma principal de trabajar.** El botón **"generar plano
+ahora"**, junto a la selección de estancias, ejecuta el generador real
+-- el mismo motor Python de siempre, corriendo dentro del propio
+navegador (via Pyodide, Python compilado a WebAssembly) -- sin salir a
+una terminal, sin exportar ni volver a cargar ningún archivo. Debajo
+del botón se puede ajustar la parcela (ancho×fondo), la semilla, las
+iteraciones, y activar vivienda accesible, todo en el mismo sitio.
+
+Al pulsar, cambia automáticamente a la pestaña "Visor de plano" con el
+resultado real. Si la primera semilla no converge, reintenta solas
+(igual que `--retry-seeds` del CLI) e informa cuál funcionó. Si quieres
+otra variante, basta con cambiar la semilla y volver a pulsar -- sin
+repetir la selección de estancias.
+
+La primera vez que se pulsa, Pyodide descarga el intérprete de Python
+y los paquetes necesarios (shapely, numpy, scipy, networkx) -- tarda
+unos segundos, con el progreso visible en pantalla. Las veces
+siguientes es inmediato, ya está todo cargado en la pestaña.
+
+**Mantenimiento**: el código Python que corre en el navegador es una
+copia embebida (`PY_BUNDLE` en el propio HTML) -- tras editar cualquier
+`.py` del generador, hay que regenerarla con:
+```bash
+python scripts/regenerar_bundle_pyodide.py
+```
+Un test (`test_pyodide_bundle_is_not_stale_against_the_real_source`)
+detecta si esto se olvida para `bridge.py`, pero conviene regenerar
+tras CUALQUIER cambio, no solo ese archivo.
+
+## Exportar JSON y usar el CLI (alternativa, para quien lo prefiera)
+
 Exporta `seleccion_plantas.json` (tipos, cantidades, áreas y tipo de
 vivienda por planta) — importable directamente:
 

@@ -1731,3 +1731,69 @@ cerca del segundo).
   permanente" ya encontrado en auditorías previas.
 - Suite Python: 328/328 unitarios sin cambios de comportamiento (el
   HTML es independiente).
+
+## Generador real en el navegador (Pyodide) -- respuesta a "¿es esta la forma de trabajar?"
+
+El usuario cuestionó de fondo si el dashboard era realmente útil, no
+solo si se veía bien. Diagnóstico honesto: el flujo real (exportar
+JSON → salir al terminal a ejecutar el CLI → volver a cargar el
+resultado) era un puente MANUAL entre dos mundos (navegador y Python)
+que nunca se hablaban directamente -- una barrera real para quien no
+sepa usar una terminal, y sin ninguna forma de iterar sin repetir todo
+el proceso a ciegas.
+
+- **[RESUELTO] Investigación de viabilidad antes de comprometerse**:
+  el riesgo técnico señalado (¿soporta Pyodide `shapely`, que envuelve
+  la librería C GEOS?) se confirmó explícitamente con fuentes oficiales
+  con fecha (changelog de Pyodide) ANTES de construir nada -- `shapely`
+  y `geos` están soportados oficialmente desde hace tiempo; `scipy`/
+  `numpy` son parte del stack científico estándar; `networkx` es Python
+  puro, se instala vía `micropip` sin problema.
+- **[RESUELTO] `interface/browser/bridge.py`** (nuevo): puente entre
+  JavaScript y el generador real -- recibe/devuelve solo datos planos
+  (dict/JSON), nunca objetos de dominio (`Program`/`Lot`/`Layout` no
+  cruzan bien el FFI de Pyodide). `generar_edificio(...)` reutiliza
+  EXACTAMENTE la misma lógica que ya tenía el CLI (`import_seleccion_plantas`,
+  reintento de semillas, `build_generate_building_use_case`) -- no se
+  reescribió nada, solo se extrajo a una función que no toca disco.
+  `JsonLayoutRepository.to_dict()` extraído de `save()` para poder
+  usarse en memoria sin pasar por archivo (mismo resultado exacto,
+  confirmado con un test que compara ambos caminos byte a byte).
+- **[RESUELTO] Bundle Python embebido en el propio HTML** (`PY_BUNDLE`,
+  80 archivos, ~230KB): sigue la misma filosofía de "archivo único, sin
+  paso de compilación" que el resto del proyecto -- Pyodide escribe
+  cada archivo en su sistema de archivos virtual al cargar, y
+  `sys.path` apunta ahí. `scripts/regenerar_bundle_pyodide.py` (nuevo)
+  regenera esto tras cualquier cambio a un `.py` del generador --
+  riesgo real de mantenimiento identificado y cerrado con un test
+  permanente (`test_pyodide_bundle_is_not_stale_against_the_real_source`,
+  compara `bridge.py` real contra lo embebido, byte a byte).
+- **Nuevo flujo real en "Sección vertical"**: botón "generar plano
+  ahora" (parcela, semilla, iteraciones, vivienda accesible, todo
+  configurable ahí mismo) -- genera de verdad, sin salir del navegador,
+  y cambia automáticamente a "Visor de plano" con el resultado. El
+  export a JSON sigue existiendo para quien prefiera el CLI a mano.
+- **[RESUELTO] Versión de Pyodide confirmada explícitamente antes de
+  escribir la URL** (`v314.0.2`, vía CDN de jsDelivr) -- un fallo real
+  de mi propio primer intento (escribí `v0.28.0` por costumbre, sin
+  verificar) corregido antes de continuar.
+- **Límite honesto de verificación, no ocultado**: este entorno de
+  trabajo bloquea el dominio `cdn.jsdelivr.net` (no está en la lista de
+  dominios permitidos), así que no se pudo probar el flujo Pyodide
+  COMPLETO de extremo a extremo con `shapely` real cargado. Lo que SÍ
+  se verificó con evidencia real, no solo revisión de código:
+  (1) el núcleo de Pyodide (intérprete Python 3.14 real, compilado a
+  WebAssembly) se instaló vía npm y se ejecutó de verdad en Node.js,
+  confirmando que el mecanismo en sí funciona; (2) `micropip` se cargó
+  y ejecutó correctamente una vez se le dio el wheel correcto;
+  (3) `shapely`/`geos` están documentados oficialmente como paquetes
+  Pyodide soportados, con fecha, no asumido; (4) el flujo completo del
+  botón "generar plano ahora", vía `jsdom`, llega correctamente hasta
+  la propia llamada a `loadPyodide()` sin ningún error previo -- el
+  único fallo que aparece es "loadPyodide is not defined", exactamente
+  lo esperado dado el bloqueo de red de ESTE entorno, no un error del
+  código. **Queda pendiente que el usuario lo pruebe en un navegador
+  real con acceso a internet normal**, donde este bloqueo no existe.
+- Suite Python: 372 tests en total (crecimiento neto de este bloque:
+  refactor de `JsonLayoutRepository` + `bridge.py` + tests de sanidad
+  del dashboard ampliados), pyflakes y mypy limpios (81 archivos).

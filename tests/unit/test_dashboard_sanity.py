@@ -5,6 +5,7 @@ test permanente, aplicando la propia convencion del proyecto (ver
 docs/CONTINUIDAD.md, "ninguna verificacion exploratoria cuenta como
 comprobado").
 """
+import json
 import re
 from pathlib import Path
 
@@ -107,3 +108,64 @@ def test_redesign_css_variable_names_preserved_for_javascript():
     ]
     for name in required_var_names:
         assert name in html, f"variable CSS {name} no encontrada -- el JS podria depender de ella"
+
+
+def test_pyodide_bundle_contains_the_bridge_and_key_modules():
+    # generador real en el navegador (Pyodide) -- confirma que el
+    # bundle Python embebido incluye el puente (bridge.py) y los
+    # modulos clave que necesita para funcionar, sin tener que cargar
+    # el navegador real para saberlo.
+    html = _read_dashboard()
+    assert "const PY_BUNDLE = {" in html
+    for expected_path in [
+        "housing_generator/interface/browser/bridge.py",
+        "housing_generator/config/container.py",
+        "housing_generator/infrastructure/persistence/seleccion_plantas_importer.py",
+        "housing_generator/infrastructure/persistence/json_layout_repository.py",
+    ]:
+        assert expected_path in html, f"{expected_path} no encontrado en PY_BUNDLE"
+
+
+def test_pyodide_cdn_script_tag_present_with_a_pinned_version():
+    # version fija (no 'latest'/'dev'), confirmado con la documentacion
+    # oficial de Pyodide en el momento de construir esto -- una URL sin
+    # version fija podria cambiar de comportamiento sin aviso.
+    html = _read_dashboard()
+    match = re.search(r'<script src="https://cdn\.jsdelivr\.net/pyodide/(v[\d.]+)/full/pyodide\.js"></script>', html)
+    assert match, "no se encontro el script de Pyodide con una version fija (vX.Y.Z)"
+
+
+def test_generate_now_button_and_status_area_exist():
+    html = _read_dashboard()
+    assert 'id="generate-now"' in html
+    assert 'id="generate-status"' in html
+    assert 'id="generate-config"' in html
+
+
+def test_pyodide_bundle_is_not_stale_against_the_real_source():
+    # riesgo real de mantenimiento: si alguien edita un .py del
+    # generador despues de esto sin regenerar el bundle embebido, el
+    # navegador seguiria ejecutando el codigo VIEJO en silencio, sin
+    # ningun error -- este test compara el contenido REAL de bridge.py
+    # (el mas probable de tocarse) contra lo que hay embebido en el
+    # dashboard, byte a byte.
+    import re as re_module
+    from pathlib import Path
+
+    html = _read_dashboard()
+    src_root = Path(__file__).parents[2] / "src"
+    bridge_path = src_root / "housing_generator" / "interface" / "browser" / "bridge.py"
+    real_content = bridge_path.read_text(encoding="utf-8")
+
+    # extraer PY_BUNDLE como JSON real (no regex parcial) para comparar
+    # el valor exacto de esa clave, no solo si la ruta aparece en el HTML
+    match = re_module.search(r"const PY_BUNDLE = (\{.*?\});\nlet PYODIDE_INSTANCE", html, re_module.DOTALL)
+    assert match, "no se pudo extraer PY_BUNDLE del HTML"
+    bundle = json.loads(match.group(1))
+
+    bundled_content = bundle.get("housing_generator/interface/browser/bridge.py")
+    assert bundled_content is not None, "bridge.py no esta en el bundle"
+    assert bundled_content == real_content, (
+        "el bundle embebido de bridge.py esta DESACTUALIZADO respecto al codigo fuente real -- "
+        "hay que regenerar el bundle (ver docs/architecture.md, seccion del generador en el navegador)"
+    )

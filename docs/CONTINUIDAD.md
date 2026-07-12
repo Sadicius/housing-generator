@@ -24,7 +24,7 @@ Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
 multi-planta con escalera y contorno progresivo, vivienda aislada y
 pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 358/358 tests (51 commits).
+**Estado en el momento de escribir esto**: 372/372 tests (53 commits).
 Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
 coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
 comando, no en este número.
@@ -255,10 +255,27 @@ generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
+**El más urgente**: **probar el generador real en el navegador
+(Pyodide) en un navegador de verdad, con internet normal.** Se
+construyó respondiendo a que el usuario cuestionara si el dashboard
+era realmente una forma de trabajar -- verificado todo lo posible
+dentro de este entorno (el núcleo de Pyodide se instaló y ejecutó de
+verdad vía npm/Node, `shapely`/`geos` confirmados como paquetes Pyodide
+oficiales con fecha, el flujo completo del botón llega correctamente
+hasta la llamada a `loadPyodide()` sin errores previos), pero el CDN
+real (`cdn.jsdelivr.net`) está bloqueado en este entorno de trabajo, así
+que la carga real de `shapely` dentro del navegador NUNCA se probó de
+extremo a extremo. Alta confianza en que funcione (documentación
+oficial con fecha, no una suposición), pero sigue siendo, técnicamente,
+sin confirmar en el escenario real. Ver `docs/architecture.md`, sección
+"Generador real en el navegador (Pyodide)".
+
 Auditoría de flujo completo realizada a petición del usuario (recopilar
 fallos/huecos de flujo, no solo bugs sueltos). El hallazgo #1
 (`tipo_vivienda` sin conectar) ya está RESUELTO -- ver
-`docs/architecture.md`. Quedan estos, por orden de cómo se listaron:
+`docs/architecture.md`. El hueco de fondo (no había forma de generar
+sin salir a una terminal) también está RESUELTO -- ver la sección de
+Pyodide arriba. Quedan estos, por orden de cómo se listaron:
 
 - **`retranqueo_m` (retranqueo básico de vivienda aislada) no es
   configurable desde el CLI** -- toda vivienda generada por CLI tiene

@@ -96,3 +96,21 @@ def test_save_with_adjacency_requirements_includes_real_doors(tmp_path):
     assert len(data["doors"]) == 1
     pair = {data["doors"][0]["room_a"], data["doors"][0]["room_b"]}
     assert pair == {"living", "dining"}
+
+
+def test_to_dict_matches_what_save_writes_to_disk(tmp_path):
+    # retomado al construir el puente de navegador (interface/browser/
+    # bridge.py): to_dict() se extrajo de save() para poder usarse en
+    # memoria, sin pasar por disco -- confirma que ambos caminos
+    # producen exactamente el mismo resultado, no solo uno de ellos.
+    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25))
+    living.boundary = Boundary(polygon=box(0, 0, 5, 5))
+    layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
+
+    direct_dict = JsonLayoutRepository.to_dict(layout)
+
+    path = tmp_path / "layout.json"
+    JsonLayoutRepository().save(layout, str(path))
+    saved_dict = json.loads(path.read_text(encoding="utf-8"))
+
+    assert direct_dict == saved_dict

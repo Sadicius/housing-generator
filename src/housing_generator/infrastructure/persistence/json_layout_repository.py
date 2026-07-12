@@ -11,16 +11,18 @@ class JsonLayoutRepository(LayoutRepositoryPort):
     de geometria (via shapely.wkt) se puede anadir cuando haga falta cargar
     layouts guardados, no solo inspeccionarlos."""
 
-    def save(
-        self, layout: Layout, path: str,
-        adjacency_requirements: Optional[List[AdjacencyRequirement]] = None,
-    ) -> None:
+    @staticmethod
+    def to_dict(layout: Layout, adjacency_requirements: Optional[List[AdjacencyRequirement]] = None) -> dict:
+        """Extraido de `save()` para reutilizar la MISMA serializacion
+        (rooms/doors/metadata) sin pasar por disco -- retomado al
+        construir el puente de navegador (`interface/browser/bridge.py`),
+        que necesita el dict en memoria, no un archivo."""
         doors = []
         if adjacency_requirements:
             door_graph = build_door_graph(layout, adjacency_requirements)
             doors = [{"room_a": a, "room_b": b} for a, b in door_graph.edges()]
 
-        data = {
+        return {
             "rooms": [
                 {
                     "id": r.id,
@@ -35,6 +37,12 @@ class JsonLayoutRepository(LayoutRepositoryPort):
             "doors": doors,
             "metadata": layout.metadata,
         }
+
+    def save(
+        self, layout: Layout, path: str,
+        adjacency_requirements: Optional[List[AdjacencyRequirement]] = None,
+    ) -> None:
+        data = self.to_dict(layout, adjacency_requirements)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
