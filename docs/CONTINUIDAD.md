@@ -259,6 +259,23 @@ generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
+**Cytoscape.js para la pestaña "Sinergias"** (investigado a fondo, no
+implementado -- decisión explícita de posponerlo): sustituiría la red
+SVG dibujada a mano (posicionamiento radial estático) por una red
+interactiva real (arrastrar nodos, zoom, selección por caja). Viable
+técnicamente -- `cytoscape.min.js` (UMD, MIT, muy establecida) tiene
+bundle standalone real cargable con `<script src="">` clásico desde
+CDN (unpkg/jsDelivr/CDNJS), funciona desde `file://` igual que Pyodide.
+Coste real, no trivial: se renderiza en `<canvas>`, no SVG -- nuestras
+variables CSS no se le pueden pasar directamente, hay que leer los
+valores computados vía JS. Gotcha documentado por la propia librería
+que nos afecta de verdad: necesita que su contenedor tenga dimensiones
+reales en el momento de inicializarse, y nuestras pestañas inactivas
+usan `display:none` -- inicializar mientras la pestaña está oculta le
+daría tamaño cero. Solución conocida (inicializar solo al abrir la
+pestaña la primera vez, + `cy.resize()`+`cy.fit()` al mostrarla) pero
+es trabajo real de integración, no "añadir una librería y ya".
+
 **El más urgente**: **probar el generador real en el navegador
 (Pyodide) en un navegador de verdad, con internet normal.** Se
 construyó respondiendo a que el usuario cuestionara si el dashboard

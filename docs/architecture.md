@@ -1894,3 +1894,30 @@ CSS/JS del HTML y reducir la cantidad de información comentada.
 - Suite Python: 343 unitarios (uno nuevo), sin cambios de
   comportamiento (separación de archivos, no de lógica). pyflakes y
   mypy limpios (82 archivos).
+
+## Limpieza de código muerto encontrado durante la división por pestañas
+
+Al empezar a dividir `relaciones_espaciales.js` por pestañas (según lo
+confirmado), una comprobación rutinaria del tamaño del archivo reveló
+algo real: contenía un bloque `const PYTHON_SOURCES = {...}` de
+**227KB completamente muerto y sin usar** -- una versión antigua y
+abandonada del bundle Python, con un puente distinto
+(`generar_en_navegador`, no el `generar_edificio` real de
+`bridge.py`), residuo de una iteración anterior de la construcción del
+generador vía Pyodide que nunca se limpió. El código real solo
+referencia `PY_BUNDLE` (definido en `py_bundle.js`, el archivo
+separado) -- `PYTHON_SOURCES` no se usaba en ningún sitio.
+
+- **[RESUELTO] Eliminado por completo**: `relaciones_espaciales.js`
+  pasó de 298KB a 71KB. Verificado con `jsdom` que todo sigue
+  funcionando exactamente igual (chips, generación automática, visor,
+  cero errores) tras la eliminación -- no era código en uso.
+- Comentario huérfano de cabecera (describía el bloque ya eliminado)
+  también corregido, para no dejar documentación desactualizada.
+- Lección de proceso: este bloque llevaba ahí desde antes de la
+  separación en 4 archivos, y sobrevivió esa separación sin que se
+  detectara -- el tamaño final del archivo (298KB, sospechosamente
+  grande para "solo lógica principal") habría sido la señal a
+  revisar entonces. Vale la pena comprobar tamaños de archivo tras
+  cualquier refactor grande, no solo confiar en que "funciona" como
+  señal de que está limpio.
