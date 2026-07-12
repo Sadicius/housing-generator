@@ -291,16 +291,20 @@ oficial con fecha, no una suposición), pero sigue siendo, técnicamente,
 sin confirmar en el escenario real. Ver `docs/architecture.md`, sección
 "Generador real en el navegador (Pyodide)".
 
-**Zona de desembarco de escalera separada del pasillo principal**:
-señalado en una crítica externa que el usuario compartió (parcialmente
-acertada, parcialmente ya cubierta o sin fundamento -- ver el
-intercambio donde se evaluó punto por punto). No tenemos nada
-explícito que exija un espacio de llegada diferenciado en la unión
-escalera-planta superior -- `EscaleraAlineacionValidator` solo
-comprueba solape de huella entre plantas, `PasilloTopologiaValidator`
-evita puntos muertos pero no exige esta distinción concreta. No
-investigado a fondo todavía si es un hueco genuino o si el
-comportamiento actual ya lo resuelve indirectamente.
+**[INVESTIGADO, no es un hueco genuino] Zona de desembarco de
+escalera**: señalado en una crítica externa que el usuario compartió.
+Investigado contra CTE DB-SUA 1 real: el concepto normativo que existe
+de verdad es la "meseta" (descansillo intermedio), obligatoria dentro
+de un mismo tramo al superar cierto número de peldaños (16 en uso
+restringido, confirmado que ni siquiera tiene límite de altura que
+fuerce mesetas por altura en vivienda unifamiliar) -- pero esto vive
+DENTRO de la geometría propia de la escalera (peldaños/tramos), algo
+que ya documentamos explícitamente como fuera de alcance (no modelamos
+peldaños individuales, `STAIRCASE` es un único rectángulo). No es un
+hueco nuevo, es el mismo límite ya conocido. La preocupación de fondo
+de la crítica (topología de circulación, "puntos muertos") ya está
+cubierta en espíritu por `PasilloTopologiaValidator` +
+`EscaleraAlineacionValidator`. Cerrado, sin trabajo pendiente.
 
 Auditoría de flujo completo realizada a petición del usuario (recopilar
 fallos/huecos de flujo, no solo bugs sueltos). El hallazgo #1
@@ -330,9 +334,6 @@ Pyodide arriba. Quedan estos, por orden de cómo se listaron:
   documentado como limitación en su momento, pero fácil de olvidar.
 - **`CocinaIntegrada` (cocina abierta al salón) no tiene ninguna forma
   de activarse ni explicarse desde el dashboard.**
-- **`--vivienda-accesible` (nuevo) tampoco aparece mencionado en el
-  dashboard** -- mismo patrón que `AnchoLibrePracticoValidator`, un
-  flag real del CLI sin ningún reflejo en la interfaz.
 
 **Proyecto Lua anterior del usuario, evaluado (10 archivos: nhv.lua ya
 conocido + main.lua, accesibilidad.lua, termica.lua, acustica.lua,
