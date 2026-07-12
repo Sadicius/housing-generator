@@ -1947,3 +1947,57 @@ ese proyecto use páginas de Next.js, no aplicable directamente).
   access`) que todo funciona exactamente igual tras la división: cero
   errores, matriz/sección/fichas/sinergias/visor/modo espejo/botón
   generar, todos intactos.
+
+## Auditoría completa de código muerto (a petición del usuario)
+
+Tras encontrar el bloque `PYTHON_SOURCES` de 227KB muerto en el JS,
+el usuario preguntó directamente: "¿entonces seguro que no tenemos más
+código muerto?" -- pregunta justa, no contestable de memoria dado lo
+que acababa de pasar. Auditoría sistemática, no solo revisión visual:
+
+- **`vulture`** (detector real de código muerto para Python) instalado
+  y ejecutado sobre `src/` -- confirmó, además del bloque JS ya
+  encontrado, un **archivo Python completo huérfano**:
+  `infrastructure/browser_bridge.py` (78 líneas) -- el archivo fuente
+  REAL detrás del bloque JS muerto, con la misma función antigua
+  (`generar_en_navegador`, no la real `generar_edificio` de
+  `interface/browser/bridge.py`). Nadie lo importaba, en ningún sitio
+  -- confirmado con dos métodos independientes (`vulture` + búsqueda
+  directa de imports en todo el árbol). **[RESUELTO] Eliminado.**
+- Descubierto de paso: este archivo huérfano SÍ se estaba colando en
+  `py_bundle.js` en cada regeneración (el script barre por carpeta,
+  no por uso real) -- 233KB añadidos sin ningún motivo, en cada
+  regeneración, sin que nadie lo notara. Bundle regenerado tras
+  eliminar el archivo (81 → 80 archivos).
+- El resto de hallazgos de `vulture` (confianza 60%, su nivel más
+  bajo) se revisaron uno a uno contra tests reales antes de decidir,
+  no se aceptaron ni descartaron en bloque:
+  - `GraphBasedLayoutGenerator`, `BuildAdjacencyGraphUseCase`,
+    `ValidateLayoutUseCase`, `build_program_with_auto_adjacency`,
+    `build_day_night_zoning_validators`, y varios campos de
+    dataclass -- **NO son código muerto**: tienen tests propios que
+    los verifican, son piezas alternativas deliberadas de la
+    arquitectura hexagonal (demuestran que el generador es
+    intercambiable), simplemente no conectadas al pipeline principal
+    de `container.py`. Confirmado con tests dedicados para cada uno,
+    no solo con la confianza baja de `vulture`.
+  - `AdjacencyStrength.INDIFFERENT` -- **mantenido**: el propio
+    catálogo documenta que "Neutro" se representa por AUSENCIA de
+    entrada, no asignando este valor -- decisión de diseño deliberada,
+    el valor documenta el modelo clásico completo de 5 niveles aunque
+    nunca se instancie.
+  - **[RESUELTO] Eliminados, confirmados con el usuario uno a uno**:
+    `ConstraintViolationError` (excepción nunca lanzada, sin camino de
+    error que la use), `Room.requires_natural_light` /
+    `Room.requires_direct_access_exterior` (campos sin comentario, sin
+    ningún validador que los leyera -- mismo riesgo de "aprobación
+    silenciosa" que este proyecto evita activamente en todos los demás
+    sitios via el patrón de 3 estados None/True/False),
+    `Layout.rooms_in_zone` (método de consulta sin ningún llamador).
+- Lado JavaScript: cada función definida en los 8 archivos de `js/`
+  comprobada por referencias -- ninguna con solo su propia definición.
+  Limpio.
+- Búsqueda de archivos completos huérfanos en `src/` (nadie los
+  importa) confirmó que `browser_bridge.py` era el único.
+- Suite final: 343 unitarios + 23 integración confirmados tras las
+  eliminaciones, pyflakes y mypy limpios (81 archivos fuente).

@@ -13,7 +13,3 @@ class InvalidProgramError(HousingGeneratorError):
 
 class LayoutGenerationError(HousingGeneratorError):
     """No se pudo generar un layout valido para un programa/solar dados."""
-
-
-class ConstraintViolationError(HousingGeneratorError):
-    """Un layout generado viola una restriccion dura."""

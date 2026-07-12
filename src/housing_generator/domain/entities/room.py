@@ -38,8 +38,6 @@ class Room:
     integrated_in_largest_room: bool = False
     vertical_opening_m2: Optional[float] = None
     boundary: Optional[Boundary] = None
-    requires_natural_light: bool = True
-    requires_direct_access_exterior: bool = False
     # Planta a la que pertenece esta estancia (multi-planta). `None` =
     # vivienda de una sola planta (comportamiento previo sin cambios) --
     # se asume PLANTA_BAJA implicitamente en ese caso por el resto del
