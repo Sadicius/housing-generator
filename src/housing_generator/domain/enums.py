@@ -3,16 +3,10 @@ from enum import Enum
 
 
 class ZoneType(str, Enum):
-    """Macro-zonas segun grado de privacidad y horario de uso.
-
-    Es la division clasica que emplea el diseno residencial: social/dia,
-    privada/noche y de servicio. CIRCULATION es distinta de las otras
-    tres: no es una macro-zona de uso, es la clasificacion honesta para
-    estancias que no pertenecen a ninguna (ver mas abajo, CORRIDOR y
-    ENTRANCE_HALL) -- una circulacion sirve a varias zonas a la vez, y
-    forzarla a DAY por defecto era un dato falso (encontrado en
-    auditoria: generaba violaciones falsas de zonificacion cuando un
-    pasillo servia correctamente a la zona noche).
+    """Macro-zonas según grado de privacidad y horario de uso.
+    CIRCULATION no es una macro-zona de uso, es la clasificación para
+    estancias que sirven a varias a la vez (CORRIDOR, ENTRANCE_HALL).
+    Ver [ARCH:enums].
     """
     DAY = "day"          # Social/publica: estar, comedor, cocina abierta, acceso
     NIGHT = "night"       # Privada: dormitorios, banos privados
@@ -41,17 +35,9 @@ class RoomType(str, Enum):
 
 
 class AdjacencyStrength(str, Enum):
-    """Fuerza de un requisito de adyacencia, siguiendo la matriz clasica
-    'debe estar cerca / deberia estar cerca / indiferente / deberia
-    estar lejos / debe estar lejos'.
-
-    SHOULD_BE_NEAR/SHOULD_BE_AWAY ("Preferencia cerca/alejar" del
-    catalogo de relaciones_espaciales.md) usan una METRICA DISTINTA a
-    MUST_BE_NEAR/MUST_BE_AWAY -- saltos en el grafo de adyacencia
-    (cerca objetivo <=2, alejar objetivo >=3), no contacto geometrico
-    directo. Decision deliberada (ver architecture.md): no unificar
-    metricas para no perder la precision de "ancho de puerta" (1.0m)
-    que ya tiene MUST_BE_NEAR. Ver SoftConstraintScorer."""
+    """Fuerza de un requisito de adyacencia: cerca/lejos obligatorio o
+    preferente, o indiferente. SHOULD_BE_* usa una métrica distinta de
+    MUST_BE_* -- ver [ARCH:enums] y `SoftConstraintScorer`."""
     MUST_BE_NEAR = "must_be_near"
     SHOULD_BE_NEAR = "should_be_near"
     INDIFFERENT = "indifferent"
@@ -59,13 +45,7 @@ class AdjacencyStrength(str, Enum):
     MUST_BE_AWAY = "must_be_away"
 
 
-# Zona por defecto de cada tipo de estancia, editable por el llamador
-# (Room.zone se puede sobreescribir explicitamente).
-# CORRIDOR y ENTRANCE_HALL -> CIRCULATION, no DAY: son circulacion, no
-# pertenecen a una macro-zona de uso (ver ZoneType.CIRCULATION arriba).
-# TOILET -> DAY: es un supuesto de diseno (aseo de cortesia, tipicamente
-# cerca del acceso/zona dia para visitas), no una regla normativa -- si
-# tu programa necesita un aseo en zona noche, sobreescribe `zone` a mano.
+# Zona por defecto por tipo, editable via Room.zone. Ver [ARCH:enums].
 DEFAULT_ROOM_ZONE = {
     RoomType.LIVING_ROOM: ZoneType.DAY,
     RoomType.DINING_ROOM: ZoneType.DAY,
@@ -87,13 +67,7 @@ DEFAULT_ROOM_ZONE = {
 }
 
 
-# "Local humedo": estancias con conexion a fontaneria/saneamiento (agua
-# corriente + desague). Confirmado por normativa (CTE DB-HS distingue
-# "locales secos" de "locales humedos": cocinas, banos, aseos) y por
-# practica de proyecto de fontaneria (cada local humedo lleva su propia
-# llave de corte independiente: banos, aseos, cocinas, cuartos de lavado).
-# `tendedero` se deja fuera por defecto: normalmente es prolongacion del
-# lavadero sin desague propio, no un punto de agua independiente.
+# Locales con conexion a fontaneria/saneamiento. Ver [ARCH:enums].
 DEFAULT_WET_ROOMS = {
     RoomType.KITCHEN,
     RoomType.BATHROOM,
@@ -103,16 +77,10 @@ DEFAULT_WET_ROOMS = {
 
 
 class SpaceCategory(str, Enum):
-    """Clasificacion normativa para superficie minima (Tabla 1 vs Tabla 2):
-    que cuenta como "estancia" (Tabla 1: pieza habitable sin instalaciones
-    propias -- estar, comedor, dormitorios, despacho) frente a "servicio"
-    (Tabla 2: cocina, bano, aseo, lavadero, tendedero, almacenamiento --
-    escalan con el numero de estancias, no por puesto de tamano) y
-    "circulacion" (vestibulo/pasillo: reglas de anchura, no de superficie).
-    Confirmado contra Decreto 29/2010 (Galicia) y normativas municipales:
-    cocina es "pieza vividera" (categoria A.1.1, luz/exterior) pero NO es
-    "estancia" a efectos de Tabla 1 -- son dos clasificaciones distintas.
-    """
+    """Clasificación normativa para superficie mínima: ESTANCIA (Tabla
+    1), SERVICIO (Tabla 2, cocina/baño/aseo/lavadero/tendedero/
+    almacenamiento), CIRCULACION (reglas de anchura), OTROS (fuera de
+    Tabla 1/2). Ver [ARCH:enums]."""
     ESTANCIA = "estancia"
     SERVICIO = "servicio"
     CIRCULACION = "circulacion"
@@ -153,41 +121,13 @@ DEFAULT_SERVICE_SUBTYPE = {
 }
 
 
-# Minimo de lados con contacto real al exterior por tipo de estancia
-# (vivienda UNIFAMILIAR -- en bloque de viviendas ENTRANCE_HALL daria al
-# nucleo de comunicaciones, no al exterior real). Confirmado caso por
-# caso con el usuario, no derivado automaticamente de SpaceCategory --
-# BATHROOM y TOILET admiten ventilacion mecanica (0), pero DRYING_AREA
-# exige ventilacion natural directa (1) pese a ser tambien "servicio".
-# TECHNICAL_ROOM: 0 exigido, aunque por comodidad de acceso tecnico se
-# prefiera 1 en la practica -- eso es preferencia de diseno, no regla.
+# Minimo de lados con contacto exterior real por tipo, vivienda
+# UNIFAMILIAR. Confirmado caso por caso con el usuario. GARAGE=0 --
+# corregido tras investigacion (sin respaldo normativo real). Ver
+# [ARCH:enums].
 #
-# GARAGE: 0 -- **[CORREGIDO tras investigacion, antes era 1]**. La
-# exigencia anterior de contacto exterior para GARAGE nunca estuvo
-# respaldada por ninguna fuente real: ni el Decreto 29/2010 (donde el
-# unico apartado sobre garajes, B.2.6 "Garajes colectivos", esta
-# confirmado -- por un hilo real de arquitectos en soloarquitectura.com
-# discutiendo la aplicacion practica del decreto -- que NO aplica a
-# vivienda unifamiliar, "ya que no disponen de ninguno de ellos por
-# tipologia") ni siquiera nhv.lua (que declara explicitamente en su
-# propio comentario: "garajes de viviendas unifamiliares... no se
-# modela aqui -- ese es GARAJE colectivo"). GARAGE ya es
-# SpaceCategory.OTROS (excluido de A.1.2, iluminacion/ventilacion de
-# piezas habitables) -- consistente con que la norma de habitabilidad
-# no lo trata como pieza vividera. El acceso vehicular real es un
-# asunto de urbanismo/acceso a parcela (A.2.1), no de habitabilidad por
-# estancia. Sigue siendo OPCIONAL por proyecto: `Room.min_exterior_sides`
-# admite override explicito (`Room(room_type=GARAGE, ...,
-# min_exterior_sides=1)`) para quien quiera exigirlo por motivos
-# practicos propios, sin que sea la exigencia por defecto del sistema.
-# Nombres legibles en espanol -- mismo mapeo EXACTO que DISPLAY en
-# docs/visualizador/relaciones_espaciales.html (las dos copias deben
-# coincidir; si una cambia, cambiar la otra). Bug real encontrado
-# haciendo el recorrido de extremo a extremo: seleccion_plantas_importer.py
-# usaba el nombre TECNICO del tipo ("living_room") como `Room.name`
-# tambien, en vez de un nombre legible -- se veia en el plano final,
-# no solo en el JSON intermedio. STAIRCASE incluido aqui (no aparece en
-# el catalogo del dashboard, que es solo de los 16 tipos no-circulacion).
+# DISPLAY_NAMES debe coincidir EXACTAMENTE con DISPLAY en
+# docs/visualizador/js/00-shared.js -- ver [ARCH:enums].
 DISPLAY_NAMES = {
     RoomType.LIVING_ROOM: "Salón",
     RoomType.DINING_ROOM: "Comedor",

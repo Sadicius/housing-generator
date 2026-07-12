@@ -98,29 +98,10 @@ def build_per_floor_validators(
     adjacency_requirements, graph_builder, total_num_estancias=None, global_rank=None,
     vivienda_accesible: bool = False,
 ) -> List:
-    """Validadores que tiene sentido aplicar a UNA SOLA planta (Layout).
-
-    IMPORTANTE (encontrado al construir GenerateBuildingUseCase):
-    `ViviendaMinimaValidator` (necesita ver las 6 piezas del programa
-    minimo juntas) y `BanoAccesoGeneralValidator` (podria depender de un
-    bano en OTRA planta) son de ambito de EDIFICIO, no de planta -- se
-    excluyen aqui deliberadamente y se comprueban aparte, a nivel de
-    `Building` completo (ver `generate_building.py`).
-
-    `total_num_estancias` / `global_rank`: numero y ranking de estancias
-    del EDIFICIO COMPLETO (no solo de esta planta), para que Tabla 1/2
-    elijan la fila Y el puesto correctos -- dos bugs reales encontrados
-    al generar el primer edificio de 2 plantas de prueba, ambos
-    [RESUELTOS] ahora. `None` (por defecto, caso de una sola planta)
-    preserva el comportamiento anterior: se calcula localmente, que en
-    ese caso coincide exactamente con el total/ranking del edificio.
-
-    `vivienda_accesible`: OPT-IN (por defecto False, sin cambio de
-    comportamiento) -- activa `ViviendaAccesibleValidator` (circulo de
-    giro Ø1.50m + pasillo 1.20m, DB-SUA/Base 5.4), retomado de un
-    modulo Lua de un proyecto anterior del usuario. La gran mayoria de
-    viviendas NO estan obligadas a esto, de ahi que no sea el
-    comportamiento por defecto.
+    """Validadores que se aplican a UNA sola planta (Layout). No
+    incluye `ViviendaMinimaValidator` ni `BanoAccesoGeneralValidator`
+    (ámbito edificio, ver `generate_building.py`). `vivienda_accesible`
+    opt-in. Ver [ARCH:container].
     """
     return [
         AdjacencyConstraintValidator(adjacency_requirements),
@@ -154,28 +135,12 @@ def build_generate_layout_use_case(
     seed: Optional[int] = None,
     vivienda_accesible: bool = False,
 ) -> GenerateLayoutUseCase:
-    """Fabrica el caso de uso GenerateLayout con TODAS las reglas
-    construidas hasta ahora, combinadas via CompositeConstraintValidator:
-    geometria/must_be_away, nucleo humedo, zonificacion dia/noche/
-    servicio, Tabla 1 (+ cuadrado inscribible de estancia mayor), Tabla 2,
-    armario empotrado por dormitorio, trastero (B.2.5), ancho libre por
-    estancia (A.3.2.1), ancho libre de pasillo (A.3.2.3) y altura libre
-    (A.3.1.1).
-
-    `vivienda_accesible`: OPT-IN (por defecto False) -- ver docstring de
-    `build_per_floor_validators`.
-
-    Para vivienda de UNA sola planta (caso de uso original, sin cambios
-    de comportamiento): usa `build_per_floor_validators` + los dos que
-    son de ambito de edificio (`ViviendaMinimaValidator`,
-    `BanoAccesoGeneralValidator`) -- con una unica planta, "edificio" y
-    "planta" son lo mismo, asi que aplicarlos aqui sigue siendo correcto.
-
-    El generador es SimulatedAnnealingLayoutGenerator: construye un unico
-    arbol de particion sobre TODAS las estancias (sin fase previa de
-    zonificacion geometrica) y busca la mejor topologia minimizando el
-    numero de violaciones del mismo composite -- ver docs/architecture.md
-    seccion de limitaciones conocidas para el porque de este cambio.
+    """Fábrica del caso de uso GenerateLayout con todas las reglas de
+    una sola planta (`build_per_floor_validators`) + las de ámbito
+    edificio (`ViviendaMinimaValidator`, `BanoAccesoGeneralValidator`
+    -- con una única planta, "edificio" y "planta" son lo mismo).
+    Generador: `SimulatedAnnealingLayoutGenerator`. Ver
+    [ARCH:container].
     """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
@@ -208,18 +173,10 @@ def build_generate_building_use_case(
     seed: Optional[int] = None,
     vivienda_accesible: bool = False,
 ) -> GenerateBuildingUseCase:
-    """Fabrica GenerateBuildingUseCase con las fabricas concretas
-    (per_floor_validators_factory, layout_generator_factory) ya
-    resueltas -- unico punto del sistema que conecta el caso de uso
-    multi-planta con las clases de infraestructura reales, siguiendo el
-    mismo patron que build_generate_layout_use_case.
-
-    `vivienda_accesible`: OPT-IN (por defecto False) -- ver docstring de
-    `build_per_floor_validators`. Si la vivienda tiene mas de una
-    planta, el requisito de circulo de giro/pasillo accesible se aplica
-    en TODAS las plantas por igual (la fuente Lua original distinguia
-    "vivienda accesible duplex" como caso aparte -- aqui no se modela
-    esa distincion, toda planta declarada accesible se comprueba igual).
+    """Fábrica de `GenerateBuildingUseCase` con las fábricas concretas
+    ya resueltas -- único punto que conecta el caso de uso multi-planta
+    con infraestructura real. `vivienda_accesible` opt-in, aplicado
+    igual en todas las plantas. Ver [ARCH:container].
     """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 

@@ -19,40 +19,17 @@ from shapely.geometry import Polygon, box
 
 @dataclass
 class PartitionNode:
-    """Nodo del arbol. Una hoja tiene `room_id`; un nodo interno tiene
-    `direction` y dos subarboles `first`/`second`.
+    """Nodo del árbol. Una hoja tiene `room_id`; un nodo interno tiene
+    `direction` y dos subárboles `first`/`second`.
 
-    `direction`: **[RESUELTO, corregido dos veces sobre un caso real]**
-    `None` (por defecto) significa "automatica -- elegir, en el momento
-    de colocar, la orientacion que MINIMIZA la peor proporcion
-    ancho:alto resultante entre las dos piezas" (regla real de
-    squarified treemap, Bruls/Huizing/van Wijk 2000, aplicada a plantas
-    por Marson & Musse 2010 -- la primera version de este proyecto
-    simplificaba esto a "cortar por el lado mas largo del contenedor",
-    que resulto ser INSUFICIENTE: no mira el reparto de area real del
-    corte, y un contenedor casi cuadrado partido 90/10 sigue dando una
-    tira fina en cualquier direccion). Un valor explicito ("h"/"v")
-    FUERZA esa direccion, anulando el automatismo -- usado por el
-    movimiento `flip_direction` como via de escape para que el recocido
-    pueda explorar topologias distintas a la "natural" cuando haga falta.
+    `direction`: None = automática (minimiza la peor proporción
+    ancho:alto del corte). "h"/"v" fuerza esa dirección, usado por
+    `flip_direction` para explorar topologías no automáticas.
+    `ratio_override`: proporción del corte forzada manualmente (0-1,
+    fracción de `first`), en vez de derivarla del área declarada.
 
-    Encontrado con casos reales (bateria de 5 escenarios generados con
-    el propio panel automatico del dashboard, no sinteticos): incluso
-    con la primera correccion (lado mas largo), una vivienda de 5
-    dormitorios (14 estancias) seguia produciendo dormitorios de hasta
-    9.5:1 -- confirmado que la causa era mirar solo la forma del
-    contenedor, no el reparto de area real de cada corte concreto.
-
-    `ratio_override`: proporcion del corte FORZADA manualmente (0-1,
-    fraccion de `first`), en vez de derivarla siempre del area declarada
-    de las estancias. Inspirado en Merrell/Schkufza/Koltun 2010
-    ("Sliding a wall" como proposal move independiente de "swapping
-    rooms") -- investigacion externa confirmada, no una idea propia
-    inventada sin referencia. Sin esto, la proporcion de cada corte
-    quedaba SIEMPRE atada al area declarada de cada estancia, sin ningun
-    grado de libertad independiente para ajustar forma/ancho libre sin
-    cambiar topologia. `None` (por defecto) preserva el comportamiento
-    anterior exacto -- calculo derivado del area."""
+    [ARCH:partition-node]
+    """
     room_id: Optional[str] = None
     direction: Optional[str] = None
     first: Optional["PartitionNode"] = None
@@ -84,14 +61,9 @@ class PartitionNode:
 
 
 def build_random_tree(room_ids: List[str], rng: random.Random) -> PartitionNode:
-    """Construye un arbol de topologia aleatoria que contiene cada
-    room_id exactamente una vez (punto de partida para la busqueda).
-
-    `direction=None` (automatica, minimiza la peor proporcion resultante
-    -- ver docstring de PartitionNode) es el punto de partida por
-    defecto, no un valor h/v elegido al azar como antes -- el azar de
-    direccion ahora es responsabilidad exclusiva del movimiento
-    `flip_direction` durante la busqueda, no de la construccion inicial."""
+    """Construye un árbol de topología aleatoria, cada room_id una vez
+    (punto de partida para la búsqueda). `direction=None` en todos los
+    nodos -- ver [ARCH:partition-node]."""
     if len(room_ids) == 1:
         return PartitionNode(room_id=room_ids[0])
 
@@ -111,14 +83,9 @@ def _leaf_area(leaf: "PartitionNode", areas: Dict[str, float]) -> float:
 
 
 def _worst_aspect_ratio(width: float, height: float, ratio: float, direction: str) -> float:
-    """Peor (mayor) proporcion ancho:alto entre las DOS piezas resultantes
-    de cortar un rectangulo width x height en la proporcion `ratio`
-    (fraccion de `first`), en la `direction` dada. Helper de la regla
-    real de squarified treemap en `place_tree` -- NO es solo mirar la
-    forma del contenedor (lo que se hacia antes), hay que mirar tambien
-    como de desigual es el reparto de area, porque un contenedor casi
-    cuadrado partido 90/10 puede seguir dando una tira fina en cualquier
-    direccion."""
+    """Peor proporción ancho:alto entre las dos piezas de cortar
+    width x height en `ratio` (fracción de `first`), en `direction`.
+    Ver [ARCH:partition-node]."""
     if direction == "v":
         w1, h1 = width * ratio, height
         w2, h2 = width * (1 - ratio), height
@@ -146,18 +113,8 @@ def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float])
     total = first_area + second_area or 1.0
     ratio = node.ratio_override if node.ratio_override is not None else (first_area / total)
 
-    # direccion EFECTIVA: si no hay override explicito ("h"/"v" forzado
-    # por flip_direction), elegir la que MINIMIZA la peor proporcion
-    # resultante -- la regla real de squarified treemap (Bruls/Huizing/
-    # van Wijk 2000, aplicada a plantas por Marson & Musse 2010), no
-    # solo "cortar por el lado mas largo del contenedor" (simplificacion
-    # anterior de este mismo proyecto). Encontrado con casos reales
-    # (5 dormitorios, 14 estancias): la simplificacion anterior seguia
-    # produciendo tiras finas (hasta 9.5:1) cuando dos hojas de area muy
-    # distinta caian como hermanas en el arbol -- mirar solo la forma
-    # del contenedor no basta, un contenedor casi cuadrado partido 90/10
-    # sigue dando una tira fina en cualquier direccion; hay que mirar
-    # tambien el reparto de area real de ESE corte.
+    # direccion efectiva: automatica minimiza la peor proporcion
+    # resultante (ver [ARCH:partition-node]), o la forzada por override.
     width, height = maxx - minx, maxy - miny
     if node.direction is not None:
         effective_direction = node.direction
@@ -201,22 +158,10 @@ def _current_ratio(node: PartitionNode, areas: Dict[str, float]) -> float:
 
 
 def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, float]) -> PartitionNode:
-    """Genera un arbol vecino mediante UNO de cuatro movimientos aleatorios:
-    - intercambiar la estancia de dos hojas cualesquiera
-    - invertir la direccion de corte (h<->v) de un nodo interno
-    - intercambiar los dos subarboles de un nodo interno (efecto espejo)
-    - "deslizar pared": perturbar la proporcion de un corte existente,
-      independientemente de las areas declaradas (`ratio_override`) --
-      inspirado en Merrell/Schkufza/Koltun 2010 ("Sliding a wall" como
-      proposal move propio, distinto de "swapping rooms"). Los tres
-      primeros son los habituales en recocido simulado sobre slicing
-      floorplans; el cuarto cubre un grado de libertad que antes no
-      existia en absoluto: sin el, la unica forma de corregir una
-      violacion de forma/ancho libre era cambiar topologia (que
-      estancia va con cual), nunca ajustar un corte ya bueno en si mismo.
-      La perturbacion parte de la proporcion EFECTIVA actual (`_current_ratio`),
-      no de un valor fijo -- un deslizamiento real, no un salto.
-    """
+    """Genera un árbol vecino mediante uno de cuatro movimientos:
+    intercambiar hojas, invertir dirección, intercambiar subárboles,
+    o "deslizar pared" (perturbar la proporción de un corte). Ver
+    [ARCH:partition-node]."""
     new_tree = copy.deepcopy(tree)
     move = rng.choice(("swap_leaves", "flip_direction", "swap_children", "slide_wall"))
 
@@ -233,15 +178,7 @@ def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, fl
     target = rng.choice(internals)
 
     if move == "flip_direction":
-        # ciclo None (automatica, lado mas largo) -> "h" forzado ->
-        # "v" forzado -> None -- ya no es un toggle ciego h<->v, porque
-        # la direccion "natural" ahora depende del rectangulo real en
-        # el momento de colocar, no se puede saber solo mirando el
-        # nodo. Ciclar por los 3 estados le da al recocido la misma
-        # libertad de explorar topologias no-cuadradas cuando haga
-        # falta (p.ej. un pasillo que conviene mantener alargado en la
-        # misma direccion), sin perder el punto de partida "automatico"
-        # por defecto.
+        # ciclo None -> "h" -> "v" -> None (ver [ARCH:partition-node])
         if target.direction is None:
             target.direction = "h"
         elif target.direction == "h":

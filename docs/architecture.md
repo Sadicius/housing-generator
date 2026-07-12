@@ -1798,7 +1798,7 @@ el proceso a ciegas.
   refactor de `JsonLayoutRepository` + `bridge.py` + tests de sanidad
   del dashboard ampliados), pyflakes y mypy limpios (81 archivos).
 
-## ProporcionMaximaValidator -- cierre del hallazgo de la bateria de casos reales
+## ProporcionMaximaValidator -- cierre del hallazgo de la bateria de casos reales [ARCH:proporcion-maxima]
 
 El usuario insistió en probar con casos reales de forma sistemática en
 vez de confiar en tests sintéticos aislados -- confirmado que tenía
@@ -2001,3 +2001,121 @@ que acababa de pasar. Auditoría sistemática, no solo revisión visual:
   importa) confirmó que `browser_bridge.py` era el único.
 - Suite final: 343 unitarios + 23 integración confirmados tras las
   eliminaciones, pyflakes y mypy limpios (81 archivos fuente).
+
+# Referencia técnica por componente [ARCH:*]
+
+A partir de aquí, no es histórico cronológico (eso sigue arriba, sin
+tocar) -- es referencia consolidada por pieza de código, para que un
+comentario corto en el código (`[ARCH:tag]`) pueda apuntar aquí sin
+tener que rastrear varias secciones distintas. Cada entrada junta lo
+que antes vivía como docstring largo en el propio archivo fuente.
+
+## [ARCH:partition-node] PartitionNode y place_tree
+
+`direction=None` (automático) minimiza la peor proporción ancho:alto
+resultante del corte -- regla real de squarified treemap (Bruls/
+Huizing/van Wijk 2000, aplicada a plantas por Marson & Musse 2010).
+La simplificación anterior ("cortar por el lado más largo") resultó
+insuficiente: no mira el reparto de área real del corte, y un
+contenedor casi cuadrado partido 90/10 sigue dando una tira fina en
+cualquier dirección -- confirmado con un caso real (vivienda de 5
+dormitorios, dormitorios de hasta 9.5:1). Investigado después con
+200.000 pruebas aleatorias: la heurística "lado más largo" y la regla
+completa (`_worst_aspect_ratio`, evalúa ambas orientaciones) dan
+siempre el mismo resultado en un corte binario -- son equivalentes,
+la dirección de corte nunca fue el problema real; ver
+`[ARCH:proporcion-maxima]` para la causa raíz real y su arreglo.
+
+`ratio_override`: proporción de corte forzada manualmente (0-1,
+fracción de `first`), independiente del área declarada de las
+estancias. Inspirado en Merrell/Schkufza/Koltun 2010 ("Sliding a
+wall" como proposal move propio, distinto de "swapping rooms") --
+investigación externa confirmada. Sin esto, la proporción de cada
+corte quedaba siempre atada al área declarada, sin ningún grado de
+libertad para ajustar forma/ancho libre sin cambiar topología.
+
+`random_neighbor` -- 4 movimientos: intercambiar hojas, invertir
+dirección (ciclo None→"h"→"v"→None, no un toggle binario, porque la
+dirección "automática" depende del rectángulo real en el momento de
+colocar, no se puede saber solo mirando el nodo), intercambiar
+subárboles, y "deslizar pared" (`slide_wall`, el movimiento inspirado
+en Merrell et al. arriba).
+
+## [ARCH:enums] domain/enums.py -- decisiones de clasificación
+
+**`ZoneType.CIRCULATION`**: distinta de DAY/NIGHT/SERVICE -- no es una
+macro-zona de uso, es la clasificación honesta para estancias que
+sirven a varias zonas a la vez (CORRIDOR, ENTRANCE_HALL, STAIRCASE).
+Forzarlas a DAY por defecto generaba violaciones falsas de
+zonificación cuando un pasillo servía correctamente a la zona noche
+(bug real encontrado en auditoría).
+
+**`AdjacencyStrength`**: SHOULD_BE_NEAR/SHOULD_BE_AWAY usan una
+métrica distinta (saltos en el grafo, cerca ≤2/alejar ≥3) que
+MUST_BE_NEAR/MUST_BE_AWAY (contacto geométrico directo, ancho de
+puerta 1.0m) -- decisión deliberada de no unificar métricas para no
+perder esa precisión. Ver `SoftConstraintScorer`.
+
+**`DEFAULT_WET_ROOMS`**: confirmado por normativa (CTE DB-HS) y
+práctica de fontanería (cada local húmedo con su propia llave de
+corte). `tendedero` queda fuera -- normalmente prolongación del
+lavadero sin desagüe propio.
+
+**`SpaceCategory`**: Tabla 1 (ESTANCIA) vs Tabla 2 (SERVICIO) vs
+CIRCULACION (reglas de anchura, no superficie). Cocina es "pieza
+vividera" pero NO "estancia" a efectos de Tabla 1 -- dos
+clasificaciones normativas distintas, confirmado contra el decreto.
+
+**`DEFAULT_MIN_EXTERIOR_SIDES`**: confirmado caso por caso con el
+usuario, no derivado automáticamente. `GARAGE=0` -- corregido tras
+investigación (antes era 1): sin respaldo normativo real (B.2.6 es de
+garajes colectivos, no unifamiliares; ni siquiera `nhv.lua` lo exigía).
+Ancho de exterior es asunto de urbanismo (A.2.1), no de habitabilidad
+por estancia. Override disponible por proyecto si hace falta.
+
+**`DISPLAY_NAMES`**: debe coincidir EXACTAMENTE con el mapeo `DISPLAY`
+del dashboard (`docs/visualizador/js/00-shared.js`) -- si uno cambia,
+cambiar el otro. Bug real encontrado en su momento: el nombre técnico
+del tipo se usaba como `Room.name`, visible en el plano final.
+
+## [ARCH:generate-building] GenerateBuildingUseCase
+
+Orquesta la generación multi-planta: agrupa por `Room.level`, genera
+de abajo a arriba (búsqueda independiente por planta, no conjunta),
+encadenando alineación de escalera + continuidad de núcleo húmedo
+entre plantas consecutivas. Primer incremento deliberadamente
+simplificado: todas las plantas comparten `lot.buildable_area`; el
+programa mínimo se comprueba una sola vez, a nivel de edificio
+completo (uniendo tipos de todas las plantas).
+
+`PerFloorValidatorsFactory` se inyecta como función, no como clases
+concretas, para que esta capa de aplicación no dependa de
+infraestructura -- incluye el número total de estancias del edificio
+completo (bug real corregido: sin esto, una planta con pocas
+estancias aplicaba una fila de Tabla 1/2 más baja de la real).
+
+`_shrink_for_next_floor`: encoge el contorno progresivamente
+(`buffer(-x)`), con red de seguridad (investigación externa
+confirmada, patrón `MinArea{Action:Shrink, Fallback:...}`) -- si el
+área encogida no alcanza para las estancias declaradas, no se encoge,
+usa la misma huella que la planta de abajo.
+
+`_check_bano_acceso_general`: reutiliza el validador de una sola
+planta, ejecutado POR PLANTA -- la accesibilidad de un baño no se
+"hereda" de otra planta. Corrige un hueco real: antes esta regla no se
+comprobaba en absoluto en modo multi-planta.
+
+## [ARCH:container] config/container.py -- composition root
+
+`build_per_floor_validators`: `ViviendaMinimaValidator` y
+`BanoAccesoGeneralValidator` quedan fuera deliberadamente -- son de
+ámbito EDIFICIO, no de planta, se comprueban aparte en
+`GenerateBuildingUseCase`. `total_num_estancias`/`global_rank`: del
+edificio completo, no solo de esta planta (dos bugs reales corregidos
+en el primer edificio de 2 plantas de prueba). `vivienda_accesible`:
+opt-in, por defecto False.
+
+`build_generate_building_use_case`: si la vivienda tiene más de una
+planta, el requisito de vivienda accesible se aplica en todas las
+plantas por igual (la fuente Lua original distinguía "duplex" como
+caso aparte, aquí no).
