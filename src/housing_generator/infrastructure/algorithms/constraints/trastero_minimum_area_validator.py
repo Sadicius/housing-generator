@@ -5,27 +5,15 @@ from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
 from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
 
-# B.2.5 (trastero): superficie minima FIJA, no escala con el numero de
-# estancias -- a diferencia de "almacenamiento" (Tabla 2). Confirmado en
-# nhv.lua (NHV.trastero.area = 4.00), con la propia fuente admitiendo que
-# esta regla nunca estuvo realmente implementada pese a estar declarada.
+# B.2.5: superficie fija. Ver [ARCH:trastero-minimum-area].
 TRASTERO_AREA_MIN_M2 = 4.00
 TRASTERO_ANCHO_LIBRE_MIN_M = 1.60
 
-# Ancho de puerta (0.80m) sigue pendiente -- requiere modelar puertas/
-# accesos, que este proyecto no modela todavia (mismo hueco identificado
-# en relaciones_espaciales.md: "acceso/puertas").
-
 
 class TrasteroMinimumAreaValidator(ConstraintValidatorPort):
-    """B.2.5: superficie minima fija Y ancho libre minimo para trasteros
-    (RoomType.STORAGE_ROOM). Distinto de ServicioMinimumAreaValidator
-    (Tabla 2), que cubre "almacenamiento" (RoomType.STORAGE) con un
-    minimo que SI escala con el numero de estancias.
-
-    El ancho de puerta (0.80m, tambien en B.2.5) NO se comprueba aqui --
-    requiere modelar puertas/accesos, pendiente en todo el proyecto.
-    """
+    """B.2.5: superficie mínima fija y ancho libre mínimo para
+    trasteros (STORAGE_ROOM) -- distinto de "almacenamiento" (Tabla 2,
+    escala con estancias). Ver [ARCH:trastero-minimum-area]."""
 
     def validate(self, layout: Layout) -> ValidationResult:
         violations: List[str] = []

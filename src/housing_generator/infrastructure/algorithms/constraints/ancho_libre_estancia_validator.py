@@ -5,12 +5,7 @@ from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
 from housing_generator.infrastructure.geometry.shapely_utils import meets_minimum_width
 
-# A.3.2.1: ancho libre minimo entre paramentos enfrentados. Declarado en
-# nhv.lua (NHV.anchoLibreMin) pero nunca conectado a ningun validador en
-# la fuente; los valores en si son reales (Anexo I, Decreto de Galicia),
-# confirmados de forma independiente. Solo cubre estas 5 categorias --
-# comedor, despacho, aseo, lavadero, tendedero, trastero, almacenamiento
-# no tienen ancho libre asignado en ningun sitio de la fuente.
+# A.3.2.1: ancho libre minimo. Ver [ARCH:ancho-libre-estancia].
 ANCHO_LIBRE_ESTANCIA_MAYOR_M = 2.70
 ANCHO_LIBRE_DORMITORIO_DOBLE_M = 2.60   # habitacion >= 12m2
 ANCHO_LIBRE_DORMITORIO_INDIVIDUAL_M = 2.00  # habitacion < 12m2
@@ -22,16 +17,8 @@ _DORMITORIO_TYPES = {RoomType.BEDROOM, RoomType.MASTER_BEDROOM}
 
 
 class AnchoLibreEstanciaValidator(ConstraintValidatorPort):
-    """A.3.2.1: comprueba el ancho libre minimo (lado mas corto del
-    rectangulo) para estancia mayor, dormitorios, cocina y bano.
-
-    La "estancia mayor" aqui es estrictamente `RoomType.LIVING_ROOM` --
-    a diferencia de `EstanciaMinimumAreaValidator`, este validador NO
-    hace fallback a la estancia de mayor area si no hay salon declarado
-    (para no duplicar ese aviso, que ya emite aquel validador sobre el
-    mismo tema): si no hay salon, esta comprobacion concreta simplemente
-    no se ejecuta.
-    """
+    """A.3.2.1: ancho libre mínimo para estancia mayor, dormitorios,
+    cocina y baño. Ver [ARCH:ancho-libre-estancia]."""
 
     def validate(self, layout: Layout) -> ValidationResult:
         violations: List[str] = []

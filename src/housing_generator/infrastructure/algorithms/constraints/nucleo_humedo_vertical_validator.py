@@ -5,26 +5,13 @@ from housing_generator.application.ports.constraint_validator_port import Constr
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 
-# docs/niveles_plantas.md, "Relacion vertical: continuidad de
-# instalaciones (bajantes)" -- documentado desde hace tiempo, nunca
-# implementable por falta de generacion multi-planta. Regla: cualquier
-# estancia humeda (is_wet) de esta planta debe solapar en (x,y) con
-# ALGUNA humeda de la planta inmediatamente inferior -- "cualquier tipo
-# humedo coincide, no especifico por tipo" (ya confirmado en ese
-# documento). A diferencia de la escalera (que exige near-alineacion
-# exacta por continuidad estructural), aqui basta con solape real
-# (interseccion de area > 0): las bajantes necesitan poder discurrir
-# verticalmente por la zona humeda, no que las piezas coincidan pieza
-# a pieza.
+# Continuidad de bajantes. Ver [ARCH:nucleo-humedo-vertical].
 
 
 class NucleoHumedoVerticalValidator(ConstraintValidatorPort):
-    """Cada estancia humeda de esta planta debe solapar en planta con
-    alguna humeda de la planta inmediatamente inferior (continuidad de
-    bajantes). `reference_wet_boundaries=[]` (planta de abajo sin
-    humedas, o no hay planta de abajo) significa que este validador no
-    aplica -- no se puede comprobar continuidad contra una planta que no
-    tiene ninguna humeda con la que solapar."""
+    """Cada estancia húmeda debe solapar en planta con alguna húmeda
+    de la planta inmediatamente inferior. Sin referencia, no aplica.
+    Ver [ARCH:nucleo-humedo-vertical]."""
 
     def __init__(self, reference_wet_boundaries: List[Polygon]):
         self._reference_union = unary_union(reference_wet_boundaries) if reference_wet_boundaries else None

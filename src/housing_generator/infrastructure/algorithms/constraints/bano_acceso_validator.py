@@ -5,30 +5,14 @@ from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType, SpaceCategory
 
-# Regla "Condicional" del catalogo de relaciones espaciales
-# (BEDROOM/MASTER_BEDROOM x BATHROOM, ver relaciones_espaciales.md):
-# "1 bano -> acceso solo via pasillo; >=2 banos -> uno puede ser en-suite".
-#
-# NO es un valor estatico de tabla (TipoA, TipoB) -- depende de cuantos
-# RoomType.BATHROOM tenga el Program real. Formulacion equivalente y mas
-# simple que no necesita ramificar por conteo: al menos UN bano debe
-# tener acceso directo (pared compartida) a circulacion general
-# (CORRIDOR o ENTRANCE_HALL). Con 1 solo bano, esa exigencia recae
-# necesariamente sobre el (equivale a "acceso solo via pasillo"); con 2+,
-# basta con que UNO la cumpla, los demas pueden ser en-suite de un
-# dormitorio sin acceso propio a circulacion.
+# Regla "Condicional" del catalogo. Ver [ARCH:bano-acceso].
 
 
 class BanoAccesoGeneralValidator(ConstraintValidatorPort):
-    """Al menos un RoomType.BATHROOM debe tener adyacencia real (pared
-    compartida) con una estancia de circulacion (CORRIDOR o
-    ENTRANCE_HALL) -- ningun bano puede quedar "capturado" exclusivamente
-    dentro de un dormitorio si es el unico (o el unico con acceso general)
-    de la vivienda.
-
-    Si no hay ningun BATHROOM colocado, no aplica (lista vacia, sin
-    avisos) -- ViviendaMinimaValidator ya exige que exista al menos uno;
-    este validador no duplica esa exigencia, solo comprueba el acceso.
+    """Al menos un BATHROOM debe tener adyacencia real con circulación
+    (CORRIDOR o ENTRANCE_HALL) -- ninguno puede quedar capturado
+    exclusivamente dentro de un dormitorio si es el único con acceso
+    general. Sin BATHROOM colocado, no aplica. Ver [ARCH:bano-acceso].
     """
 
     def __init__(self, graph_builder: AdjacencyGraphBuilderPort):

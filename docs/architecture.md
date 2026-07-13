@@ -2482,3 +2482,43 @@ circulación hacia zona noche.
 
 Zonificación de servicio: NO existe en `nhv.lua` (solo cubre día/
 noche) -- extensión propia de este proyecto, marcada como tal.
+
+## [ARCH:bano-acceso] BanoAccesoGeneralValidator
+
+Regla "Condicional" del catálogo (BEDROOM/MASTER_BEDROOM x BATHROOM):
+"1 baño → acceso solo vía pasillo; ≥2 baños → uno puede ser en-suite".
+NO es un valor estático de tabla -- depende de cuántos BATHROOM tenga
+el Program real. Formulación equivalente más simple, sin ramificar por
+conteo: al menos un baño debe tener acceso directo a circulación
+general; con 1 solo baño, la exigencia recae necesariamente sobre él.
+
+## [ARCH:nucleo-humedo-vertical] NucleoHumedoVerticalValidator
+
+`docs/niveles_plantas.md`: cualquier estancia húmeda debe solapar en
+(x,y) con ALGUNA húmeda de la planta inmediatamente inferior --
+cualquier tipo húmedo coincide, no específico por tipo. A diferencia
+de la escalera (near-alineación exacta), aquí basta con solape real
+(intersección de área > 0): las bajantes necesitan discurrir por la
+zona húmeda, no que las piezas coincidan pieza a pieza.
+
+## [ARCH:ancho-libre-estancia] AnchoLibreEstanciaValidator
+
+A.3.2.1: declarado en `nhv.lua` (NHV.anchoLibreMin) pero nunca
+conectado a ningún validador en la fuente; valores confirmados de
+forma independiente (Anexo I, Decreto de Galicia). Solo cubre 5
+categorías (estancia mayor, dormitorios, cocina, baño) -- comedor,
+despacho, aseo, lavadero, tendedero, trastero, almacenamiento no
+tienen ancho libre asignado en ningún sitio de la fuente (cubiertos
+en cambio por `AnchoLibrePracticoValidator`, no normativo).
+
+La "estancia mayor" aquí es estrictamente LIVING_ROOM -- a diferencia
+de `EstanciaMinimumAreaValidator`, no hace fallback a la de mayor
+área (para no duplicar ese aviso).
+
+## [ARCH:trastero-minimum-area] TrasteroMinimumAreaValidator
+
+B.2.5: superficie mínima FIJA (4.00m², no escala con estancias, a
+diferencia de "almacenamiento" en Tabla 2). Confirmado en `nhv.lua`
+(NHV.trastero.area = 4.00), con la propia fuente admitiendo que nunca
+estuvo realmente implementada pese a estar declarada. Ancho de puerta
+(0.80m, también en B.2.5) pendiente -- requiere modelar puertas.
