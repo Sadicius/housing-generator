@@ -6,26 +6,7 @@ from housing_generator.domain.enums import RoomType
 from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
 
 # NO NORMATIVO -- criterio de ingenieria practica, confirmado
-# explicitamente con el usuario, no un valor del Decreto 29/2010.
-#
-# Hallazgo real: AnchoLibreEstanciaValidator (A.3.2.1) solo cubre 5
-# categorias porque el propio decreto no especifica ancho libre minimo
-# para el resto de tipos -- confirmado e investigado en su momento, no
-# un descuido. Pero eso significaba que el generador podia producir
-# formas NORMATIVAMENTE CONFORMES y PRACTICAMENTE INSERVIBLES: un caso
-# real (captura de pantalla del usuario) mostro un "Almacen" de 3m2
-# generado como 2.49m x 0.49m -- 49 CENTIMETROS de fondo, cumple el
-# area exigida pero es inutilizable en la practica (no cabe ni una
-# balda). El decreto no exige un minimo ahi porque asume, con razon,
-# que ningun arquitecto real dibujaria eso -- pero un generador
-# automatico sin este limite si puede, y sin darse cuenta.
-#
-# Cubre los tipos que NO tienen ningun otro ancho libre comprobado en
-# ningun validador del proyecto (ver docs/architecture.md para el
-# listado exacto verificado): comedor, despacho, aseo, lavadero,
-# tendedero, almacenamiento, recibidor, garaje, cuarto tecnico.
-# Trastero (STORAGE_ROOM) ya tiene su propio minimo normativo (B.2.5,
-# TrasteroMinimumAreaValidator, 1.60m) -- no se duplica aqui.
+# explicitamente con el usuario. Ver [ARCH:ancho-libre-practico].
 ANCHO_LIBRE_PRACTICO_M = 1.20
 
 TIPOS_SIN_ANCHO_NORMATIVO: Set[RoomType] = {
@@ -42,11 +23,10 @@ TIPOS_SIN_ANCHO_NORMATIVO: Set[RoomType] = {
 
 
 class AnchoLibrePracticoValidator(ConstraintValidatorPort):
-    """Ancho libre mínimo NO NORMATIVO (1.20m, criterio de ingeniería
-    confirmado explícitamente, no del Decreto 29/2010) para los tipos
-    de estancia que el decreto deja sin ancho libre especificado --
-    evita formas técnicamente conformes en área pero inservibles en la
-    práctica (p.ej. un almacén de 49cm de fondo)."""
+    """Ancho libre mínimo NO normativo (1.20m) para tipos que el
+    decreto deja sin ancho libre especificado -- evita formas
+    técnicamente conformes en área pero inservibles en la práctica.
+    Ver [ARCH:ancho-libre-practico]."""
 
     def validate(self, layout: Layout) -> ValidationResult:
         violations: List[str] = []

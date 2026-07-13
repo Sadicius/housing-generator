@@ -1458,7 +1458,7 @@ DATOS y AUSENCIA DE ERRORES, nunca el aspecto visual real.
 - Añadido un comentario de advertencia explícito en el propio CSS para
   que este error de unidades no se repita en el futuro.
 
-## AnchoLibrePracticoValidator + heurística de "cortar por el lado más largo"
+## AnchoLibrePracticoValidator + heurística de "cortar por el lado más largo" [ARCH:ancho-libre-practico]
 
 A partir de una captura de pantalla real del usuario (proporciones
 extrañas en el plano: "Almacén" generado como 2.49m×0.49m, "Comedor"
@@ -2412,3 +2412,14 @@ Bug real corregido: `floor_below_exists=True, reference_boundary=None`
 (hay planta inferior, pero sin escalera declarada) se trataba antes
 igual que "no hay planta inferior" -- dejaba pasar una escalera que no
 conecta con la planta de abajo, sin detectarlo.
+
+## [ARCH:dormitorio-armario] DormitorioArmarioValidator
+
+Espacio de armario empotrado -- confirmado por investigación
+(condiciones mínimas de habitabilidad, varias fuentes independientes),
+NO presente en nhv.lua. Cuenta DENTRO de la superficie del dormitorio
+(no es un Room aparte): profundidad 0.60m, largo 1.00m (>6m²) o 1.50m
+(>8m²). El umbral para ≤6m² no aparece en las fuentes consultadas; se
+usa 1.00m como valor conservador, marcado como asunción, no cifra
+normativa confirmada. Altura (2.20m) no se comprueba aquí -- la cubre
+`AlturaLibreValidator` sobre la misma habitación.

@@ -5,20 +5,8 @@ from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
 from housing_generator.infrastructure.geometry.shapely_utils import can_fit_rectangle
 
-# Espacio de armario empotrado por dormitorio -- CONFIRMADO por
-# investigacion (condiciones minimas de habitabilidad, varias fuentes
-# independientes), NO presente en nhv.lua. El espacio cuenta DENTRO de
-# la superficie del propio dormitorio (no es un Room aparte):
-#   - profundidad minima: 0.60 m
-#   - altura minima: 2.20 m -- NO se duplica aqui: la altura general del
-#     dormitorio ya la cubre `AlturaLibreValidator` sobre la misma
-#     habitacion (el armario esta dentro de ella, no es un volumen aparte
-#     con su propia altura independiente).
-#   - largo minimo: 1.00 m si la habitacion es de mas de 6m2,
-#                   1.50 m si la habitacion es de mas de 8m2
-# El umbral exacto para habitaciones de <=6m2 no aparece en las fuentes
-# consultadas; se usa 1.00 m como valor conservador por defecto, marcado
-# como asuncion, no como cifra normativa confirmada.
+# Espacio de armario empotrado, confirmado por investigacion, no en
+# nhv.lua. Ver [ARCH:dormitorio-armario].
 ARMARIO_PROFUNDIDAD_MIN_M = 0.60
 ARMARIO_LARGO_MIN_PEQUENO_M = 1.00
 ARMARIO_LARGO_MIN_GRANDE_M = 1.50
@@ -32,18 +20,10 @@ def armario_largo_minimo(area_m2: float) -> float:
 
 
 class DormitorioArmarioValidator(ConstraintValidatorPort):
-    """Exige que cada dormitorio (BEDROOM, MASTER_BEDROOM) admita, dentro
-    de su propia forma, un hueco de armario empotrado de
-    `armario_largo_minimo(area) x ARMARIO_PROFUNDIDAD_MIN_M`.
-
-    NO reserva ni resta esa superficie del dormitorio -- solo comprueba
-    que la geometria de la habitacion sea capaz de alojarlo, igual que
-    el cuadrado inscribible del salon. Misma logica de tres estados:
-    violacion si no cabe, aviso si no se puede verificar (forma no
-    rectangular), nada si no esta colocado todavia.
-
-    La altura minima (2.20m) no se comprueba EN ESTE validador -- la
-    cubre `AlturaLibreValidator` sobre la misma habitacion.
+    """Exige que cada dormitorio admita, dentro de su propia forma, un
+    hueco de armario empotrado. No reserva esa superficie -- solo
+    comprueba que la geometría sea capaz de alojarlo. Ver
+    [ARCH:dormitorio-armario].
     """
 
     ROOM_TYPES = {RoomType.BEDROOM, RoomType.MASTER_BEDROOM}
