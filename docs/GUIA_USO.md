@@ -355,6 +355,18 @@ comprobó esto explícitamente antes de separar, no se asumió). Si
 mueves el `.html`, mueve `.css`, `py_bundle.js` y la carpeta `js/`
 enteros con él.
 
+## Cronograma de obra (pestaña 06)
+
+Herramienta de visualización pura, no de estimación: introduces las
+fases de ejecución (nombre, categoría, duración en días) y una fecha
+de inicio de obra -- cada fase se encadena a la siguiente (empieza
+donde termina la anterior) y se dibuja como diagrama de Gantt. No hay,
+que hayamos podido confirmar, una fuente pública con rendimientos
+reales por fase para vivienda unifamiliar en Galicia, así que esta
+pestaña nunca sugiere duraciones por su cuenta -- las declaras tú, con
+tu propio criterio o el de la constructora. Reordenar fases (↑/↓) o
+eliminarlas recalcula el cronograma completo al momento.
+
 ## Modo espejo (Visor de plano)
 
 Si el plano generado es funcionalmente bueno pero la orientación no

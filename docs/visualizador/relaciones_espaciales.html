@@ -36,6 +36,7 @@
     <button class="tab" data-tab="synergy"><span class="num">03</span>Sinergias</button>
     <button class="tab" data-tab="cards"><span class="num">04</span>Fichas por tipo</button>
     <button class="tab" data-tab="plano"><span class="num">05</span>Visor de plano</button>
+    <button class="tab" data-tab="cronograma"><span class="num">06</span>Cronograma de obra</button>
   </div>
 
   <!-- ============ TAB: MATRIZ ============ -->
@@ -179,6 +180,25 @@
     <div id="plano-content">
       <div class="plano-empty">Carga un archivo para ver la planta generada.</div>
     </div>
+  <div class="panel" id="panel-cronograma">
+    <div class="caveat">
+      <b>⚠ nota de alcance</b> — esta pestaña NO estima duraciones por sí sola. No existe, que hayamos podido confirmar, una fuente pública con rendimientos de obra reales por fase (la <a href="https://www.observatoriodavivenda.gal/gl/utilidades/base-de-datos-da-construcion-de-galicia-bdc" target="_blank" rel="noopener">Base de datos da Construción de Galicia</a> es una herramienta oficial de precios/presupuestos, no de plazos). Introduce tú mismo las fases y su duración estimada -- esto solo las encadena y las dibuja.
+    </div>
+    <div class="controls">
+      <label class="areas-lock-toggle">Inicio de obra <input type="date" id="gantt-start-date"></label>
+    </div>
+    <div class="gantt-form">
+      <input type="text" id="gantt-fase-nombre" placeholder="Nombre de la fase (ej. Cimentación losa)">
+      <select id="gantt-fase-categoria"></select>
+      <input type="number" id="gantt-fase-duracion" placeholder="Duración (días)" min="1" value="7">
+      <button class="picker-btn primary" id="gantt-add-fase">añadir fase</button>
+    </div>
+    <div class="gantt-table-wrap">
+      <table class="gantt-table" id="gantt-table"><tbody></tbody></table>
+    </div>
+    <div id="gantt-chart-content">
+      <div class="plano-empty">Añade fases para ver el cronograma.</div>
+    </div>
   </div>
 
 </div>
@@ -191,6 +211,7 @@
 <script src="js/04-sinergias.js"></script>
 <script src="js/05-visor.js"></script>
 <script src="js/06-pyodide.js"></script>
-<script src="js/07-init.js"></script>
+<script src="js/07-cronograma.js"></script>
+<script src="js/08-init.js"></script>
 </body>
 </html>

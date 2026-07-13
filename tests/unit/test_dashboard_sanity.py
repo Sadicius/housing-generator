@@ -59,7 +59,7 @@ def test_room_and_door_stroke_width_is_in_meters_not_pixels():
     )
 
 
-def test_dashboard_has_five_tabs_matching_the_panels():
+def test_dashboard_has_six_tabs_matching_the_panels():
     # confirma que el numero de pestanas declaradas coincide con el
     # numero de paneles reales -- una discrepancia aqui significa una
     # pestana sin panel (rota) o un panel sin pestana (inaccesible).
@@ -67,7 +67,7 @@ def test_dashboard_has_five_tabs_matching_the_panels():
     tabs = re.findall(r'<button class="tab[^"]*" data-tab="(\w+)">', html)
     panels = re.findall(r'<div class="panel[^"]*" id="panel-(\w+)"', html)
 
-    assert len(tabs) == 5
+    assert len(tabs) == 6
     assert set(tabs) == set(panels)
 
 
@@ -157,8 +157,8 @@ def test_html_references_js_files_via_classic_tags_in_order():
     # servidor (confirmado con investigacion antes de separar: los
     # modulos ES y fetch() SI se bloquean desde file://, los scripts/
     # link clasicos no). El orden importa: 00-shared antes que el
-    # resto (todas dependen de sus globals), 07-init al final (llama
-    # funciones de todos los demas al arrancar).
+    # resto (todas dependen de sus globals), 08-init al final (llama
+    # funciones de todos los demas al arrancar, incluido 07-cronograma).
     html = _read(HTML_PATH)
     assert '<link rel="stylesheet" href="relaciones_espaciales.css">' in html
     assert '<script src="py_bundle.js"></script>' in html
@@ -166,7 +166,8 @@ def test_html_references_js_files_via_classic_tags_in_order():
 
     expected_order = [
         "py_bundle.js", "js/00-shared.js", "js/01-matriz.js", "js/02-seccion.js",
-        "js/03-fichas.js", "js/04-sinergias.js", "js/05-visor.js", "js/06-pyodide.js", "js/07-init.js",
+        "js/03-fichas.js", "js/04-sinergias.js", "js/05-visor.js", "js/06-pyodide.js",
+        "js/07-cronograma.js", "js/08-init.js",
     ]
     positions = [html.index(f'<script src="{name}">') for name in expected_order]
     assert positions == sorted(positions), "los scripts JS no estan en el orden esperado en el HTML"
@@ -182,6 +183,13 @@ def test_generate_now_button_and_status_area_exist():
 def test_mirror_mode_controls_exist():
     html = _read(HTML_PATH)
     for control_id in ["mirror-h", "mirror-v", "mirror-rotate", "mirror-reset"]:
+        assert f'id="{control_id}"' in html
+
+
+def test_cronograma_controls_exist():
+    html = _read(HTML_PATH)
+    for control_id in ["gantt-start-date", "gantt-fase-nombre", "gantt-fase-categoria",
+                        "gantt-fase-duracion", "gantt-add-fase", "gantt-table", "gantt-chart-content"]:
         assert f'id="{control_id}"' in html
 
 

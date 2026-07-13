@@ -4,6 +4,9 @@ const SCORES = computeScores();
 buildNetwork(SCORES); buildScoreBars(SCORES); buildRankings();
 document.getElementById('export-section').addEventListener('click', exportSectionSelection);
 document.getElementById('generate-now').addEventListener('click', handleGenerateNow);
+document.getElementById('gantt-start-date').valueAsDate = new Date();
+document.getElementById('gantt-add-fase').addEventListener('click', handleAddFase);
+document.getElementById('gantt-start-date').addEventListener('change', renderGantt);
 document.getElementById('clear-section').addEventListener('click', () => {
   if(!confirm('¿Vaciar toda la selección de todas las plantas?')) return;
   SECTION.selected = {};
