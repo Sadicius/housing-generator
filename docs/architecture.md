@@ -2351,3 +2351,35 @@ verdad se construyó, no solo lo pedido explícitamente.
 Regla: ninguna estancia no-circulación puede ser punto de corte
 obligado hacia otra -- EXCEPTO LIVING_ROOM/DINING_ROOM (salón-comedor
 abierto, arquitectónicamente normal atravesarlos).
+
+## [ARCH:graph-based-generator] GraphBasedLayoutGenerator
+
+Generador alternativo, deliberadamente simple (franjas por zona,
+luego cajas por estancia dentro de cada franja) -- para ser fácil de
+testear/entender, y sustituible por CSP/genético sin tocar el resto
+del sistema. No conectado al pipeline principal (`container.py` usa
+`SimulatedAnnealingLayoutGenerator`), pero mantenido con tests propios
+como pieza intercambiable de la arquitectura hexagonal.
+
+Heurística de núcleo húmedo: coloca estancias húmedas primero
+(extremo izquierdo) dentro de su zona, para alinearlas en columna con
+zonas contiguas. Es heurística de orden, no garantía -- con 3+
+estancias húmedas en zonas no mutuamente contiguas (día y servicio
+nunca se tocan directamente, solo vía noche) sigue siendo
+geométricamente imposible que todas queden a distancia ≤1.
+
+## [ARCH:door-graph] adjacency/door_graph.py
+
+Grafo de puertas: capa SEPARADA y más dispersa que la adyacencia
+geométrica, inspirada en el patrón "Door Connectivity Graph"
+(investigación externa, paper "Automatic Rendering of Building Floor
+Plan Images from Textual Descriptions"; Infinigen Indoors 2024
+confirma que la colocación de puertas es un paso posterior a resolver
+posiciones, no algo que compita con la búsqueda). Se construye sobre
+un Layout ya generado.
+
+Regla deliberadamente simple: un par tiene puerta si y solo si hay
+`AdjacencyRequirement(MUST_BE_NEAR)` declarado Y la geometría final
+realmente los colocó adyacentes. El umbral de MUST_BE_NEAR (1.0m) ya
+se eligió específicamente "para que quepa una puerta" -- este grafo
+hace explícito lo que ese umbral ya representaba implícitamente.

@@ -15,19 +15,10 @@ _ZONE_ORDER = [ZoneType.DAY, ZoneType.NIGHT, ZoneType.SERVICE]
 
 
 class GraphBasedLayoutGenerator(LayoutGeneratorPort):
-    """Generador de particionado (slicing) simplificado:
-
-    1. Divide el solar en franjas horizontales, una por zona, con tamano
-       proporcional al area total de estancias de cada zona (paso de
-       diagrama de zonificacion).
-    2. Dentro de cada franja de zona, vuelve a dividir en cajas por
-       estancia, proporcional al area solicitada de cada una (paso de
-       traduccion diagrama de burbujas -> planta).
-
-    Es deliberadamente simple para que sea facil de testear y entender,
-    y para poder sustituirlo despues por un generador basado en resolucion
-    de restricciones (CSP) o en un algoritmo genetico que implemente el
-    mismo LayoutGeneratorPort sin tocar el resto del sistema.
+    """Generador de particionado simplificado: franjas por zona, luego
+    cajas por estancia dentro de cada franja, proporcional al área.
+    Deliberadamente simple, sustituible sin tocar el resto del sistema.
+    Ver [ARCH:graph-based-generator].
     """
 
     def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout:
@@ -66,20 +57,8 @@ class GraphBasedLayoutGenerator(LayoutGeneratorPort):
         zone_width = maxx - minx
         zone_rooms = [rooms_by_id[rid] for rid in zone.room_ids]
 
-        # Heuristica para nucleo humedo: las estancias humedas se colocan
-        # PRIMERO (extremo izquierdo) dentro de su zona. Como las zonas se
-        # apilan verticalmente en el mismo orden de X, esto alinea las
-        # estancias humedas de zonas contiguas (p.ej. cocina en dia,
-        # bano en noche) en la misma columna, maximizando la probabilidad
-        # de que compartan pared real -- sin esto, cada zona particiona su
-        # ancho de forma independiente y las estancias humedas casi nunca
-        # coinciden en X. Es una heuristica de orden, no una garantia: con
-        # 3+ estancias humedas repartidas en zonas NO mutuamente contiguas
-        # (dia y servicio nunca se tocan directamente, solo a traves de
-        # noche) sigue siendo geometricamente imposible que todas queden a
-        # distancia <=1 entre si -- eso requeriria cambiar la topologia de
-        # zonificacion (que dia/noche/servicio se toquen entre si en un
-        # punto comun), no solo el orden de colocacion.
+        # Heuristica de nucleo humedo: humedas primero (izquierda), para
+        # alinearlas en columna con zonas contiguas. Ver [ARCH:graph-based-generator].
         zone_rooms = sorted(zone_rooms, key=lambda r: not r.is_wet)
 
         total_area = sum(r.dimensions.area_m2 for r in zone_rooms) or 1.0
