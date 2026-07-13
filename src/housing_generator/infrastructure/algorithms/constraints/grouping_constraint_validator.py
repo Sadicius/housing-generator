@@ -8,16 +8,11 @@ from housing_generator.domain.entities.room import Room
 
 
 class GroupingConstraintValidator(ConstraintValidatorPort):
-    """Comprueba que todas las estancias que cumplen `predicate` esten a
-    distancia (numero de paredes que hay que cruzar) <= `max_distance`
-    entre si, medida sobre el grafo de adyacencia REAL (geometria ya
-    generada, no requisitos declarados).
-
-    Es el mismo mecanismo generico que sirve tanto para el nucleo humedo
-    (predicate=is_wet, max_distance=1, pared compartida) como, mas
-    adelante, para zonificacion dia/noche (predicate=misma zona,
-    max_distance mayor, sin exigir pared comun) -- solo cambian los tres
-    parametros, no la logica de medicion.
+    """Comprueba que las estancias que cumplen `predicate` estén a
+    distancia (paredes a cruzar) ≤ `max_distance` entre sí, sobre el
+    grafo de adyacencia real. Mecanismo genérico: sirve tanto para
+    núcleo húmedo como para zonificación día/noche/servicio, solo
+    cambian los parámetros.
     """
 
     def __init__(

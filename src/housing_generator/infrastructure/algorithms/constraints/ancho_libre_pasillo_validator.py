@@ -5,19 +5,14 @@ from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
 from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
 
-# A.3.2.3: espacios de comunicacion interiores a la vivienda (pasillos).
-# No se modela la distincion "estrechamiento puntual" (0.90m) vs "todo
-# el recorrido" (1.00m) -- nuestras estancias son siempre rectangulares
-# (particion guillotina), asi que el ancho es uniforme en todo el
-# CORRIDOR; se aplica el minimo general de todo el recorrido (1.00m).
+# A.3.2.3: pasillos rectangulares (particion guillotina), ancho
+# uniforme -- se aplica el minimo de todo el recorrido (1.00m), no el
+# de estrechamiento puntual (0.90m).
 ANCHO_LIBRE_PASILLO_M = 1.00
 
 
 class AnchoLibrePasilloValidator(ConstraintValidatorPort):
-    """A.3.2.3: el ancho libre de cada CORRIDOR debe ser >= 1.00m (no se
-    aplica el minimo mas laxo de estrechamiento puntual, 0.90m, porque
-    nuestras estancias rectangulares no representan una diferencia entre
-    "un punto" y "todo el recorrido")."""
+    """A.3.2.3: ancho libre de cada CORRIDOR ≥ 1.00m."""
 
     def validate(self, layout: Layout) -> ValidationResult:
         violations: List[str] = []

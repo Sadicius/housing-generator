@@ -7,14 +7,9 @@ from housing_generator.domain.exceptions import LayoutGenerationError
 
 
 class GenerateLayoutUseCase:
-    """Orquesta zonificacion -> colocacion -> validacion para producir un
-    Layout valido.
-
-    Las dependencias se inyectan como puertos (interfaces), asi que el
-    algoritmo concreto (zonificacion por treemap, generador por grafos,
-    genetico...) puede cambiarse sin tocar este caso de uso (principio
-    de inversion de dependencias). `constraint_validator` puede ser un
-    unico validador o un CompositeConstraintValidator que agrupe varios.
+    """Orquesta zonificación → colocación → validación para producir
+    un Layout válido. Dependencias inyectadas como puertos (interfaces)
+    -- el algoritmo concreto puede cambiarse sin tocar este caso de uso.
     """
 
     def __init__(

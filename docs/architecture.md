@@ -2534,3 +2534,42 @@ es una tercera categoría, no un término medio. Mismo patrón que
 `nhv.lua` ya distinguía en varios sitios (`esEspacioExteriorDeCalidad`).
 Usado consistentemente en todos los validadores geométricos del
 proyecto.
+
+## Cierre de la refactorización de comentarios/docstrings (41 archivos)
+
+A petición del usuario: revisión completa de los 82 archivos Python
+del proyecto, recortando comentarios/docstrings largos a lo
+imprescindible ("qué hace esto"), moviendo el histórico de
+investigación/bugs/citas a esta misma sección de referencia técnica
+por componente, con el sistema de etiquetas `[ARCH:tag]` confirmado
+explícitamente con el usuario (buscable en ambos sitios, código y
+documentación, sin depender del título exacto ni del orden del
+archivo).
+
+- **41 de 82 archivos** tenían 8+ líneas de comentario/docstring
+  verboso; los otros 41 ya estaban razonablemente concisos, no
+  tocados.
+- **Reducción real: 1401 → 469 líneas verbosas (-67%)**, verificado
+  con un script propio (cuenta docstrings vía `ast` + líneas `#`), no
+  a ojo.
+- Cada extracción se verificó con pyflakes + suite completa antes de
+  seguir al siguiente archivo -- 13 puntos de control (commits) a lo
+  largo del proceso, no un cambio monolítico al final.
+- **Hallazgo real durante la limpieza, no buscado**: al revisar el
+  tamaño de `relaciones_espaciales.js` para la división por pestañas
+  (tarea previa), apareció un bloque `PYTHON_SOURCES` de 227KB
+  completamente muerto -- ver sección "Limpieza de código muerto"
+  arriba. Confirma que revisar el código de cerca, aunque el objetivo
+  fuera otro, encuentra cosas reales.
+- Un test de integración (`test_cli_retries_seeds_automatically...`)
+  empezó a fallar por timeout de subproceso (90s) durante la
+  verificación final -- confirmado que NO era una regresión de
+  comportamiento (medido directamente: la generación tarda 109.9s bajo
+  la carga del sistema en ese momento, converge correctamente con la
+  semilla 4, igual que antes) -- el recorte de comentarios no puede
+  afectar al tiempo de cómputo. Margen de timeout ampliado (90s→180s)
+  en los dos tests con esta sensibilidad.
+- Suite final: 343 unitarios + 23 integración + 6 CLI rápidos + 3 CLI
+  lentos + 7 puente del navegador, todos confirmados. pyflakes y mypy
+  limpios (81 archivos). Bundle Pyodide regenerado (169.640 caracteres
+  JSON, bajado de 233.946 antes de empezar esta limpieza).

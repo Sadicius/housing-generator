@@ -19,12 +19,9 @@ from housing_generator.infrastructure.persistence.seleccion_plantas_importer imp
 
 
 def build_sample_program(auto_adjacency: bool = False) -> Program:
-    """`auto_adjacency=True`: en vez de la declaracion manual de abajo,
-    deriva los AdjacencyRequirement automaticamente del catalogo
-    formalizado (`generate_adjacency_requirements`) -- retomado de
-    docs/CONTINUIDAD.md ("conectar como opcion automatica en
-    container.py/CLI"). Mismas 11 estancias en ambos casos, solo cambia
-    de donde salen las relaciones de adyacencia."""
+    """`auto_adjacency=True`: deriva los AdjacencyRequirement
+    automáticamente del catálogo formalizado en vez de la declaración
+    manual de abajo. Mismas 11 estancias en ambos casos."""
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
         Room(id="dining", name="Comedor", room_type=RoomType.DINING_ROOM, dimensions=Dimensions(area_m2=15)),
@@ -61,13 +58,8 @@ def main():
     parser.add_argument("--output", default="layout.json", help="Ruta de salida del layout generado")
     parser.add_argument(
         "--seed", type=int, default=4,
-        help="Semilla del recocido simulado (por defecto 4, fija -- determinista. "
-             "Actualizada tras anadir ProporcionMaximaValidator (2.5:1, red de "
-             "seguridad geometrica confirmada con el usuario tras encontrar "
-             "estancias de hasta 9.5:1 en una bateria de casos reales) -- la "
-             "semilla 1 anterior dejo de converger con esta restriccion nueva, "
-             "mismo patron ya documentado varias veces. Usa otro valor para "
-             "explorar variantes distintas.",
+        help="Semilla del recocido simulado (por defecto 4, fija -- determinista). "
+             "Usa otro valor para explorar variantes distintas.",
     )
     parser.add_argument("--max-iterations", type=int, default=3000, help="Iteraciones del recocido simulado")
     parser.add_argument(

@@ -156,7 +156,7 @@ def test_cli_retries_seeds_automatically_when_the_first_one_does_not_converge(tm
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
             "--lot-size", "12x10", "--max-iterations", "5000", "--seed", "1",
         ],
-        capture_output=True, text=True, timeout=90,
+        capture_output=True, text=True, timeout=180,
     )
 
     assert result.returncode == 0, f"El CLI fallo pese al reintento automatico: {result.stderr}"
@@ -232,7 +232,7 @@ def test_cli_lot_size_option_changes_the_actual_parcel_dimensions(tmp_path):
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
             "--lot-size", "12x11", "--max-iterations", "5000", "--seed", "1", "--retry-seeds", "3",
         ],
-        capture_output=True, text=True, timeout=90,
+        capture_output=True, text=True, timeout=180,
     )
 
     assert result.returncode == 0, f"El CLI con --lot-size fallo: {result.stderr}"
