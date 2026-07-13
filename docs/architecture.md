@@ -2212,3 +2212,56 @@ huella que la planta inferior en vez de encoger a un tamaño inválido.
 ni contacto exterior real -- una pared de medianera no tiene luz ni
 ventilación propia). Requiere parcela rectangular ortogonal, misma
 simplificación geométrica que el resto del proyecto.
+
+## [ARCH:seleccion-plantas-importer] persistence/seleccion_plantas_importer.py
+
+Importa `seleccion_plantas.json` (exportación del dashboard) hacia un
+`Program` real. Soporta formato nuevo (`version: 2`, cantidad + área
+real por entrada) y antiguo (lista plana de nombres, sin cantidad ni
+área -- retrocompatible con exportaciones previas al cambio).
+
+`tipo_vivienda` se resuelve a `medianera_sides`: hallazgo real de una
+auditoría de flujo completo -- el dashboard exportaba `tipo_vivienda`
+desde hacía varias rondas, pero ningún sitio de Python lo leía (elegir
+"adosada" no tenía ningún efecto real al generar). "pareada" usa un
+lado (convención propia, "east" -- el dashboard no pregunta
+orientación real); "adosada" usa dos lados opuestos (este/oeste).
+
+`AREAS_POR_DEFECTO_M2`: solo se usa con el formato antiguo o si una
+entrada nueva no trae área -- no derivadas de Tabla 1/2 (dependen del
+número total de estancias, no se puede saber de antemano).
+
+## [ARCH:browser-bridge] interface/browser/bridge.py
+
+Puente entre el dashboard (JS, Pyodide) y el generador real -- solo
+cruza datos planos (dict/JSON), nunca objetos de dominio (no cruzan
+bien el FFI de Pyodide). Comparte toda la lógica de generación con el
+CLI, solo difiere en dónde entra el dato (payload en memoria vs.
+archivo) y dónde sale (dict vs. archivo). Reintenta semillas
+automáticamente, mismo comportamiento que `--retry-seeds` del CLI.
+Nunca lanza una excepción hacia JavaScript -- el error se devuelve
+como dato.
+
+## [ARCH:geometry-adjacency-graph] GeometryAdjacencyGraphBuilder
+
+Mide la LONGITUD del borde compartido (no solo `touches()`, que da
+positivo con un simple contacto de esquina/punto) -- un punto mide
+longitud 0 y queda descartado sin caso especial. `min_shared_edge_m`
+es parámetro, no constante fija (adyacencia interior y contacto
+exterior usan umbrales distintos).
+
+Cache de una sola entrada: bug de rendimiento real (no optimización
+especulativa) -- 5 validadores comparten esta instancia sobre el mismo
+`Layout` en cada iteración del recocido; sin cache, cada uno
+reconstruía el grafo desde cero. Medido: 9.35s → 4.52s con el programa
+de ejemplo del CLI.
+
+**Gotcha real de Python encontrado y corregido**: cachear por `id(layout)`
+falla, porque Python REUTILIZA agresivamente direcciones de memoria de
+objetos liberados -- en un experimento directo, de 1000 `Layout`
+creados/descartados en bucle, solo 6 `id()` distintos aparecieron.
+Cachear solo por id habría devuelto resultados de un Layout
+completamente distinto que reutilizó la misma dirección, en silencio.
+Corregido guardando una REFERENCIA real al objeto (no solo su id):
+mientras la referencia esté viva, Python no puede reutilizar esa
+memoria.

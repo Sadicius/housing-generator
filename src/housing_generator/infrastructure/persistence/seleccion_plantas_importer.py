@@ -1,25 +1,6 @@
-"""Importador de `seleccion_plantas.json` (exportacion del dashboard,
+"""Importador de `seleccion_plantas.json` (exportación del dashboard,
 pestaña "Sección vertical") hacia un `Program` real utilizable por el
-generador -- retomado de docs/CONTINUIDAD.md, ultimo pendiente real.
-
-**[RESUELTO] Limitaciones eliminadas de raiz, no solo documentadas**: el
-dashboard ahora captura CANTIDAD real (cuantas estancias de cada tipo
-por planta, ya no maximo 1) y AREA real declarada por el usuario (ya no
-un valor generico de relleno) -- ver `docs/architecture.md`. El formato
-nuevo (`version: 2`) trae `{"type": ..., "count": ..., "area_m2": ...}`
-por entrada en vez de un simple nombre de tipo. Compatibilidad hacia
-atras con el formato anterior (solo nombres de tipo, sin version)
-preservada -- por si existe algun `seleccion_plantas.json` exportado
-antes de este cambio: en ese caso SI se sigue usando
-`AREAS_POR_DEFECTO_M2` como aproximacion, exactamente como antes.
-
-**[RESUELTO] `tipo_vivienda` conectado de verdad, no solo exportado.**
-Hallazgo real de la auditoria de flujo completo: el dashboard exportaba
-`tipo_vivienda` (aislada/pareada/adosada) desde hace varias rondas,
-pero NINGUN sitio de Python lo leia -- elegir "adosada" en el panel
-automatico no tenia ningun efecto real al generar, se perdia en
-silencio. `import_seleccion_plantas` ahora tambien resuelve
-`medianera_sides` a partir de ese campo, listo para pasarselo a `Lot`.
+generador. Ver [ARCH:seleccion-plantas-importer].
 """
 import json
 from pathlib import Path
@@ -30,11 +11,8 @@ from housing_generator.domain.value_objects.dimensions import Dimensions
 from housing_generator.domain.enums import RoomType, NivelPlanta, DISPLAY_NAMES
 from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
 
-# Areas por defecto, genericas -- solo se usan con el formato ANTIGUO
-# (sin cantidad/area declaradas) o si una entrada del formato nuevo no
-# trae area_m2 valida. NO derivadas de Tabla 1/2 (esas dependen del
-# numero total de estancias del programa completo, que no se puede
-# conocer de antemano sin ya haber decidido las areas).
+# Areas por defecto, genericas -- solo formato antiguo o entrada sin
+# area_m2 valida. Ver [ARCH:seleccion-plantas-importer].
 AREAS_POR_DEFECTO_M2: Dict[RoomType, float] = {
     RoomType.LIVING_ROOM: 25.0,
     RoomType.DINING_ROOM: 14.0,
@@ -54,14 +32,7 @@ AREAS_POR_DEFECTO_M2: Dict[RoomType, float] = {
     RoomType.CORRIDOR: 4.0,
 }
 
-# tipo_vivienda (dashboard) -> Lot.medianera_sides. "pareada" usa UN
-# lado (elegido "east" por convencion propia -- el dashboard no
-# pregunta orientacion real, no hay forma de saber cual lado concreto
-# corresponde a la parcela real del usuario); "adosada" usa DOS lados
-# opuestos (este y oeste), el patron tipico de vivienda entre
-# medianeras a ambos lados. Sin sorpresas: quien necesite una
-# orientacion real distinta puede construir su propio `Lot` en Python
-# en vez de depender de esta convencion por defecto.
+# tipo_vivienda -> Lot.medianera_sides. Ver [ARCH:seleccion-plantas-importer].
 MEDIANERA_SIDES_BY_TIPO_VIVIENDA: Dict[str, FrozenSet[str]] = {
     "aislada": frozenset(),
     "pareada": frozenset({"east"}),
@@ -82,22 +53,11 @@ def import_seleccion_plantas(
     areas_m2: Optional[Dict[RoomType, float]] = None,
 ) -> SeleccionImportada:
     """Construye un `Program` real a partir del JSON exportado por el
-    dashboard, y resuelve `medianera_sides` a partir de `tipo_vivienda`
-    (si el JSON lo trae -- formato antiguo no lo tiene, resuelve a
-    aislada/sin medianera). `source` puede ser una ruta de archivo o el
-    dict ya cargado. `areas_m2` sobreescribe `AREAS_POR_DEFECTO_M2` por
-    tipo, usado como respaldo si una entrada no trae area propia.
-
-    Soporta el formato nuevo (`version: 2`, con cantidad y area reales
-    por entrada) y el antiguo (lista plana de nombres de tipo, sin
-    cantidad ni area -- una estancia por tipo/planta, area generica).
-
-    Las relaciones de adyacencia del `Program` resultante se derivan
-    automaticamente del catalogo formalizado
-    (`generate_adjacency_requirements`), no hace falta declararlas.
-
-    Devuelve `SeleccionImportada(program, medianera_sides)` -- ver esa
-    clase para como usar `medianera_sides` con `Lot`.
+    dashboard, y resuelve `medianera_sides` desde `tipo_vivienda`.
+    `source`: ruta o dict ya cargado. Soporta formato nuevo (v2,
+    cantidad+área reales) y antiguo (lista plana). Adyacencias
+    derivadas automáticamente del catálogo. Ver
+    [ARCH:seleccion-plantas-importer].
     """
     if isinstance(source, (str, Path)):
         with open(source, encoding="utf-8") as f:

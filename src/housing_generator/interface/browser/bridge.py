@@ -1,23 +1,7 @@
 """Puente entre el dashboard (JavaScript, en el navegador) y el
-generador real (este mismo paquete Python) -- pensado para ejecutarse
-dentro de Pyodide (Python compilado a WebAssembly, corriendo en el
-propio navegador), no como un servidor aparte.
-
-Retomado de una pregunta directa del usuario ("¿es esta la forma de
-trabajar?"): el flujo anterior obligaba a exportar un JSON desde el
-dashboard, salir al terminal a ejecutar el CLI, y volver a cargar el
-resultado en el visor -- un puente manual entre dos mundos que nunca
-se hablaban. Esta funcion es ese puente, pero automatico: recibe datos
-planos (dict, lo que ya produce `exportSectionSelection()` en el
-dashboard) y devuelve datos planos (el mismo formato que ya consume
-`renderPlano()` en el visor) -- todo dentro del mismo proceso del
-navegador, sin pasar por disco ni por una terminal.
-
-Deliberadamente NO expone objetos de dominio (Program, Lot, Layout) a
-JavaScript -- estos no cruzan bien el puente FFI de Pyodide (requieren
-conversion caso a caso, fragil de mantener). Solo dicts/listas/
-numeros/strings, lo unico que JSON.parse/JSON.stringify entienden
-igual de bien a los dos lados.
+generador real (este mismo paquete Python), pensado para ejecutarse
+dentro de Pyodide -- no un servidor aparte. Solo cruza datos planos
+(dict/JSON), nunca objetos de dominio. Ver [ARCH:browser-bridge].
 """
 from typing import Optional
 from shapely.geometry import box
@@ -39,25 +23,17 @@ def generar_edificio(
     retry_seeds: int = 5,
     vivienda_accesible: bool = False,
 ) -> dict:
-    """Genera un edificio real a partir de una seleccion del dashboard
-    (mismo formato que `seleccion_plantas.json`) y una parcela
-    rectangular. Reintenta semillas automaticamente, MISMO
-    comportamiento que `--retry-seeds` del CLI (misma razon: los
-    programas del dashboard no estan curados a mano, necesitan mas
-    margen de busqueda de forma habitual) -- de hecho, esta funcion y
-    el CLI comparten toda la logica de generacion, solo difieren en
-    donde entra el dato (payload en memoria vs. archivo en disco) y
-    donde sale el resultado (dict en memoria vs. archivo en disco).
+    """Genera un edificio real a partir de una selección del dashboard
+    y una parcela rectangular. Reintenta semillas automáticamente
+    (mismo comportamiento que `--retry-seeds` del CLI).
 
-    Devuelve SIEMPRE un dict con la forma:
+    Devuelve SIEMPRE un dict:
       {"ok": True, "semilla_usada": N, "reintentos": N,
        "floors": {"planta_baja": {"rooms":[...], "doors":[...], "metadata":{...}}, ...}}
     o, si fallan todos los intentos:
       {"ok": False, "error": "mensaje legible", "semillas_probadas": N}
 
-    Nunca lanza una excepcion hacia JavaScript -- el error se devuelve
-    como dato, mas facil de manejar desde el lado JS que un traceback
-    de Python cruzando el puente FFI.
+    Ver [ARCH:browser-bridge].
     """
     try:
         seleccion = import_seleccion_plantas(seleccion_payload)
