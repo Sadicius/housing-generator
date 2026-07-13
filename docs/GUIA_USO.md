@@ -361,12 +361,23 @@ enteros con él.
 su composición real por capas -- extraída del Catálogo de Elementos
 Constructivos del CTE (oficial, codigotecnico.org). Haz clic en
 cualquier tarjeta para ver el desglose de capas (material + espesor)
-y la transmitancia térmica U. Los valores U están **calculados** con
-la fórmula física estándar y las conductividades reales de cada
-material, asumiendo un espesor de aislante concreto (indicado en cada
-ficha) -- no son los del catálogo original, que dependen del espesor
-que elijas en tu proyecto real. Es un subconjunto representativo (10
-por categoría), no el catálogo CEC completo.
+y la transmitancia térmica U.
+
+Fachadas y huecos están dimensionados para cumplir el estándar
+**Passivhaus** (U muro 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K, triple
+acristalamiento con gas noble) -- el estándar *voluntario* más
+exigente reconocido en eficiencia energética, no el mínimo legal (que
+sigue siendo el CTE, la base normativa de todo el resto del proyecto).
+Los forjados quedan sin cambios a propósito: son estructura intermedia
+entre plantas calefactadas, sin salto térmico entre ellas, así que no
+necesitan aislamiento Passivhaus.
+
+Los valores U están **calculados** con la fórmula física estándar y
+las conductividades reales de cada material, asumiendo un espesor de
+aislante concreto (indicado en cada ficha) -- no son los del catálogo
+original, que dependen del espesor que elijas en tu proyecto real. Es
+un subconjunto representativo (10 por categoría), no el catálogo CEC
+completo.
 
 ## Cronograma de obra (pestaña 06)
 

@@ -208,6 +208,26 @@ def test_catalogo_constructivo_has_ten_items_per_category():
         assert len(items) == 10, f"{categoria} tiene {len(items)} elementos, se esperaban 10"
 
 
+def test_catalogo_constructivo_meets_passivhaus_thresholds():
+    # confirmado explicitamente con el usuario: fachadas y huecos deben
+    # cumplir el estandar Passivhaus real (U muro 0.10-0.15 W/m2K,
+    # Uw ventana <=0.80 W/m2K) -- forjados quedan fuera a proposito
+    # (estructura intermedia, no necesita aislamiento Passivhaus).
+    js_files = sorted(JS_DIR.glob("*.js"))
+    catalogo_js = next(p for p in js_files if p.name == "08-catalogo.js")
+    content = _read(catalogo_js)
+    match = re.search(r"const CATALOGO_CONSTRUCTIVO = (\{.*?\});", content, re.DOTALL)
+    data = json.loads(match.group(1))
+
+    for fachada in data["fachadas"]:
+        u = fachada["transmitancia_u"]
+        assert 0.08 <= u <= 0.16, f"{fachada['id']}: U={u} fuera del rango Passivhaus (0.10-0.15, margen 0.08-0.16)"
+
+    for hueco in data["huecos"]:
+        uw = hueco["transmitancia_u_global"]
+        assert uw <= 0.80, f"{hueco['id']}: Uw={uw} no cumple el umbral Passivhaus (<=0.80 W/m2K)"
+
+
 def test_pyodide_bundle_is_not_stale_against_the_real_source():
     # riesgo real de mantenimiento: si alguien edita un .py del
     # generador despues de esto sin regenerar el bundle (py_bundle.js,

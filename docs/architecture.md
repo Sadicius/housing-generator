@@ -2710,3 +2710,45 @@ composición por capas de decenas de sistemas constructivos.
 - Tests de sanidad actualizados: 7 pestañas, orden de archivos JS,
   nuevo test que confirma 10 elementos por categoría.
 - Suite final: 346 unitarios, pyflakes limpio.
+
+## [ARCH:catalogo-constructivo] Actualización a materiales Passivhaus
+
+A petición del usuario: reconsiderar fachadas y huecos del catálogo
+constructivo con materiales adecuados para el estándar Passivhaus.
+
+- **Aclaración honesta hecha antes de tocar código**: Passivhaus NO es
+  el estándar legalmente obligatorio -- ese sigue siendo el CTE (el
+  que fundamenta el resto del proyecto). Es el estándar VOLUNTARIO más
+  exigente reconocido en eficiencia energética. Se aplicó con ese
+  matiz explícito, no como sustituto del CTE en el resto del sistema.
+- **Valores objetivo verificados con fuentes reales** antes de
+  recalcular: muros/cubiertas U ≈ 0.10-0.15 W/m²K (frente al 0.35-0.56
+  del CTE), ventanas Uw ≤ 0.80 W/m²K con triple acristalamiento y gas
+  noble (argón/kriptón), marcos multicámara con rotura amplia de
+  puente térmico.
+- **Fachadas (10)**: recalculadas con espesores de aislante mucho
+  mayores (170-300mm según sistema, antes 50-120mm) y, en varios
+  casos, materiales de mayor rendimiento (PUR/PIR λ=0.025 en vez de
+  EPS estándar) -- mismos sistemas constructivos de base (SATE,
+  cámara ventilada, entramado de madera...) pero dimensionados para
+  Passivhaus real. Las 10 quedan en el rango 0.107-0.146 W/m²K,
+  verificado con un test permanente.
+- **Huecos (10)**: sustituidos marco+vidrio por combinaciones reales
+  certificables Passivhaus (PVC 5-6 cámaras, madera-aluminio, aluminio
+  con RPT amplio certificado + triple acristalamiento bajo emisivo con
+  argón/kriptón) -- se retiró la opción de vidrio simple/aluminio sin
+  RPT que servía de referencia de contraste, ya no encaja con "materiales
+  adecuados para Passivhaus". Las 10 quedan en el rango 0.56-0.67 W/m²K,
+  bajo el umbral de 0.80, verificado con un test permanente.
+- **Forjados (10): sin cambios, confirmado explícitamente con el
+  usuario** -- son estructura intermedia entre plantas calefactadas de
+  la misma vivienda, sin salto térmico entre ellas; el aislamiento
+  Passivhaus va en muros y cubierta, no ahí. Aplicarlo a los forjados
+  habría sido incorrecto técnicamente, no solo innecesario.
+- Cálculo hecho con script (mismo patrón que la versión anterior), no
+  a mano, para consistencia en las 20 fichas recalculadas.
+- Nuevo test permanente (`test_catalogo_constructivo_meets_passivhaus_thresholds`)
+  que falla si cualquier fachada sale del rango 0.08-0.16 W/m²K o
+  cualquier hueco supera 0.80 W/m²K -- protege la decisión igual que
+  el resto de fitness functions del proyecto.
+- Suite final: 347 unitarios, pyflakes limpio.
