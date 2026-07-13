@@ -202,12 +202,16 @@
     </div>
   <div class="panel" id="panel-catalogo">
     <div class="caveat">
-      <b>⚠ nota de alcance</b> — composición por capas extraída de las definiciones reales del <a href="https://www.codigotecnico.org/pdf/Programas/CEC/CAT-EC-v06.1_SEPBRE_09_Completo.pdf" target="_blank" rel="noopener">Catálogo de Elementos Constructivos del CTE</a> (oficial, Instituto Eduardo Torroja + CEPCO + AICIA). Subconjunto representativo (10 por categoría). Fachadas y huecos con materiales/espesores para cumplir el estándar <b>Passivhaus</b> (U muro 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K, confirmado explícitamente) -- Passivhaus es el estándar <b>voluntario</b> más exigente reconocido en eficiencia energética, no el mínimo legal (que sigue siendo el CTE, usado en el resto de este proyecto). Forjados sin cambios: son estructura intermedia entre plantas calefactadas, no necesitan aislamiento Passivhaus -- el salto térmico real está en muros y cubierta. Los valores U están <b>calculados</b> con la fórmula estándar (U=1/ΣR) y conductividades reales de cada material, con el espesor de aislante indicado en cada ficha -- no son los valores de tabla exactos del documento original.
+      <b>⚠ nota de alcance</b> — composición extraída de las definiciones reales del <a href="https://www.codigotecnico.org/pdf/Programas/CEC/CAT-EC-v06.1_SEPBRE_09_Completo.pdf" target="_blank" rel="noopener">Catálogo de Elementos Constructivos del CTE</a> (oficial, Instituto Eduardo Torroja + CEPCO + AICIA). Subconjunto representativo (10 por categoría; 13 en puentes térmicos, lista real y cerrada del propio catálogo). Fachadas y cubiertas con materiales/espesores para cumplir el estándar <b>Passivhaus</b> (U 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K) -- estándar <b>voluntario</b> más exigente reconocido, no el mínimo legal (que sigue siendo el CTE). Forjados sin cambios: estructura intermedia sin salto térmico. Particiones interiores (verticales y horizontales) centradas en propiedades <b>acústicas</b>, no térmicas -- son interiores a la vivienda, no envolvente. Puentes térmicos: comparativa construcción estándar vs. Passivhaus (aislamiento continuo por el exterior, principio central del estándar), con valores Ψ de referencia real. Los valores U/Ψ están <b>calculados</b> con la física estándar y conductividades reales de cada material, no transcritos directamente de las tablas del documento original.
     </div>
     <div class="controls">
       <button class="picker-btn cat-tab active" data-cat="fachadas">Fachadas</button>
+      <button class="picker-btn cat-tab" data-cat="cubiertas">Cubiertas</button>
       <button class="picker-btn cat-tab" data-cat="forjados">Forjados</button>
       <button class="picker-btn cat-tab" data-cat="huecos">Huecos (ventanas)</button>
+      <button class="picker-btn cat-tab" data-cat="particionesVerticales">Particiones verticales</button>
+      <button class="picker-btn cat-tab" data-cat="particionesHorizontales">Particiones horizontales</button>
+      <button class="picker-btn cat-tab" data-cat="puentesTermicos">Puentes térmicos</button>
     </div>
     <div class="catalogo-grid" id="catalogo-grid"></div>
   </div>

@@ -194,38 +194,56 @@ def test_cronograma_controls_exist():
         assert f'id="{control_id}"' in html
 
 
-def test_catalogo_constructivo_has_ten_items_per_category():
-    # confirma el alcance acordado explicitamente con el usuario (10
-    # por categoria, no el catalogo CEC completo).
+def test_catalogo_constructivo_has_expected_items_per_category():
+    # confirma el alcance acordado explicitamente con el usuario: 10
+    # por categoria (composicion por capas + huecos + particiones),
+    # y 13 en puentes termicos (lista real y cerrada del propio
+    # catalogo CEC, no una muestra recortada).
     js_files = sorted(JS_DIR.glob("*.js"))
     catalogo_js = next(p for p in js_files if p.name == "08-catalogo.js")
     content = _read(catalogo_js)
     match = re.search(r"const CATALOGO_CONSTRUCTIVO = (\{.*?\});", content, re.DOTALL)
     assert match, "no se pudo extraer CATALOGO_CONSTRUCTIVO de 08-catalogo.js"
     data = json.loads(match.group(1))
-    assert set(data.keys()) == {"fachadas", "forjados", "huecos"}
-    for categoria, items in data.items():
-        assert len(items) == 10, f"{categoria} tiene {len(items)} elementos, se esperaban 10"
+    expected_categorias = {
+        "fachadas": 10, "cubiertas": 10, "forjados": 10, "huecos": 10,
+        "particionesVerticales": 10, "particionesHorizontales": 10, "puentesTermicos": 13,
+    }
+    assert set(data.keys()) == set(expected_categorias.keys())
+    for categoria, expected_n in expected_categorias.items():
+        assert len(data[categoria]) == expected_n, (
+            f"{categoria} tiene {len(data[categoria])} elementos, se esperaban {expected_n}"
+        )
 
 
 def test_catalogo_constructivo_meets_passivhaus_thresholds():
-    # confirmado explicitamente con el usuario: fachadas y huecos deben
-    # cumplir el estandar Passivhaus real (U muro 0.10-0.15 W/m2K,
-    # Uw ventana <=0.80 W/m2K) -- forjados quedan fuera a proposito
-    # (estructura intermedia, no necesita aislamiento Passivhaus).
+    # confirmado explicitamente con el usuario: fachadas y cubiertas
+    # deben cumplir el estandar Passivhaus real (U 0.10-0.15 W/m2K),
+    # huecos Uw<=0.80 W/m2K -- forjados y particiones interiores quedan
+    # fuera a proposito (no son envolvente termica). Puentes termicos:
+    # el valor Passivhaus debe ser claramente menor que el estandar en
+    # los 13 (principio de "construccion libre de puentes termicos").
     js_files = sorted(JS_DIR.glob("*.js"))
     catalogo_js = next(p for p in js_files if p.name == "08-catalogo.js")
     content = _read(catalogo_js)
     match = re.search(r"const CATALOGO_CONSTRUCTIVO = (\{.*?\});", content, re.DOTALL)
     data = json.loads(match.group(1))
 
-    for fachada in data["fachadas"]:
-        u = fachada["transmitancia_u"]
-        assert 0.08 <= u <= 0.16, f"{fachada['id']}: U={u} fuera del rango Passivhaus (0.10-0.15, margen 0.08-0.16)"
+    for categoria in ("fachadas", "cubiertas"):
+        for elem in data[categoria]:
+            u = elem["transmitancia_u"]
+            assert 0.08 <= u <= 0.16, f"{categoria}/{elem['id']}: U={u} fuera del rango Passivhaus (0.08-0.16)"
 
     for hueco in data["huecos"]:
         uw = hueco["transmitancia_u_global"]
         assert uw <= 0.80, f"{hueco['id']}: Uw={uw} no cumple el umbral Passivhaus (<=0.80 W/m2K)"
+
+    for pt in data["puentesTermicos"]:
+        assert pt["psi_passivhaus"] < pt["psi_estandar"], (
+            f"{pt['id']}: el valor Passivhaus ({pt['psi_passivhaus']}) deberia ser menor que "
+            f"el estandar ({pt['psi_estandar']}) -- principio de construccion libre de puentes termicos"
+        )
+        assert pt["psi_passivhaus"] <= 0.15, f"{pt['id']}: Psi Passivhaus={pt['psi_passivhaus']} demasiado alto"
 
 
 def test_pyodide_bundle_is_not_stale_against_the_real_source():

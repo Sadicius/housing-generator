@@ -2752,3 +2752,41 @@ constructivo con materiales adecuados para el estándar Passivhaus.
   cualquier hueco supera 0.80 W/m²K -- protege la decisión igual que
   el resto de fitness functions del proyecto.
 - Suite final: 347 unitarios, pyflakes limpio.
+
+## [ARCH:catalogo-constructivo] Ampliación a las 7 categorías completas del CEC
+
+A petición del usuario: fachadas/forjados/huecos se habían presentado
+como referencia, no como el conjunto completo -- el catálogo real
+tiene más categorías. Ampliado a las 7 categorías reales del
+documento oficial.
+
+- **Cubiertas (10)**: mismo criterio Passivhaus que fachadas
+  (confirmado explícitamente: son envolvente térmica también), U
+  0.099-0.133 W/m²K con aislantes de gran espesor (EPS/XPS/lana
+  mineral 220-240mm, o PUR 180mm en panel sándwich).
+- **Particiones interiores verticales (10)** y **horizontales (10)**:
+  centradas en propiedades ACÚSTICAS (índice RA, mejora de ruido de
+  impacto ΔL), no térmicas -- son interiores a la vivienda, no
+  envolvente, decisión coherente con la de forjados.
+- **Puentes térmicos (13)**: lista real y CERRADA del catálogo CEC
+  (4.6.1 a 4.6.13, no una muestra recortada a 10 como el resto,
+  porque el documento original solo tiene estos 13 puntos nombrados).
+  Formato de dato distinto a las demás categorías -- no es composición
+  por capas con transmitancia U (W/m²K), es transmitancia térmica
+  LINEAL Ψ (W/mK) de un detalle de unión constructiva. Cada uno
+  compara construcción estándar (aislamiento discontinuo/interior)
+  frente a Passivhaus (aislamiento continuo por el exterior, principio
+  central del estándar: "construcción libre de puentes térmicos"),
+  con valores Ψ de referencia real investigados (DA DB-HE/3 del CTE,
+  comparativas Therm/LIDER encontradas en foros técnicos -- p.ej.
+  pilar 30x30 con aislamiento interior: Ψ=0.27 W/mK medido con Therm;
+  frente de forjado: 0.30-0.80 W/mK según continuidad del aislante).
+- Verificado con `jsdom` en las 7 categorías: número de tarjetas
+  correcto, formato de detalle correcto por categoría (capas+U,
+  capas+acústica, o comparativa estándar/Passivhaus para puentes
+  térmicos), expansión de tarjeta, cero errores.
+- Tests de sanidad ampliados: número de elementos esperado por
+  categoría (10, o 13 en puentes térmicos), y umbrales Passivhaus
+  extendidos a cubiertas + verificación de que el valor Passivhaus es
+  siempre menor que el estándar en los 13 puentes térmicos.
+- Suite final: 347 unitarios, pyflakes limpio.

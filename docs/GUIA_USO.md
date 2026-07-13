@@ -357,27 +357,35 @@ enteros con él.
 
 ## Catálogo constructivo (pestaña 07)
 
-10 fachadas, 10 forjados y 10 huecos (ventanas) representativos, con
-su composición real por capas -- extraída del Catálogo de Elementos
-Constructivos del CTE (oficial, codigotecnico.org). Haz clic en
-cualquier tarjeta para ver el desglose de capas (material + espesor)
-y la transmitancia térmica U.
+**7 categorías reales del catálogo** (fachadas/forjados/huecos eran
+solo una primera referencia, no el conjunto completo): fachadas,
+cubiertas, forjados, huecos, particiones interiores verticales,
+particiones interiores horizontales y puentes térmicos -- 10
+elementos representativos por categoría, 13 en puentes térmicos (la
+lista real y cerrada del propio catálogo). Extraído del Catálogo de
+Elementos Constructivos del CTE (oficial, codigotecnico.org). Haz clic
+en cualquier tarjeta para ver el detalle.
 
-Fachadas y huecos están dimensionados para cumplir el estándar
-**Passivhaus** (U muro 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K, triple
+Fachadas y cubiertas están dimensionadas para cumplir el estándar
+**Passivhaus** (U 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K, triple
 acristalamiento con gas noble) -- el estándar *voluntario* más
 exigente reconocido en eficiencia energética, no el mínimo legal (que
 sigue siendo el CTE, la base normativa de todo el resto del proyecto).
-Los forjados quedan sin cambios a propósito: son estructura intermedia
-entre plantas calefactadas, sin salto térmico entre ellas, así que no
-necesitan aislamiento Passivhaus.
+Forjados y particiones interiores quedan sin ese tratamiento a
+propósito: son interiores a la vivienda (forjados entre plantas
+calefactadas, particiones entre estancias), sin salto térmico -- ahí
+lo que importa es el aislamiento acústico (índice RA, mejora de ruido
+de impacto), no el térmico.
 
-Los valores U están **calculados** con la fórmula física estándar y
-las conductividades reales de cada material, asumiendo un espesor de
-aislante concreto (indicado en cada ficha) -- no son los del catálogo
-original, que dependen del espesor que elijas en tu proyecto real. Es
-un subconjunto representativo (10 por categoría), no el catálogo CEC
-completo.
+Puentes térmicos usa un formato distinto: no es composición por capas,
+es la transmitancia lineal Ψ (W/mK) de un detalle de unión (pilar,
+dintel, encuentro de forjado...), comparando construcción estándar
+frente a Passivhaus -- ilustra directamente el principio de
+"construcción libre de puentes térmicos".
+
+Los valores U/Ψ están **calculados** con la física estándar y las
+conductividades reales de cada material, no transcritos directamente
+de las tablas del documento original.
 
 ## Cronograma de obra (pestaña 06)
 
