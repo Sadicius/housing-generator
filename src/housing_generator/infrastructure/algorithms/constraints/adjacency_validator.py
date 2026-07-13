@@ -4,10 +4,8 @@ from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import AdjacencyStrength
 
-# MUST_BE_NEAR: longitud minima de borde compartido para considerar que
-# dos estancias estan "unidas por un lado" (no solo tocandose en una
-# esquina) -- lo bastante para que quepa una puerta. Confirmado por el
-# usuario como umbral mas exigente que el de adyacencia generica (0.1m).
+# Longitud minima de borde compartido para "unidas por un lado" (no
+# solo esquina) -- lo bastante para que quepa una puerta.
 MUST_BE_NEAR_MIN_SHARED_LENGTH_M = 1.0
 
 

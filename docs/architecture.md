@@ -2522,3 +2522,15 @@ diferencia de "almacenamiento" en Tabla 2). Confirmado en `nhv.lua`
 (NHV.trastero.area = 4.00), con la propia fuente admitiendo que nunca
 estuvo realmente implementada pese a estar declarada. Ancho de puerta
 (0.80m, también en B.2.5) pendiente -- requiere modelar puertas.
+
+## [ARCH:validation-result] ValidationResult -- el patrón de 3 estados
+
+Separa dos cosas que una simple `List[str]` de violaciones no puede
+expresar: `violations` (la restricción NO se cumple, con los datos
+disponibles) y `warnings` (no se puede confirmar NI descartar el
+cumplimiento -- "no verificable"). Nunca se trata como aprobado por
+defecto, pero tampoco bloquea la generación como una violación real --
+es una tercera categoría, no un término medio. Mismo patrón que
+`nhv.lua` ya distinguía en varios sitios (`esEspacioExteriorDeCalidad`).
+Usado consistentemente en todos los validadores geométricos del
+proyecto.

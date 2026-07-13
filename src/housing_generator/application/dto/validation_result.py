@@ -4,19 +4,10 @@ from typing import List
 
 @dataclass(frozen=True)
 class ValidationResult:
-    """Resultado de validar un Layout contra una restriccion.
-
-    Separa dos cosas que `nhv.lua` ya distinguia en varios sitios
-    (`esEspacioExteriorDeCalidad`, y ahora `can_inscribe_square`) y que
-    una simple `List[str]` de violaciones no puede expresar:
-
-    - `violations`: la restriccion NO se cumple, con los datos disponibles.
-      Un layout con violaciones se rechaza.
-    - `warnings`: no se puede confirmar NI descartar el cumplimiento con
-      los datos/algoritmos disponibles ("no verificable"). Nunca se trata
-      como aprobado por defecto, pero tampoco bloquea la generacion como
-      una violacion real -- es una tercera categoria, no un termino medio
-      entre las otras dos.
+    """Resultado de validar un Layout contra una restricción. Separa
+    `violations` (no se cumple) de `warnings` (no verificable con los
+    datos disponibles -- tercera categoría, no aprobado por defecto ni
+    bloqueo). Ver [ARCH:validation-result].
     """
     violations: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)

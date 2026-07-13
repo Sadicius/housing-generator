@@ -31,17 +31,13 @@ class Room:
     space_category: Optional[SpaceCategory] = None
     service_subtype: Optional[str] = None
     min_exterior_sides: Optional[int] = None
-    # Solo relevante para RoomType.KITCHEN: cocina abierta en un unico
-    # espacio con el salon (caso tipico de estudio/loft). Ver
-    # CocinaIntegradaValidator -- confirmado contra nhv.lua
-    # (validarCocinaIntegrada), no un supuesto propio.
+    # Solo RoomType.KITCHEN: cocina abierta con el salon. Ver
+    # CocinaIntegradaValidator, [ARCH:cocina-integrada].
     integrated_in_largest_room: bool = False
     vertical_opening_m2: Optional[float] = None
     boundary: Optional[Boundary] = None
-    # Planta a la que pertenece esta estancia (multi-planta). `None` =
-    # vivienda de una sola planta (comportamiento previo sin cambios) --
-    # se asume PLANTA_BAJA implicitamente en ese caso por el resto del
-    # sistema, sin necesidad de declararlo.
+    # Planta de esta estancia (multi-planta). None = una sola planta
+    # (se asume PLANTA_BAJA implicitamente).
     level: Optional[NivelPlanta] = None
 
     def __post_init__(self):
