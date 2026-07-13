@@ -479,3 +479,20 @@ table.matrix th.dim{opacity:.25;}
 .gantt-bar-label{font-family:'Archivo',sans-serif; font-size:11px; fill:var(--ink);}
 .gantt-axis-label{font-family:'Space Mono',monospace; font-size:9.5px; fill:var(--ink-faint);}
 .gantt-today-line{stroke:var(--terracota); stroke-width:0.5; stroke-dasharray:2,2;}
+
+/* ---------------- CATALOGO CONSTRUCTIVO ---------------- */
+.catalogo-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; margin-top:14px;}
+.catalogo-card{border:1px solid var(--line); background:var(--bg-panel-2); padding:14px 16px; cursor:pointer;}
+.catalogo-card:hover{border-color:var(--terracota);}
+.catalogo-card .cec-code{font-family:'Space Mono',monospace; font-size:9.5px; color:var(--ink-faint); text-transform:uppercase;}
+.catalogo-card h4{font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--ink); margin:4px 0 8px; font-weight:600;}
+.catalogo-card .u-value{font-family:'Space Mono',monospace; font-size:12px; color:var(--terracota);}
+.catalogo-layers{margin-top:10px; display:none;}
+.catalogo-card.expanded .catalogo-layers{display:block;}
+.catalogo-layer-row{
+  display:flex; justify-content:space-between; gap:8px; padding:5px 8px; margin-bottom:3px;
+  background:var(--bg); border-left:2px solid var(--cyan-dim);
+  font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-dim);
+}
+.catalogo-layer-bar{display:flex; height:18px; margin-top:8px; border:1px solid var(--line-soft);}
+.catalogo-layer-bar span{display:block; height:100%; border-right:1px solid var(--bg-panel-2);}

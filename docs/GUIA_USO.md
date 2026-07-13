@@ -355,6 +355,19 @@ comprobó esto explícitamente antes de separar, no se asumió). Si
 mueves el `.html`, mueve `.css`, `py_bundle.js` y la carpeta `js/`
 enteros con él.
 
+## Catálogo constructivo (pestaña 07)
+
+10 fachadas, 10 forjados y 10 huecos (ventanas) representativos, con
+su composición real por capas -- extraída del Catálogo de Elementos
+Constructivos del CTE (oficial, codigotecnico.org). Haz clic en
+cualquier tarjeta para ver el desglose de capas (material + espesor)
+y la transmitancia térmica U. Los valores U están **calculados** con
+la fórmula física estándar y las conductividades reales de cada
+material, asumiendo un espesor de aislante concreto (indicado en cada
+ficha) -- no son los del catálogo original, que dependen del espesor
+que elijas en tu proyecto real. Es un subconjunto representativo (10
+por categoría), no el catálogo CEC completo.
+
 ## Cronograma de obra (pestaña 06)
 
 Herramienta de visualización pura, no de estimación: introduces las

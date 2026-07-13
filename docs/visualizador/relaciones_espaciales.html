@@ -37,6 +37,7 @@
     <button class="tab" data-tab="cards"><span class="num">04</span>Fichas por tipo</button>
     <button class="tab" data-tab="plano"><span class="num">05</span>Visor de plano</button>
     <button class="tab" data-tab="cronograma"><span class="num">06</span>Cronograma de obra</button>
+    <button class="tab" data-tab="catalogo"><span class="num">07</span>Catálogo constructivo</button>
   </div>
 
   <!-- ============ TAB: MATRIZ ============ -->
@@ -199,6 +200,16 @@
     <div id="gantt-chart-content">
       <div class="plano-empty">Añade fases para ver el cronograma.</div>
     </div>
+  <div class="panel" id="panel-catalogo">
+    <div class="caveat">
+      <b>⚠ nota de alcance</b> — composición por capas extraída de las definiciones reales del <a href="https://www.codigotecnico.org/pdf/Programas/CEC/CAT-EC-v06.1_SEPBRE_09_Completo.pdf" target="_blank" rel="noopener">Catálogo de Elementos Constructivos del CTE</a> (oficial, Instituto Eduardo Torroja + CEPCO + AICIA). Subconjunto representativo (10 por categoría), no el catálogo completo (que tiene varias decenas de variantes solo en fachadas). Los valores de transmitancia térmica U están <b>calculados</b> con la fórmula estándar (U=1/ΣR) y las conductividades reales de cada material del propio catálogo, asumiendo un espesor de aislante concreto (indicado en cada ficha) -- no son los valores de tabla exactos del documento, que dependen del espesor de aislante elegido en cada proyecto real.
+    </div>
+    <div class="controls">
+      <button class="picker-btn cat-tab active" data-cat="fachadas">Fachadas</button>
+      <button class="picker-btn cat-tab" data-cat="forjados">Forjados</button>
+      <button class="picker-btn cat-tab" data-cat="huecos">Huecos (ventanas)</button>
+    </div>
+    <div class="catalogo-grid" id="catalogo-grid"></div>
   </div>
 
 </div>
@@ -212,6 +223,7 @@
 <script src="js/05-visor.js"></script>
 <script src="js/06-pyodide.js"></script>
 <script src="js/07-cronograma.js"></script>
-<script src="js/08-init.js"></script>
+<script src="js/08-catalogo.js"></script>
+<script src="js/09-init.js"></script>
 </body>
 </html>

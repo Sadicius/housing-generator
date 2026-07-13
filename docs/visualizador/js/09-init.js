@@ -7,6 +7,7 @@ document.getElementById('generate-now').addEventListener('click', handleGenerate
 document.getElementById('gantt-start-date').valueAsDate = new Date();
 document.getElementById('gantt-add-fase').addEventListener('click', handleAddFase);
 document.getElementById('gantt-start-date').addEventListener('change', renderGantt);
+renderCatalogoGrid();
 document.getElementById('clear-section').addEventListener('click', () => {
   if(!confirm('¿Vaciar toda la selección de todas las plantas?')) return;
   SECTION.selected = {};

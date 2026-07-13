@@ -2661,3 +2661,52 @@ desglosables por fase.
   archivos JS actualizado con `07-cronograma.js`, nuevo test de
   controles del cronograma.
 - Suite final: 345 unitarios, pyflakes limpio.
+
+## [ARCH:catalogo-constructivo] Catálogo constructivo -- pestaña 07
+
+A petición del usuario: acceso a la composición real de materiales de
+fachada, forjado y huecos (ventanas). Investigado antes de construir:
+encontrada fuente sólida y oficial -- **Catálogo de Elementos
+Constructivos del CTE (CEC)**, codigotecnico.org, Instituto Eduardo
+Torroja + CEPCO + AICIA. A diferencia del cronograma de obra (donde no
+existía fuente real), aquí sí hay un documento oficial extenso con
+composición por capas de decenas de sistemas constructivos.
+
+- **Alcance confirmado explícitamente**: 10 elementos representativos
+  por categoría (fachadas/forjados/huecos), no el catálogo CEC
+  completo -- solo en fachadas el documento real tiene varias decenas
+  de variantes por familia, digitalizarlo entero sería un proyecto
+  aparte.
+- **Composición por capas**: extraída de las definiciones reales del
+  catálogo (códigos de capa como `LC`=fábrica de ladrillo cerámico,
+  `AT`=aislante térmico, `C`=cámara de aire, `RI`=revestimiento
+  interior), no inventada.
+- **Valores de transmitancia U**: aquí sí hubo que tomar una decisión
+  de rigor real -- las tablas del catálogo dan U en función de la
+  resistencia térmica del aislante elegido (fórmula tipo
+  `1/(0.58+RAT)`, no un número fijo), y extraer los números exactos de
+  las tablas del PDF (con formato muy degradado al convertir a texto)
+  habría sido poco fiable. En su lugar: U calculada con la fórmula
+  física estándar (U=1/ΣR, con Rsi+Rse=0.17 m²K/W para fachadas) y las
+  conductividades λ REALES de cada material, tomadas del mismo
+  catálogo (sección 3, materiales) -- con un espesor de aislante
+  concreto asumido y declarado explícitamente en cada ficha, no los
+  valores de tabla exactos. Cálculo hecho con un script (no a mano)
+  para que las 30 fichas sean consistentes.
+- Huecos: transmitancia global aproximada como 20% marco + 80% vidrio
+  (proporción típica de ventana estándar), con U de marco y vidrio
+  reales del catálogo (secciones 3.16 y 3.15.2) mostrados por
+  separado, no solo el global.
+- Nota de alcance visible en el propio panel, con enlace al PDF
+  oficial y la aclaración explícita de que los valores U son
+  calculados, no transcritos directamente de la tabla.
+- Implementado en `js/08-catalogo.js` (nuevo, antes de `init` --
+  `08-init.js` renombrado a `09-init.js`, mismo patrón que el
+  cronograma). Sin pieza Python nueva: catálogo estático embebido como
+  constante JS, puro cliente.
+- Verificado con `jsdom`: 10 tarjetas por categoría, expansión de
+  capas al hacer clic, cambio de categoría (fachadas/forjados/huecos)
+  correcto, cero errores.
+- Tests de sanidad actualizados: 7 pestañas, orden de archivos JS,
+  nuevo test que confirma 10 elementos por categoría.
+- Suite final: 346 unitarios, pyflakes limpio.
