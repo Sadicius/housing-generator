@@ -9,7 +9,7 @@ from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.value_objects.dimensions import Dimensions
 from housing_generator.domain.enums import RoomType, NivelPlanta, DISPLAY_NAMES
-from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
+from housing_generator.domain.services.type_adjacency_catalog import build_adjacency_requirements
 
 # Areas por defecto, genericas -- solo formato antiguo o entrada sin
 # area_m2 valida. Ver [ARCH:seleccion-plantas-importer].
@@ -97,7 +97,7 @@ def import_seleccion_plantas(
                     level=level,
                 ))
 
-    adjacency = generate_adjacency_requirements(rooms)
+    adjacency = build_adjacency_requirements(rooms)
     program = Program(rooms=rooms, adjacency_requirements=adjacency)
 
     tipo_vivienda = payload.get("tipo_vivienda", "aislada")

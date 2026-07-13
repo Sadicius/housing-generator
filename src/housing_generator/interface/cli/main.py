@@ -13,7 +13,7 @@ from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
 from housing_generator.domain.exceptions import LayoutGenerationError
-from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
+from housing_generator.domain.services.type_adjacency_catalog import build_adjacency_requirements
 from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
 from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
 
@@ -36,7 +36,7 @@ def build_sample_program(auto_adjacency: bool = False) -> Program:
         Room(id="garage", name="Garaje", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=18)),
     ]
     if auto_adjacency:
-        adjacency = generate_adjacency_requirements(rooms)
+        adjacency = build_adjacency_requirements(rooms)
     else:
         adjacency = [
             AdjacencyRequirement("living", "dining", AdjacencyStrength.MUST_BE_NEAR),
@@ -65,7 +65,7 @@ def main():
     parser.add_argument(
         "--auto-adjacency", action="store_true",
         help="Derivar Obligatorio/Preferencia automaticamente del catalogo formalizado "
-             "de 120 pares (generate_adjacency_requirements) en vez de la declaracion "
+             "de 120 pares (build_adjacency_requirements) en vez de la declaracion "
              "manual del programa de ejemplo -- genera bastantes mas requisitos "
              "(44 en vez de 6 para las mismas 11 estancias), busqueda mas dificil, "
              "puede necesitar --max-iterations mayor o probar otra --seed.",

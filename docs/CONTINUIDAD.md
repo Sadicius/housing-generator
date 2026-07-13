@@ -225,7 +225,7 @@ cede aunque haya tensión directa para el mismo par.
 `domain/services/type_adjacency_catalog.py`. `DEFAULT_TYPE_ADJACENCY`
 (82 entradas reales, generado programáticamente desde
 `relaciones_espaciales.md`, no transcrito a mano) +
-`generate_adjacency_requirements(rooms)` (deriva `AdjacencyRequirement`
+`build_adjacency_requirements(rooms)` (deriva `AdjacencyRequirement`
 duros y blandos automáticamente por `RoomType`). Verificado con el
 generador real: un programa de 11 estancias genera 44 requisitos
 automáticamente y produce un layout válido. Hallazgo honesto: usar el

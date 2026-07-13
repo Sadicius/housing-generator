@@ -1,5 +1,5 @@
 from shapely.geometry import box
-from housing_generator.domain.services.type_adjacency_catalog import generate_adjacency_requirements
+from housing_generator.domain.services.type_adjacency_catalog import build_adjacency_requirements
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.entities.lot import Lot
@@ -40,7 +40,7 @@ def test_catalog_generated_requirements_produce_a_valid_layout():
     # la semilla que antes convergia (10) dejo de hacerlo con la misma
     # busqueda -- mismo patron ya documentado en CONTINUIDAD.md.
     rooms = _realistic_rooms()
-    adjacency = generate_adjacency_requirements(rooms)
+    adjacency = build_adjacency_requirements(rooms)
     assert len(adjacency) == 44  # confirma que el conteo no cambia sin darnos cuenta
 
     program = Program(rooms=rooms, adjacency_requirements=adjacency)
@@ -59,7 +59,7 @@ def test_catalog_generated_requirements_include_no_condicional_or_ya_cubierto_pa
         Room(id="bath", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
         Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=8)),
     ]
-    adjacency = generate_adjacency_requirements(rooms)
+    adjacency = build_adjacency_requirements(rooms)
     pairs = {frozenset((r.room_a_id, r.room_b_id)) for r in adjacency}
 
     # BEDROOM-BATHROOM (Condicional) y KITCHEN-BATHROOM (Ya cubierto)

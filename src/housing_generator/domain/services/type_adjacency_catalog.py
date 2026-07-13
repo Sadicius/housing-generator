@@ -111,7 +111,7 @@ def get_type_adjacency(type_a: RoomType, type_b: RoomType) -> Optional[Adjacency
     return DEFAULT_TYPE_ADJACENCY.get((type_a, type_b)) or DEFAULT_TYPE_ADJACENCY.get((type_b, type_a))
 
 
-def generate_adjacency_requirements(rooms: List[Room]) -> List[AdjacencyRequirement]:
+def build_adjacency_requirements(rooms: List[Room]) -> List[AdjacencyRequirement]:
     """Genera automáticamente los AdjacencyRequirement que aplican a un
     conjunto de estancias, según su RoomType y el catálogo. Se aplica a
     cada par existente por TIPO (dos BEDROOM reciben la misma relación).
@@ -140,4 +140,4 @@ def build_program_with_auto_adjacency(rooms: List[Room]) -> Program:
     automáticamente en vez de exigir declararlos a mano. Vive en
     domain/services (lógica de dominio pura, sin infraestructura). Ver
     [ARCH:type-adjacency-catalog]."""
-    return Program(rooms=rooms, adjacency_requirements=generate_adjacency_requirements(rooms))
+    return Program(rooms=rooms, adjacency_requirements=build_adjacency_requirements(rooms))

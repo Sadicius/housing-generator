@@ -171,7 +171,7 @@ ausencia = sin requisito) o se resuelven con lógica propia
 (`BanoAccesoGeneralValidator` para el caso "Condicional", el propio
 núcleo húmedo para "Ya cubierto").
 
-`generate_adjacency_requirements(rooms)` deriva automáticamente los
+`build_adjacency_requirements(rooms)` deriva automáticamente los
 `AdjacencyRequirement` (duros y blandos) de un conjunto de estancias
 según sus tipos — aplicando la misma relación a cada instancia si hay
 varias del mismo tipo, y sin generar nada entre dos estancias del mismo

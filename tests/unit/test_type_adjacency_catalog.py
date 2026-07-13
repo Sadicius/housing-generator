@@ -3,7 +3,7 @@ from housing_generator.domain.services.type_adjacency_catalog import (
     CONDICIONAL_PAIRS,
     YA_CUBIERTO_PAIRS,
     get_type_adjacency,
-    generate_adjacency_requirements,
+    build_adjacency_requirements,
 )
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.value_objects.dimensions import Dimensions
@@ -47,7 +47,7 @@ def test_generate_requirements_for_a_realistic_program():
         _room("entrance", RoomType.ENTRANCE_HALL),
         _room("garage", RoomType.GARAGE),
     ]
-    reqs = generate_adjacency_requirements(rooms)
+    reqs = build_adjacency_requirements(rooms)
     pairs_generated = {frozenset((r.room_a_id, r.room_b_id)) for r in reqs}
 
     assert frozenset(("living", "dining")) in pairs_generated
@@ -61,19 +61,19 @@ def test_generate_requirements_for_a_realistic_program():
 
 def test_generate_requirements_skips_condicional_pairs():
     rooms = [_room("bed", RoomType.BEDROOM), _room("bath", RoomType.BATHROOM)]
-    reqs = generate_adjacency_requirements(rooms)
+    reqs = build_adjacency_requirements(rooms)
     assert reqs == []  # BEDROOM-BATHROOM es Condicional, no genera nada aqui
 
 
 def test_generate_requirements_skips_ya_cubierto_pairs():
     rooms = [_room("kitchen", RoomType.KITCHEN), _room("bath", RoomType.BATHROOM)]
-    reqs = generate_adjacency_requirements(rooms)
+    reqs = build_adjacency_requirements(rooms)
     assert reqs == []  # KITCHEN-BATHROOM ya cubierto por nucleo humedo
 
 
 def test_generate_requirements_ignores_same_type_pairs():
     rooms = [_room("bed1", RoomType.BEDROOM), _room("bed2", RoomType.BEDROOM)]
-    reqs = generate_adjacency_requirements(rooms)
+    reqs = build_adjacency_requirements(rooms)
     assert reqs == []  # el catalogo no tiene entradas tipo-tipo consigo mismo
 
 
@@ -85,7 +85,7 @@ def test_generate_requirements_applies_same_relation_to_multiple_instances_of_a_
         _room("bed2", RoomType.BEDROOM),
         _room("garage", RoomType.GARAGE),
     ]
-    reqs = generate_adjacency_requirements(rooms)
+    reqs = build_adjacency_requirements(rooms)
     garage_reqs = [r for r in reqs if "garage" in (r.room_a_id, r.room_b_id)]
     assert len(garage_reqs) == 2
     assert all(r.strength == AdjacencyStrength.SHOULD_BE_AWAY for r in garage_reqs)
@@ -94,7 +94,7 @@ def test_generate_requirements_applies_same_relation_to_multiple_instances_of_a_
 def test_generate_requirements_consistent_with_get_type_adjacency():
     rooms = [_room("garage", RoomType.GARAGE), _room("technical", RoomType.TECHNICAL_ROOM)]
     strength = get_type_adjacency(RoomType.GARAGE, RoomType.TECHNICAL_ROOM)
-    reqs = generate_adjacency_requirements(rooms)
+    reqs = build_adjacency_requirements(rooms)
     if strength is None:
         assert reqs == []
     else:
@@ -112,7 +112,7 @@ def test_build_program_with_auto_adjacency_produces_a_valid_program():
     program = build_program_with_auto_adjacency(rooms)
 
     assert program.rooms == rooms
-    assert len(program.adjacency_requirements) == len(generate_adjacency_requirements(rooms))
+    assert len(program.adjacency_requirements) == len(build_adjacency_requirements(rooms))
     # el Program resultante debe pasar su propia validacion interna
     # (todo AdjacencyRequirement referencia estancias que existen)
     pairs = {frozenset((r.room_a_id, r.room_b_id)) for r in program.adjacency_requirements}

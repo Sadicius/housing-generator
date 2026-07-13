@@ -137,7 +137,7 @@ secciones "Multi-planta: primer incremento real" y "Catálogo de 120
 pares formalizado")**: las tres tensiones de abajo ya NO "dependen de
 tener multi-planta" -- multi-planta existe. La 1 y la 3 siguen sin
 resolver de verdad. La 2 está **verificada como neutralizada, aunque
-de forma silenciosa**: `generate_adjacency_requirements` (el catálogo
+de forma silenciosa**: `build_adjacency_requirements` (el catálogo
 formalizado) no conoce `Room.level` en absoluto -- genera el requisito
 KITCHEN↔GARAGE igual sin importar la planta de cada una. Pero
 `GenerateBuildingUseCase.execute()` ya filtra por planta antes de

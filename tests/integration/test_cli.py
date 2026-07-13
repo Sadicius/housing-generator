@@ -53,7 +53,7 @@ def test_cli_end_to_end_as_a_real_subprocess(tmp_path):
 
 
 def test_cli_with_auto_adjacency_as_a_real_subprocess(tmp_path):
-    # retomado de docs/CONTINUIDAD.md: conectar generate_adjacency_requirements
+    # retomado de docs/CONTINUIDAD.md: conectar build_adjacency_requirements
     # como opcion automatica real en el CLI, no solo una funcion suelta que
     # hay que llamar a mano. Confirma que --auto-adjacency funciona de
     # extremo a extremo como subproceso real, con mas iteraciones/semilla

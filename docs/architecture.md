@@ -660,7 +660,7 @@ no solo en el CLI aislado.
   generar un `AdjacencyRequirement` fijo para ellos sería incorrecto
   (dependen de lógica evaluada contra el `Program` real o ya están
   cubiertos por otro validador).
-- `generate_adjacency_requirements(rooms)`: función pura que, dado un
+- `build_adjacency_requirements(rooms)`: función pura que, dado un
   conjunto de `Room`, deriva automáticamente los `AdjacencyRequirement`
   (duros y blandos) según sus `RoomType`. Aplica la misma relación a
   cada instancia si hay varias estancias del mismo tipo (el catálogo es
@@ -830,7 +830,7 @@ Revisados sin hallazgos adicionales: `GroupingConstraintValidator` y
 sus 4 fábricas (parámetros consistentes, sin riesgo de fuga entre
 plantas porque cada `Layout` ya es de una sola planta al llegar aquí),
 `ExteriorContactValidator`, `ViviendaMinimaValidator`,
-`BanoAccesoGeneralValidator`, `generate_adjacency_requirements` (la
+`BanoAccesoGeneralValidator`, `build_adjacency_requirements` (la
 búsqueda bidireccional con `or` es segura porque los valores del enum
 nunca son "falsy" en Python -- se verificó explícitamente, no se asumió).
 
@@ -899,7 +899,7 @@ una ausencia de revisión.
 
 ## Dos pendientes resueltos: catálogo automático conectado + contorno progresivo
 
-- **[RESUELTO]** `generate_adjacency_requirements` conectado como opción
+- **[RESUELTO]** `build_adjacency_requirements` conectado como opción
   real, no solo función suelta: `build_program_with_auto_adjacency`
   (domain/services, lógica pura sin infraestructura) + `--auto-adjacency`
   en el CLI. Confirmado con subprocess real: mismas 11 estancias, 44
@@ -1046,7 +1046,7 @@ Suite final: 295/295, `pyflakes` y `mypy` limpios.
   estancia por (tipo, planta), sin áreas reales. El importador usa
   `AREAS_POR_DEFECTO_M2` (valores genéricos razonables) en vez de
   fingir resolver algo que el formato de origen no contiene.
-  `generate_adjacency_requirements` sí deriva las relaciones de
+  `build_adjacency_requirements` sí deriva las relaciones de
   adyacencia por completo, sin esta limitación.
 - Conectado también como opción real del CLI (`--import-seleccion`),
   no solo función Python suelta -- usa `GenerateBuildingUseCase`
@@ -2188,7 +2188,7 @@ número de baños del Program completo, no del par en sí, resuelto en
 `BanoAccesoGeneralValidator`), 1 "Ya cubierto" (KITCHEN-BATHROOM, ya
 exigido por núcleo húmedo).
 
-`generate_adjacency_requirements` se aplica a CADA PAR de estancias
+`build_adjacency_requirements` se aplica a CADA PAR de estancias
 existentes cuyo tipo tenga entrada -- si hay dos BEDROOM, ambos
 reciben la misma relación hacia, p.ej., BATHROOM (catálogo por TIPO,
 no por instancia).
