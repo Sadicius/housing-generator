@@ -1,29 +1,7 @@
-"""Catalogo de 120 pares de relaciones espaciales entre tipos de estancia,
-formalizado como estructura ejecutable del dominio.
-
-Generado PROGRAMATICAMENTE desde docs/relaciones_espaciales.md (no
-transcrito a mano -- fuente de errores dado el volumen). Si el
-catalogo cambia en el Markdown, regenerar este archivo con el mismo
-script (ver docs/architecture.md, seccion de este incremento).
-
-Los tres huecos de modelo que bloqueaban esta formalizacion (acceso/
-puertas, topologia de paso/terminal, cardinalidad) estan resueltos --
-ver docs/CONTINUIDAD.md. El propio catalogo ya reclasificado a 5
-categorias reales + Neutro documental + un caso especial (ver
-relaciones_espaciales.md, seccion "Terminologia").
-
-Deliberadamente OMITIDOS de este diccionario (82 entradas de las 120
-pares totales):
-- 35 pares "Neutro": ausencia de entrada = sin requisito generado, no
-  hace falta un valor especial.
-- 2 pares "Condicional" (BEDROOM/MASTER_BEDROOM x BATHROOM): NO son un
-  valor estatico de tabla -- se resuelven con logica evaluada contra el
-  Program real (ver BanoAccesoGeneralValidator), generar aqui un
-  AdjacencyRequirement fijo seria incorrecto (depende del nº de banos
-  del Program completo, no del par en si).
-- 1 par "Ya cubierto" (KITCHEN-BATHROOM): ya exigido por el validador
-  de nucleo humedo (ambas son is_wet) -- generar un AdjacencyRequirement
-  aqui duplicaria la misma exigencia por dos caminos distintos.
+"""Catálogo de relaciones espaciales entre tipos de estancia,
+formalizado como estructura ejecutable del dominio. Generado
+programáticamente desde docs/relaciones_espaciales.md. Ver
+[ARCH:type-adjacency-catalog] para qué pares se omiten y por qué.
 """
 from typing import Dict, List, Optional, Tuple
 from housing_generator.domain.entities.room import Room
@@ -31,10 +9,7 @@ from housing_generator.domain.entities.program import Program
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 
-# Pares deliberadamente fuera de este catalogo estatico -- ver docstring
-# del modulo. Se declaran aqui (no solo en un comentario) para que
-# quien formalice reglas nuevas pueda comprobar programaticamente que
-# un par "Condicional" no deberia tener tambien una entrada aqui.
+# Pares fuera del catalogo estatico. Ver [ARCH:type-adjacency-catalog].
 CONDICIONAL_PAIRS = {
     (RoomType.BEDROOM, RoomType.BATHROOM),
     (RoomType.MASTER_BEDROOM, RoomType.BATHROOM),
@@ -137,21 +112,10 @@ def get_type_adjacency(type_a: RoomType, type_b: RoomType) -> Optional[Adjacency
 
 
 def generate_adjacency_requirements(rooms: List[Room]) -> List[AdjacencyRequirement]:
-    """Genera automaticamente los AdjacencyRequirement (Obligatorio y
-    Preferencia) que aplican a un conjunto de estancias, segun sus
-    RoomType y el catalogo formalizado.
-
-    Se aplica a CADA PAR de estancias existentes cuyo (tipo_a, tipo_b)
-    tenga entrada en el catalogo -- si un Program tiene dos BEDROOM,
-    ambos reciben la misma relacion hacia, por ejemplo, BATHROOM (el
-    catalogo es por TIPO, no por instancia unica). Pares del mismo tipo
-    nunca generan nada (el catalogo no tiene entradas tipo-tipo consigo
-    mismo: son 120 pares de tipos DISTINTOS, C(16,2)).
-
-    No genera nada para pares CONDICIONAL_PAIRS ni YA_CUBIERTO_PAIRS
-    (ver docstring del modulo) -- esos se resuelven con sus propios
-    validadores, no con un AdjacencyRequirement estatico.
-    """
+    """Genera automáticamente los AdjacencyRequirement que aplican a un
+    conjunto de estancias, según su RoomType y el catálogo. Se aplica a
+    cada par existente por TIPO (dos BEDROOM reciben la misma relación).
+    Ver [ARCH:type-adjacency-catalog]."""
     requirements: List[AdjacencyRequirement] = []
     for i, room_a in enumerate(rooms):
         for room_b in rooms[i + 1:]:
@@ -172,15 +136,8 @@ def generate_adjacency_requirements(rooms: List[Room]) -> List[AdjacencyRequirem
 
 
 def build_program_with_auto_adjacency(rooms: List[Room]) -> Program:
-    """Conveniencia que cierra el circulo del catalogo formalizado:
-    construye un `Program` derivando sus `AdjacencyRequirement`
-    automaticamente (`generate_adjacency_requirements`) en vez de
-    exigir declararlos a mano -- retomado de docs/CONTINUIDAD.md
-    ("conectar generate_adjacency_requirements como opcion automatica").
-
-    Vive aqui (domain/services), no en config/container.py: es logica
-    de dominio pura (RoomType -> AdjacencyStrength), sin ninguna
-    dependencia de infraestructura -- container.py sigue siendo el
-    unico sitio que conecta clases CONCRETAS de infraestructura, esto
-    no lo es."""
+    """Construye un `Program` derivando sus `AdjacencyRequirement`
+    automáticamente en vez de exigir declararlos a mano. Vive en
+    domain/services (lógica de dominio pura, sin infraestructura). Ver
+    [ARCH:type-adjacency-catalog]."""
     return Program(rooms=rooms, adjacency_requirements=generate_adjacency_requirements(rooms))

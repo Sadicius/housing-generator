@@ -2177,3 +2177,38 @@ duplicación real (detección sistemática de bloques repetidos): tres
 validadores distintos (pasillo, escalera, trastero) repetían
 exactamente el manejo de los 3 estados de `meets_minimum_width`, solo
 cambiaba el umbral y el texto del mensaje.
+
+## [ARCH:type-adjacency-catalog] domain/services/type_adjacency_catalog.py
+
+Generado programáticamente desde `docs/relaciones_espaciales.md`, no
+transcrito a mano. 82 de 120 pares totales tienen entrada aquí; el
+resto se omite deliberadamente: 35 "Neutro" (ausencia = sin requisito),
+2 "Condicional" (BEDROOM/MASTER_BEDROOM x BATHROOM -- depende del
+número de baños del Program completo, no del par en sí, resuelto en
+`BanoAccesoGeneralValidator`), 1 "Ya cubierto" (KITCHEN-BATHROOM, ya
+exigido por núcleo húmedo).
+
+`generate_adjacency_requirements` se aplica a CADA PAR de estancias
+existentes cuyo tipo tenga entrada -- si hay dos BEDROOM, ambos
+reciben la misma relación hacia, p.ej., BATHROOM (catálogo por TIPO,
+no por instancia).
+
+## [ARCH:lot] domain/entities/lot.py
+
+`retranqueo_m`: NO es un valor fijo de la normativa de habitabilidad
+-- el propio Decreto 29/2010 remite esto a la legislación urbanística
+(Ley 2/2016 do solo de Galicia + PXOM municipal), así que es un
+parámetro que declara quien usa el proyecto, no una constante asumida.
+
+`retranqueo_incremento_por_planta_m`: técnica de "subtractive
+generation" (investigación externa confirmada, Devans "Procedural
+Generation For Dummies: Building Footprints") -- encoge
+progresivamente cada planta respecto a la de abajo, con red de
+seguridad (`MinArea{Action:Shrink, Fallback:...}`): si el área
+resultante no alcanza para las estancias declaradas, usa la misma
+huella que la planta inferior en vez de encoger a un tamaño inválido.
+
+`medianera_sides`: vivienda pareada/adosada (1-2 lados sin retranqueo
+ni contacto exterior real -- una pared de medianera no tiene luz ni
+ventilación propia). Requiere parcela rectangular ortogonal, misma
+simplificación geométrica que el resto del proyecto.
