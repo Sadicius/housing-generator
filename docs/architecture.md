@@ -2301,3 +2301,53 @@ si la estancia no está colocada -- una estancia colocada pero
 totalmente aislada (sin ninguna pared compartida) SÍ aparece como
 nodo, así que ese caso se resuelve más abajo vía `distance=inf`,
 mismo resultado final.
+
+## [ARCH:altura-libre] AlturaLibreValidator
+
+A.3.1.1: altura libre mínima (2.50m mayoría de piezas, 2.20m
+directamente permitida en vestíbulo/pasillo/escaleras/baño/aseo/
+lavadero/tendedero/garajes de vivienda unifamiliar). En el resto de
+piezas, 2.20-2.50m es AVISO (no violación) -- podría cumplir vía la
+excepción del 30% de superficie que este proyecto no calcula
+(geometría parcial fuera de alcance, igual que la propia fuente
+admite no calcular). Solo cuarto técnico queda fuera de alcance.
+
+Bug real corregido: GARAGE estaba antes en fuera-de-alcance (sin
+comprobar) y STAIRCASE en ninguna lista (caía en el caso general más
+estricto) -- ambos explícitamente nombrados en A.3.1.1.b.
+
+## [ARCH:vivienda-accesible] ViviendaAccesibleValidator
+
+Retomado de un módulo Lua de un proyecto anterior del usuario
+(accesibilidad.lua), investigado a fondo contra DB-SUA (Anejo A) +
+Código de Accesibilidad de Galicia (Decreto 35/2000, act. Decreto
+74/2013) + Base 5.4 gallega. OPT-IN (DB-SUA 9.1: la accesibilidad solo
+es exigible en viviendas designadas específicamente, no todas).
+
+Alcance: de todo lo que cubre la fuente Lua (también mobiliario --
+altura de encimera, aproximación a la cama, barras de apoyo...), aquí
+solo se modela lo GEOMÉTRICAMENTE VERIFICABLE con `Room` (rectángulo
+con área, sin mobiliario) -- círculo de giro y ancho de pasillo. El
+resto exigiría modelar mobiliario como piezas propias, mismo motivo
+que C.10 (luz directa): fingir una comprobación sin datos reales sería
+peor que no darla.
+
+`TIPOS_CON_CIRCULO_GIRO`: mismas piezas que la fuente Lua comprueba
+(`acc.circuloGiro`) + DINING_ROOM (misma zona de estar). No incluye
+servicios pequeños (lavadero, tendedero, almacenamiento).
+
+## [ARCH:pasillo-topologia] PasilloTopologiaValidator
+
+Detección de puntos de corte (articulation points) sobre el grafo de
+ADYACENCIA GEOMÉTRICA REAL (misma fuente que núcleo húmedo/
+zonificación), no sobre el grafo de puertas. Corrección real tras un
+primer intento fallido: usar solo el grafo de puertas (relaciones
+Obligatorio declaradas) resultó demasiado disperso con programas
+reales (mayoría de cercanías son Preferencia) -- casi cualquier
+estancia parecía "paso obligado" por falta de redundancia declarada,
+rompió 9 tests. La adyacencia geométrica real refleja lo que de
+verdad se construyó, no solo lo pedido explícitamente.
+
+Regla: ninguna estancia no-circulación puede ser punto de corte
+obligado hacia otra -- EXCEPTO LIVING_ROOM/DINING_ROOM (salón-comedor
+abierto, arquitectónicamente normal atravesarlos).

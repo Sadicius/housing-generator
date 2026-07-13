@@ -6,41 +6,15 @@ from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType, SpaceCategory
 
-# Segundo hueco de modelo de relaciones_espaciales.md: "topologia de
-# circulacion (de paso vs. terminal)". KITCHEN-CORRIDOR senalaba "el
-# pasillo debe llevar a la cocina, no atravesarla" -- formalizado aqui
-# con deteccion de puntos de corte (articulation points) sobre el
-# grafo de ADYACENCIA GEOMETRICA REAL (misma fuente que ya usan nucleo
-# humedo y zonificacion dia/noche/servicio -- GeometryAdjacencyGraphBuilder,
-# umbral 0.1m de pared compartida), NO sobre el grafo de puertas
-# disperso (build_door_graph).
-#
-# CORRECCION REAL tras un primer intento fallido: la primera version
-# usaba el grafo de puertas (solo relaciones Obligatorio cerca
-# declaradas explicitamente) -- con programas reales, donde la mayoria
-# de "cercanias" son Preferencia (no Obligatorio), ese grafo resulto
-# demasiado disperso: casi CUALQUIER estancia parecia un "paso
-# obligado" simplemente porque no habia redundancia de conexiones
-# declaradas (rompio 9 tests, incluido el CLI). Usar la adyacencia
-# geometrica real (que existe siempre, declarada o no) resuelve esto:
-# refleja lo que de verdad se construyo, no solo lo que se pidio
-# explicitamente.
-#
-# Regla (confirmada con el usuario, con excepcion explicita): ninguna
-# estancia que NO sea de circulacion (CORRIDOR/ENTRANCE_HALL/STAIRCASE,
-# SpaceCategory.CIRCULACION) puede ser un punto de corte obligado entre
-# la circulacion y OTRA estancia -- EXCEPTO LIVING_ROOM y DINING_ROOM,
-# exentas (en un salon-comedor abierto es arquitectonicamente normal
-# atravesarlos para llegar a otras zonas).
+# Puntos de corte sobre adyacencia geometrica real, no grafo de
+# puertas. Ver [ARCH:pasillo-topologia].
 EXENTOS_DE_LA_REGLA = {RoomType.LIVING_ROOM, RoomType.DINING_ROOM}
 
 
 class PasilloTopologiaValidator(ConstraintValidatorPort):
-    """Ninguna estancia protegida (no circulacion, no exenta) puede ser
-    un punto de corte obligado entre la circulacion y otra estancia
-    protegida -- si quitarla del grafo de adyacencia geometrica real
-    deja a otra sin camino hacia ninguna estancia de circulacion, se
-    esta obligando a atravesarla para llegar a algun sitio."""
+    """Ninguna estancia protegida (no circulación, no exenta) puede ser
+    un punto de corte obligado hacia otra estancia protegida. Ver
+    [ARCH:pasillo-topologia]."""
 
     def __init__(self, graph_builder: AdjacencyGraphBuilderPort):
         self._graph_builder = graph_builder
