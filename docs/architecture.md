@@ -2423,3 +2423,32 @@ NO presente en nhv.lua. Cuenta DENTRO de la superficie del dormitorio
 usa 1.00m como valor conservador, marcado como asunción, no cifra
 normativa confirmada. Altura (2.20m) no se comprueba aquí -- la cubre
 `AlturaLibreValidator` sobre la misma habitación.
+
+## [ARCH:exterior-contact] ExteriorContactValidator
+
+Comprueba contra el borde del ÁREA EDIFICABLE, no de la parcela legal
+completa -- con retranqueo declarado, la construcción nunca toca la
+línea de parcela real, así que comprobar contra ella nunca daría
+contacto exterior válido. Sin retranqueo, ambas coinciden.
+
+Vivienda pareada/adosada: los lados de medianera sí forman parte del
+área edificable, pero una pared de medianera no tiene luz ni
+ventilación propia -- no cuenta como contacto exterior real aunque
+geométricamente toque el borde.
+
+## [ARCH:vivienda-minima] ViviendaMinimaValidator
+
+"Programa mínimo": texto exacto del Decreto 29/2010 de Galicia,
+I.A.2.3 (confirmado por investigación independiente, cita textual):
+salón + cocina + baño + lavadero + tendedero + almacenamiento general.
+`nhv.lua` no modela este apartado en absoluto.
+
+Corrección real: una primera versión solo exigía salón+cocina+baño,
+basada en el estándar genérico CTE/Orden de 1944 (válido para otras
+comunidades) en vez de buscar el texto específico de Galicia primero
+-- el usuario detectó que algo no cuadraba, y al revisar la fuente
+exacta se confirmó que faltaban tres piezas enteras.
+
+Mapeo "estancia" → LIVING_ROOM: el decreto exige en otro apartado que
+exista "al menos una estancia mayor"; este proyecto ya adoptó como
+convención que la estancia mayor es siempre el salón.

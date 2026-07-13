@@ -12,34 +12,16 @@ EXTERIOR_MIN_CONTACT_M = 0.3
 
 class ExteriorContactValidator(ConstraintValidatorPort):
     """Comprueba que cada estancia tenga al menos
-    `room.min_exterior_sides` lados con contacto real al limite del
-    solar (ver DEFAULT_MIN_EXTERIOR_SIDES en enums.py para el porque de
-    cada valor por tipo).
-
-    Misma logica de tres estados que el resto de validadores
-    geometricos: violacion si no llega al minimo, aviso si la forma no
-    es rectangular (no verificable), nada si la estancia no esta
-    colocada todavia.
-    """
+    `room.min_exterior_sides` lados con contacto real al límite del
+    solar. Ver [ARCH:exterior-contact]."""
 
     def validate(self, layout: Layout) -> ValidationResult:
         violations: List[str] = []
         warnings: List[str] = []
 
-        # borde del AREA EDIFICABLE, no de la parcela legal completa --
-        # con retranqueo declarado (vivienda aislada), la construccion
-        # nunca llega a tocar la linea de parcela real, asi que
-        # comprobar contra ella nunca daria contacto exterior valido.
-        # El borde del area edificable es donde de verdad termina la
-        # construccion y empieza el jardin/exterior. Sin retranqueo,
-        # ambas coinciden (mismo comportamiento que antes).
+        # borde del area edificable, no de la parcela legal completa.
+        # Ver [ARCH:exterior-contact].
         lot_polygon = layout.lot.buildable_area.polygon
-
-        # vivienda pareada/adosada (retomado de docs/CONTINUIDAD.md):
-        # los lados de medianera SI forman parte del area edificable
-        # (la construccion llega hasta el linde ahi), pero una pared de
-        # medianera no tiene luz ni ventilacion propia -- no cuenta como
-        # contacto exterior real aunque geometricamente toque el borde.
         excluded_segments = layout.lot.medianera_boundary_segments()
 
         for room in layout.rooms:
