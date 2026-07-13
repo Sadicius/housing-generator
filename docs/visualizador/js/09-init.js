@@ -25,10 +25,36 @@ document.getElementById('areas-lock-checkbox').addEventListener('change', (ev) =
 
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    // acotado al grupo (flow-indicator o subtabs-row) del propio tab --
+    // un manejador global rompia el estado de otros grupos al volver a
+    // visitarlos (los dejaba sin ningun panel activo). Ver [ARCH:zonas].
+    const grupo = tab.closest('.flow-indicator, .subtabs-row') || document;
+    const hermanos = grupo.querySelectorAll('.tab');
+    hermanos.forEach(t => {
+      t.classList.remove('active');
+      const panel = document.getElementById('panel-'+t.dataset.tab);
+      if(panel) panel.classList.remove('active');
+    });
     tab.classList.add('active');
     document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+document.querySelectorAll('.zona-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.zona-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.zona-panel').forEach(z => z.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('zona-'+btn.dataset.zona).classList.add('active');
+  });
+});
+
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.relaciones-view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
   });
 });
 

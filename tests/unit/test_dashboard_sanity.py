@@ -59,16 +59,62 @@ def test_room_and_door_stroke_width_is_in_meters_not_pixels():
     )
 
 
-def test_dashboard_has_seven_tabs_matching_the_panels():
-    # confirma que el numero de pestanas declaradas coincide con el
-    # numero de paneles reales -- una discrepancia aqui significa una
-    # pestana sin panel (rota) o un panel sin pestana (inaccesible).
+def test_zones_structure_matches_tabs_and_panels():
+    # sustituye al antiguo "7 pestanas planas" tras la reestructuracion
+    # por zonas (Diseno/Consulta/Planificacion) -- confirma: 3 zonas
+    # reales, cada boton de tab/subtab/flow-step con su panel real
+    # correspondiente (una discrepancia aqui es una pestana rota o un
+    # panel inaccesible), y que cada zona-panel contiene al menos un
+    # panel real.
     html = _read(HTML_PATH)
-    tabs = re.findall(r'<button class="tab[^"]*" data-tab="(\w+)">', html)
-    panels = re.findall(r'<div class="panel[^"]*" id="panel-(\w+)"', html)
+    zonas = re.findall(r'<button class="zona-btn[^"]*" data-zona="(\w+)">', html)
+    zona_panels = re.findall(r'<div class="zona-panel[^"]*" id="zona-(\w+)"', html)
+    assert len(zonas) == 3
+    assert set(zonas) == set(zona_panels)
 
-    assert len(tabs) == 7
-    assert set(tabs) == set(panels)
+    tabs = re.findall(r'class="tab[^"]*" data-tab="(\w+)"', html)
+    panels = re.findall(r'<div class="panel[^"]*" id="panel-(\w+)"', html)
+    # cronograma no tiene tab propio a proposito: es el unico panel de
+    # su zona, sin sub-navegacion necesaria.
+    panels_con_tab_esperado = set(panels) - {"cronograma"}
+    assert set(tabs) == panels_con_tab_esperado, (
+        f"tabs sin panel o paneles sin tab: {set(tabs) ^ panels_con_tab_esperado}"
+    )
+
+
+def test_matriz_and_sinergias_merged_with_view_toggle():
+    # confirma la fusion (Matriz de adyacencia + Sinergias en una sola
+    # pestana "Relaciones entre tipos", con selector de vista) --
+    # ambos contenidos originales deben seguir presentes, solo
+    # reorganizados, no perdidos.
+    html = _read(HTML_PATH)
+    assert 'id="panel-relaciones"' in html
+    assert 'data-view="tabla"' in html
+    assert 'data-view="red"' in html
+    assert 'id="view-tabla"' in html
+    assert 'id="view-red"' in html
+    assert 'id="matrix-table"' in html  # contenido de la antigua Matriz, conservado
+    assert 'id="net-svg"' in html  # contenido de la antigua Sinergias, conservado
+
+
+def test_scripts_are_positioned_after_all_zone_content_not_mid_document():
+    # BUG REAL encontrado al reestructurar por zonas: los scripts
+    # clasicos se quedaron en su posicion ORIGINAL (el final de la
+    # estructura plana anterior) tras reordenar los paneles en zonas --
+    # como el reordenamiento dejo contenido DESPUES de los scripts en
+    # el documento, un navegador real fallaria al ejecutar codigo de
+    # nivel superior que hace document.getElementById(...) sobre
+    # elementos que todavia no existen en el DOM en ese punto del
+    # analisis. Corregido moviendolos al final real del body -- este
+    # test evita que vuelva a pasar en silencio.
+    html = _read(HTML_PATH)
+    ultimo_zona_panel_pos = html.rindex('class="zona-panel')
+    primer_script_local_pos = html.index('<script src="py_bundle.js">')
+    assert primer_script_local_pos > ultimo_zona_panel_pos, (
+        "los scripts locales aparecen ANTES de que termine el ultimo zona-panel en el "
+        "documento -- fallarian en un navegador real al intentar acceder a elementos "
+        "que todavia no existen"
+    )
 
 
 def test_garage_min_exterior_matches_python_default():
@@ -161,7 +207,8 @@ def test_html_references_js_files_via_classic_tags_in_order():
     # funciones de todos los demas al arrancar, incluido 07-cronograma
     # y 08-catalogo).
     html = _read(HTML_PATH)
-    assert '<link rel="stylesheet" href="relaciones_espaciales.css">' in html
+    assert 'rel="stylesheet" href="relaciones_espaciales.css"' in html or \
+        'href="relaciones_espaciales.css" rel="stylesheet"' in html
     assert '<script src="py_bundle.js"></script>' in html
     assert 'type="module"' not in html
 

@@ -1,85 +1,56 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Láminas — housing_generator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Archivo:wght@400;500;600&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/pyodide/v314.0.2/full/pyodide.js"></script>
-<link rel="stylesheet" href="relaciones_espaciales.css">
+<link href="relaciones_espaciales.css" rel="stylesheet"/>
 </head>
 <body>
 <div class="wrap">
-
-  <div class="titleblock">
-    <div>
-      <div class="eyebrow">Lámina 01 · Catálogo</div>
-      <h1>Matriz de relaciones espaciales</h1>
-      <div class="sub">16 tipos de estancia · 120 pares de adyacencia · preferencia de planta · propiedades derivadas. Construido par a par sobre el catálogo de <code>relaciones_espaciales.md</code> y <code>niveles_plantas.md</code> del proyecto <code>housing_generator</code>.</div>
-    </div>
-    <div class="meta">
-      <div><span>proyecto</span>housing_generator</div>
-      <div><span>tipos</span>16</div>
-      <div><span>pares</span>120</div>
-      <div><span>escala</span>s/e</div>
-    </div>
+<div class="titleblock">
+<div>
+<div class="eyebrow">Lámina 01 · Catálogo</div>
+<h1>Matriz de relaciones espaciales</h1>
+<div class="sub">16 tipos de estancia · 120 pares de adyacencia · preferencia de planta · propiedades derivadas. Construido par a par sobre el catálogo de <code>relaciones_espaciales.md</code> y <code>niveles_plantas.md</code> del proyecto <code>housing_generator</code>.</div>
+</div>
+<div class="meta">
+<div><span>proyecto</span>housing_generator</div>
+<div><span>tipos</span>16</div>
+<div><span>pares</span>120</div>
+<div><span>escala</span>s/e</div>
+</div>
+</div>
+<div class="caveat">
+<b>⚠ nota de alcance</b> — "Obligatorio (cerca/lejos)" tiene validador real (<code>AdjacencyConstraintValidator</code>). "Preferencia (cerca/alejar)" también se aplica de verdad al generar (<code>SoftConstraintScorer</code>, distancia de saltos en el grafo real: cerca ≤2, alejar ≥3) — nunca a costa de una restricción obligatoria. "Condicional" no es un valor de este catálogo — es un marcador de una regla aparte (acceso de baño según nº de baños) que depende del <code>Program</code> real, no se puede expresar como par de tipos. La preferencia de planta (pestaña "Sección vertical") sí está implementada, incluido multi-planta con escalera y contorno progresivo.
   </div>
-
-  <div class="caveat">
-    <b>⚠ nota de alcance</b> — "Obligatorio (cerca/lejos)" tiene validador real (<code>AdjacencyConstraintValidator</code>). "Preferencia (cerca/alejar)" también se aplica de verdad al generar (<code>SoftConstraintScorer</code>, distancia de saltos en el grafo real: cerca ≤2, alejar ≥3) — nunca a costa de una restricción obligatoria. "Condicional" no es un valor de este catálogo — es un marcador de una regla aparte (acceso de baño según nº de baños) que depende del <code>Program</code> real, no se puede expresar como par de tipos. La preferencia de planta (pestaña "Sección vertical") sí está implementada, incluido multi-planta con escalera y contorno progresivo.
-  </div>
-
-  <div class="tabs">
-    <button class="tab active" data-tab="matrix"><span class="num">01</span>Matriz de adyacencia</button>
-    <button class="tab" data-tab="section"><span class="num">02</span>Sección vertical (plantas)</button>
-    <button class="tab" data-tab="synergy"><span class="num">03</span>Sinergias</button>
-    <button class="tab" data-tab="cards"><span class="num">04</span>Fichas por tipo</button>
-    <button class="tab" data-tab="plano"><span class="num">05</span>Visor de plano</button>
-    <button class="tab" data-tab="cronograma"><span class="num">06</span>Cronograma de obra</button>
-    <button class="tab" data-tab="catalogo"><span class="num">07</span>Catálogo constructivo</button>
-  </div>
-
-  <!-- ============ TAB: MATRIZ ============ -->
-  <div class="panel active" id="panel-matrix">
-    <div class="controls">
-      <input class="search" id="search-matrix" placeholder="Filtrar por tipo… (ej. cocina, garage, bathroom)">
-      <div class="legend" id="legend-matrix"></div>
-    </div>
-    <div class="matrix-scroll">
-      <table class="matrix" id="matrix-table"></table>
-    </div>
-    <div class="detail" id="detail-panel">
-      <div class="pair"><span id="detail-a"></span><span class="vs">×</span><span id="detail-b"></span></div>
-      <div class="tag" id="detail-tag"></div>
-      <div class="motivo" id="detail-motivo"></div>
-    </div>
-  </div>
-
-  <!-- ============ TAB: SECCION ============ -->
-  <div class="panel" id="panel-section">
-    <div class="auto-config-box">
-      <h3>Generar selección automática</h3>
-      <div class="auto-config-fields">
-        <label>Tipo de vivienda
+<div class="zonas-bar"><button class="zona-btn active" data-zona="diseno"><span class="zona-num">ZONA 1</span>Diseño<span class="zona-desc">Configurar y generar tu vivienda</span></button><button class="zona-btn" data-zona="consulta"><span class="zona-num">ZONA 2</span>Consulta<span class="zona-desc">Referencia normativa y de materiales</span></button><button class="zona-btn" data-zona="planificacion"><span class="zona-num">ZONA 3</span>Planificación<span class="zona-desc">Cronograma de ejecución de obra</span></button></div><div class="zona-panel active" id="zona-diseno"><div class="flow-indicator"><button class="tab flow-step active" data-tab="section"><span class="step-num">1</span>Programa y generación</button><span class="flow-arrow">→</span><button class="tab flow-step" data-tab="plano"><span class="step-num">2</span>Resultado (visor de plano)</button></div><div class="panel active" id="panel-section">
+<div class="auto-config-box">
+<h3>Generar selección automática</h3>
+<div class="auto-config-fields">
+<label>Tipo de vivienda
           <select id="auto-tipo-vivienda">
-            <option value="aislada">Aislada</option>
-            <option value="pareada">Pareada (1 medianera)</option>
-            <option value="adosada">Adosada (2 medianeras)</option>
-          </select>
-        </label>
-        <label>Dormitorios
-          <input type="number" id="auto-dormitorios" min="1" max="6" value="3">
-        </label>
-        <label>Plantas
+<option value="aislada">Aislada</option>
+<option value="pareada">Pareada (1 medianera)</option>
+<option value="adosada">Adosada (2 medianeras)</option>
+</select>
+</label>
+<label>Dormitorios
+          <input id="auto-dormitorios" max="6" min="1" type="number" value="3"/>
+</label>
+<label>Plantas
           <select id="auto-plantas">
-            <option value="1">1 (todo en planta baja)</option>
-            <option value="2" selected>2 (planta baja + superior)</option>
-          </select>
-        </label>
-        <button class="picker-btn" id="auto-apply">Generar selección</button>
-      </div>
-      <div class="auto-config-hint">
+<option value="1">1 (todo en planta baja)</option>
+<option selected="" value="2">2 (planta baja + superior)</option>
+</select>
+</label>
+<button class="picker-btn" id="auto-apply">Generar selección</button>
+</div>
+<div class="auto-config-hint">
         Reglas aplicadas: programa mínimo completo (salón, cocina, recibidor, lavadero, tendedero, almacén)
         + 1 dormitorio principal + (dormitorios−1) dormitorios normales + 1 baño (más 1 aseo si hay
         ≥3 dormitorios) + pasillo si hay 2 plantas (para que el baño de arriba tenga acceso general).
@@ -89,145 +60,146 @@
         estancias (solo aplica al generar de verdad con el CLI, vía <code>Lot.medianera_sides</code>)
         -- se guarda igualmente en la exportación como referencia para ese paso.
       </div>
-    </div>
-    <div class="controls">
-      <input class="search" id="search-section" placeholder="Filtrar por tipo…">
-      <button class="picker-btn primary" id="generate-now">generar plano ahora</button>
-      <button class="picker-btn" id="export-section">exportar selección (json)</button>
-      <button class="picker-btn" id="clear-section">vaciar selección</button>
-      <label class="areas-lock-toggle">
-        <input type="checkbox" id="areas-lock-checkbox">
+</div>
+<div class="controls">
+<input class="search" id="search-section" placeholder="Filtrar por tipo…"/>
+<button class="picker-btn primary" id="generate-now">generar plano ahora</button>
+<button class="picker-btn" id="export-section">exportar selección (json)</button>
+<button class="picker-btn" id="clear-section">vaciar selección</button>
+<label class="areas-lock-toggle">
+<input id="areas-lock-checkbox" type="checkbox"/>
         Permitir editar áreas manualmente (por defecto, bloqueadas al mínimo normativo)
       </label>
-      <span class="net-hint">clic en una estancia para activarla/desactivarla en esa planta</span>
+<span class="net-hint">clic en una estancia para activarla/desactivarla en esa planta</span>
+</div>
+<div class="generate-config" id="generate-config">
+<label>Parcela (m) <input id="gen-lot-w" min="4" step="0.5" type="number" value="14"/> × <input id="gen-lot-h" min="4" step="0.5" type="number" value="16"/></label>
+<label>Semilla <input id="gen-seed" min="1" step="1" type="number" value="1"/></label>
+<label>Iteraciones <input id="gen-iterations" min="500" step="500" type="number" value="4000"/></label>
+<label class="areas-lock-toggle"><input id="gen-accesible" type="checkbox"/> Vivienda accesible (Ø1.50m)</label>
+</div>
+<div class="generate-status" id="generate-status"></div>
+<div class="section-summary" id="section-summary"></div>
+<div class="section-wrap" id="section-wrap"></div>
+<div class="corridor-note">
+<b>Selección independiente por planta:</b> todas las estancias empiezan inactivas (mismo estilo, sin distinguir "principal" de "respaldo") — actívalas según lo que necesites en tu proyecto concreto. <b>Bajo cubierta</b> y <b>semisótano</b> incluyen aquí estancias adicionales a las de <code>niveles_plantas.md</code> (dormitorios/baño en bajo cubierta, despacho en semisótano) — uso práctico de esta herramienta, no una corrección del documento normativo. <b>CORRIDOR</b> aparece en todas las plantas (no tiene nivel propio, existe en cada una que tenga la vivienda).
+      <br/><br/><b>Para generar con esto:</b> tras exportar, <code>python -m housing_generator.interface.cli.main --import-seleccion seleccion_plantas.json --output edificio.json</code> — genera un edificio real con el generador Python (<code>docs/GUIA_USO.md</code> tiene más detalle, incluido cómo usarlo como librería).
+      <br/><br/><b>El campo de área se pone en rojo</b> si el valor declarado no alcanza el mínimo real de Tabla 1 (estancias, según su puesto por tamaño) o Tabla 2 (servicios, según subtipo) para el número TOTAL de estancias seleccionadas en todas las plantas -- se recalcula en vivo cada vez que añades o quitas una estancia, no es un valor fijo. Pasa el ratón por encima del campo para ver el mínimo exacto exigido.
     </div>
-    <div class="generate-config" id="generate-config">
-      <label>Parcela (m) <input type="number" id="gen-lot-w" value="14" min="4" step="0.5"> × <input type="number" id="gen-lot-h" value="16" min="4" step="0.5"></label>
-      <label>Semilla <input type="number" id="gen-seed" value="1" min="1" step="1"></label>
-      <label>Iteraciones <input type="number" id="gen-iterations" value="4000" min="500" step="500"></label>
-      <label class="areas-lock-toggle"><input type="checkbox" id="gen-accesible"> Vivienda accesible (Ø1.50m)</label>
-    </div>
-    <div class="generate-status" id="generate-status"></div>
-    <div class="section-summary" id="section-summary"></div>
-    <div class="section-wrap" id="section-wrap"></div>
-    <div class="corridor-note">
-      <b>Selección independiente por planta:</b> todas las estancias empiezan inactivas (mismo estilo, sin distinguir "principal" de "respaldo") — actívalas según lo que necesites en tu proyecto concreto. <b>Bajo cubierta</b> y <b>semisótano</b> incluyen aquí estancias adicionales a las de <code>niveles_plantas.md</code> (dormitorios/baño en bajo cubierta, despacho en semisótano) — uso práctico de esta herramienta, no una corrección del documento normativo. <b>CORRIDOR</b> aparece en todas las plantas (no tiene nivel propio, existe en cada una que tenga la vivienda).
-      <br><br><b>Para generar con esto:</b> tras exportar, <code>python -m housing_generator.interface.cli.main --import-seleccion seleccion_plantas.json --output edificio.json</code> — genera un edificio real con el generador Python (<code>docs/GUIA_USO.md</code> tiene más detalle, incluido cómo usarlo como librería).
-      <br><br><b>El campo de área se pone en rojo</b> si el valor declarado no alcanza el mínimo real de Tabla 1 (estancias, según su puesto por tamaño) o Tabla 2 (servicios, según subtipo) para el número TOTAL de estancias seleccionadas en todas las plantas -- se recalcula en vivo cada vez que añades o quitas una estancia, no es un valor fijo. Pasa el ratón por encima del campo para ver el mínimo exacto exigido.
-    </div>
-  </div>
-
-  <!-- ============ TAB: SINERGIAS ============ -->
-  <div class="panel" id="panel-synergy">
-    <div class="controls">
-      <div class="legend" id="legend-synergy"></div>
-      <button class="picker-btn" id="export-schedule">exportar tabla (csv)</button>
-    </div>
-    <div class="synergy-grid">
-      <div class="synergy-col">
-        <h4>Red de relaciones</h4>
-        <div class="net-filters" id="net-filters"></div>
-        <div class="net-wrap">
-          <svg id="net-svg" viewBox="0 0 620 620"></svg>
-        </div>
-        <div class="net-hint">Posición central = mayor rango en la suma de relaciones (más "necesario" en la red); posición periférica = menor rango. Clic en una estancia para resaltar solo sus relaciones.</div>
-      </div>
-      <div class="synergy-col">
-        <h4>Puntuación de sinergia por tipo</h4>
-        <div class="score-hint">Obligatorio cerca +3 · Ya cubierto +2 · Preferencia cerca +1 · Preferencia alejar −1 · Obligatorio lejos −3 (Neutro y Condicional no puntúan). Suma sobre sus 15 relaciones — cuanto más alto, más "central" en la red de preferencias.</div>
-        <div id="score-bars"></div>
-      </div>
-    </div>
-    <div class="rank-grid">
-      <div class="rank-col">
-        <h4>Top 5 sinergias más fuertes</h4>
-        <div id="rank-top"></div>
-      </div>
-      <div class="rank-col">
-        <h4>Top 5 tensiones más fuertes</h4>
-        <div id="rank-bottom"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ TAB: FICHAS ============ -->
-  <div class="panel" id="panel-cards">
-    <div class="controls">
-      <input class="search" id="search-cards" placeholder="Filtrar por tipo…">
-    </div>
-    <div class="cards" id="cards-wrap"></div>
-  </div>
-
-  <!-- ============ TAB: VISOR DE PLANO ============ -->
-  <div class="panel" id="panel-plano">
-    <div class="plano-sub">
+</div><div class="panel" id="panel-plano">
+<div class="plano-sub">
       Carga el JSON generado por el CLI (<code>--output layout.json</code>, o los
       varios <code>edificio_planta_*.json</code> de <code>--import-seleccion</code>)
       y dibuja la planta real, no solo las coordenadas. Todo se procesa en el propio
       navegador -- ningún archivo se sube a ningún sitio.
     </div>
-    <div class="plano-loader">
-      <input type="file" id="plano-file-input" accept=".json" multiple>
-      <span class="net-hint">Selecciona uno o varios JSON (uno por planta) -- se detecta automáticamente por nombre de archivo.</span>
-    </div>
-    <div class="floor-tabs" id="floor-tabs"></div>
-    <div class="mirror-controls" id="mirror-controls">
-      <span class="net-hint">Modo espejo (no vuelve a generar, solo transforma el dibujo -- conserva las adyacencias):</span>
-      <button class="picker-btn mirror-btn" id="mirror-h" title="Espejo horizontal">⇋ horizontal</button>
-      <button class="picker-btn mirror-btn" id="mirror-v" title="Espejo vertical">⇵ vertical</button>
-      <button class="picker-btn mirror-btn" id="mirror-rotate" title="Rotar 90°">↻ rotar 90°</button>
-      <button class="picker-btn" id="mirror-reset">restablecer</button>
-    </div>
-    <div id="plano-content">
-      <div class="plano-empty">Carga un archivo para ver la planta generada.</div>
-    </div>
-  <div class="panel" id="panel-cronograma">
-    <div class="caveat">
-      <b>⚠ nota de alcance</b> — esta pestaña NO estima duraciones por sí sola. No existe, que hayamos podido confirmar, una fuente pública con rendimientos de obra reales por fase (la <a href="https://www.observatoriodavivenda.gal/gl/utilidades/base-de-datos-da-construcion-de-galicia-bdc" target="_blank" rel="noopener">Base de datos da Construción de Galicia</a> es una herramienta oficial de precios/presupuestos, no de plazos). Introduce tú mismo las fases y su duración estimada -- esto solo las encadena y las dibuja.
-    </div>
-    <div class="controls">
-      <label class="areas-lock-toggle">Inicio de obra <input type="date" id="gantt-start-date"></label>
-    </div>
-    <div class="gantt-form">
-      <input type="text" id="gantt-fase-nombre" placeholder="Nombre de la fase (ej. Cimentación losa)">
-      <select id="gantt-fase-categoria"></select>
-      <input type="number" id="gantt-fase-duracion" placeholder="Duración (días)" min="1" value="7">
-      <button class="picker-btn primary" id="gantt-add-fase">añadir fase</button>
-    </div>
-    <div class="gantt-table-wrap">
-      <table class="gantt-table" id="gantt-table"><tbody></tbody></table>
-    </div>
-    <div id="gantt-chart-content">
-      <div class="plano-empty">Añade fases para ver el cronograma.</div>
-    </div>
-  <div class="panel" id="panel-catalogo">
-    <div class="caveat">
-      <b>⚠ nota de alcance</b> — composición extraída de las definiciones reales del <a href="https://www.codigotecnico.org/pdf/Programas/CEC/CAT-EC-v06.1_SEPBRE_09_Completo.pdf" target="_blank" rel="noopener">Catálogo de Elementos Constructivos del CTE</a> (oficial, Instituto Eduardo Torroja + CEPCO + AICIA). Subconjunto representativo (10 por categoría; 13 en puentes térmicos, lista real y cerrada del propio catálogo). Fachadas y cubiertas con materiales/espesores para cumplir el estándar <b>Passivhaus</b> (U 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K) -- estándar <b>voluntario</b> más exigente reconocido, no el mínimo legal (que sigue siendo el CTE). Forjados sin cambios: estructura intermedia sin salto térmico. Particiones interiores (verticales y horizontales) centradas en propiedades <b>acústicas</b>, no térmicas -- son interiores a la vivienda, no envolvente. Puentes térmicos: comparativa construcción estándar vs. Passivhaus (aislamiento continuo por el exterior, principio central del estándar), con valores Ψ de referencia real. Los valores U/Ψ están <b>calculados</b> con la física estándar y conductividades reales de cada material, no transcritos directamente de las tablas del documento original.
-    </div>
-    <div class="controls">
-      <button class="picker-btn cat-tab active" data-cat="fachadas">Fachadas</button>
-      <button class="picker-btn cat-tab" data-cat="cubiertas">Cubiertas</button>
-      <button class="picker-btn cat-tab" data-cat="forjados">Forjados</button>
-      <button class="picker-btn cat-tab" data-cat="huecos">Huecos (ventanas)</button>
-      <button class="picker-btn cat-tab" data-cat="particionesVerticales">Particiones verticales</button>
-      <button class="picker-btn cat-tab" data-cat="particionesHorizontales">Particiones horizontales</button>
-      <button class="picker-btn cat-tab" data-cat="puentesTermicos">Puentes térmicos</button>
-    </div>
-    <div class="catalogo-grid" id="catalogo-grid"></div>
-  </div>
-
+<div class="plano-loader">
+<input accept=".json" id="plano-file-input" multiple="" type="file"/>
+<span class="net-hint">Selecciona uno o varios JSON (uno por planta) -- se detecta automáticamente por nombre de archivo.</span>
+</div>
+<div class="floor-tabs" id="floor-tabs"></div>
+<div class="mirror-controls" id="mirror-controls">
+<span class="net-hint">Modo espejo (no vuelve a generar, solo transforma el dibujo -- conserva las adyacencias):</span>
+<button class="picker-btn mirror-btn" id="mirror-h" title="Espejo horizontal">⇋ horizontal</button>
+<button class="picker-btn mirror-btn" id="mirror-v" title="Espejo vertical">⇵ vertical</button>
+<button class="picker-btn mirror-btn" id="mirror-rotate" title="Rotar 90°">↻ rotar 90°</button>
+<button class="picker-btn" id="mirror-reset">restablecer</button>
+</div>
+<div id="plano-content">
+<div class="plano-empty">Carga un archivo para ver la planta generada.</div>
 </div>
 
-<script src="py_bundle.js"></script>
-<script src="js/00-shared.js"></script>
-<script src="js/01-matriz.js"></script>
-<script src="js/02-seccion.js"></script>
-<script src="js/03-fichas.js"></script>
-<script src="js/04-sinergias.js"></script>
-<script src="js/05-visor.js"></script>
-<script src="js/06-pyodide.js"></script>
-<script src="js/07-cronograma.js"></script>
-<script src="js/08-catalogo.js"></script>
-<script src="js/09-init.js"></script>
-</body>
+
+
+
+
+
+
+
+
+
+
+</div></div><div class="zona-panel" id="zona-consulta"><div class="subtabs-row"><button class="tab subtab active" data-tab="relaciones">Relaciones entre tipos</button><button class="tab subtab" data-tab="cards">Fichas por tipo</button><button class="tab subtab" data-tab="catalogo">Catálogo constructivo</button></div><div class="panel active" id="panel-relaciones"><div class="view-toggle"><button class="view-btn active" data-view="tabla">Vista tabla</button><button class="view-btn" data-view="red">Vista red</button></div><div class="relaciones-view active" id="view-tabla"><div id="panel-matrix-inner">
+<div class="controls">
+<input class="search" id="search-matrix" placeholder="Filtrar por tipo… (ej. cocina, garage, bathroom)"/>
+<div class="legend" id="legend-matrix"></div>
+</div>
+<div class="matrix-scroll">
+<table class="matrix" id="matrix-table"></table>
+</div>
+<div class="detail" id="detail-panel">
+<div class="pair"><span id="detail-a"></span><span class="vs">×</span><span id="detail-b"></span></div>
+<div class="tag" id="detail-tag"></div>
+<div class="motivo" id="detail-motivo"></div>
+</div>
+</div></div><div class="relaciones-view" id="view-red"><div id="panel-synergy-inner">
+<div class="controls">
+<div class="legend" id="legend-synergy"></div>
+<button class="picker-btn" id="export-schedule">exportar tabla (csv)</button>
+</div>
+<div class="synergy-grid">
+<div class="synergy-col">
+<h4>Red de relaciones</h4>
+<div class="net-filters" id="net-filters"></div>
+<div class="net-wrap">
+<svg id="net-svg" viewbox="0 0 620 620"></svg>
+</div>
+<div class="net-hint">Posición central = mayor rango en la suma de relaciones (más "necesario" en la red); posición periférica = menor rango. Clic en una estancia para resaltar solo sus relaciones.</div>
+</div>
+<div class="synergy-col">
+<h4>Puntuación de sinergia por tipo</h4>
+<div class="score-hint">Obligatorio cerca +3 · Ya cubierto +2 · Preferencia cerca +1 · Preferencia alejar −1 · Obligatorio lejos −3 (Neutro y Condicional no puntúan). Suma sobre sus 15 relaciones — cuanto más alto, más "central" en la red de preferencias.</div>
+<div id="score-bars"></div>
+</div>
+</div>
+<div class="rank-grid">
+<div class="rank-col">
+<h4>Top 5 sinergias más fuertes</h4>
+<div id="rank-top"></div>
+</div>
+<div class="rank-col">
+<h4>Top 5 tensiones más fuertes</h4>
+<div id="rank-bottom"></div>
+</div>
+</div>
+</div></div></div><div class="panel" id="panel-cards">
+<div class="controls">
+<input class="search" id="search-cards" placeholder="Filtrar por tipo…"/>
+</div>
+<div class="cards" id="cards-wrap"></div>
+</div><div class="panel" id="panel-catalogo">
+<div class="caveat">
+<b>⚠ nota de alcance</b> — composición extraída de las definiciones reales del <a href="https://www.codigotecnico.org/pdf/Programas/CEC/CAT-EC-v06.1_SEPBRE_09_Completo.pdf" rel="noopener" target="_blank">Catálogo de Elementos Constructivos del CTE</a> (oficial, Instituto Eduardo Torroja + CEPCO + AICIA). Subconjunto representativo (10 por categoría; 13 en puentes térmicos, lista real y cerrada del propio catálogo). Fachadas y cubiertas con materiales/espesores para cumplir el estándar <b>Passivhaus</b> (U 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K) -- estándar <b>voluntario</b> más exigente reconocido, no el mínimo legal (que sigue siendo el CTE). Forjados sin cambios: estructura intermedia sin salto térmico. Particiones interiores (verticales y horizontales) centradas en propiedades <b>acústicas</b>, no térmicas -- son interiores a la vivienda, no envolvente. Puentes térmicos: comparativa construcción estándar vs. Passivhaus (aislamiento continuo por el exterior, principio central del estándar), con valores Ψ de referencia real. Los valores U/Ψ están <b>calculados</b> con la física estándar y conductividades reales de cada material, no transcritos directamente de las tablas del documento original.
+    </div>
+<div class="controls">
+<button class="picker-btn cat-tab active" data-cat="fachadas">Fachadas</button>
+<button class="picker-btn cat-tab" data-cat="cubiertas">Cubiertas</button>
+<button class="picker-btn cat-tab" data-cat="forjados">Forjados</button>
+<button class="picker-btn cat-tab" data-cat="huecos">Huecos (ventanas)</button>
+<button class="picker-btn cat-tab" data-cat="particionesVerticales">Particiones verticales</button>
+<button class="picker-btn cat-tab" data-cat="particionesHorizontales">Particiones horizontales</button>
+<button class="picker-btn cat-tab" data-cat="puentesTermicos">Puentes térmicos</button>
+</div>
+<div class="catalogo-grid" id="catalogo-grid"></div>
+</div></div><div class="zona-panel" id="zona-planificacion"><div class="panel active" id="panel-cronograma">
+<div class="caveat">
+<b>⚠ nota de alcance</b> — esta pestaña NO estima duraciones por sí sola. No existe, que hayamos podido confirmar, una fuente pública con rendimientos de obra reales por fase (la <a href="https://www.observatoriodavivenda.gal/gl/utilidades/base-de-datos-da-construcion-de-galicia-bdc" rel="noopener" target="_blank">Base de datos da Construción de Galicia</a> es una herramienta oficial de precios/presupuestos, no de plazos). Introduce tú mismo las fases y su duración estimada -- esto solo las encadena y las dibuja.
+    </div>
+<div class="controls">
+<label class="areas-lock-toggle">Inicio de obra <input id="gantt-start-date" type="date"/></label>
+</div>
+<div class="gantt-form">
+<input id="gantt-fase-nombre" placeholder="Nombre de la fase (ej. Cimentación losa)" type="text"/>
+<select id="gantt-fase-categoria"></select>
+<input id="gantt-fase-duracion" min="1" placeholder="Duración (días)" type="number" value="7"/>
+<button class="picker-btn primary" id="gantt-add-fase">añadir fase</button>
+</div>
+<div class="gantt-table-wrap">
+<table class="gantt-table" id="gantt-table"><tbody></tbody></table>
+</div>
+<div id="gantt-chart-content">
+<div class="plano-empty">Añade fases para ver el cronograma.</div>
+</div>
+</div></div>
+</div><script src="py_bundle.js"></script><script src="js/00-shared.js"></script><script src="js/01-matriz.js"></script><script src="js/02-seccion.js"></script><script src="js/03-fichas.js"></script><script src="js/04-sinergias.js"></script><script src="js/05-visor.js"></script><script src="js/06-pyodide.js"></script><script src="js/07-cronograma.js"></script><script src="js/08-catalogo.js"></script><script src="js/09-init.js"></script></body>
 </html>

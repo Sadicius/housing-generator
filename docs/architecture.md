@@ -2790,3 +2790,59 @@ documento oficial.
   extendidos a cubiertas + verificación de que el valor Passivhaus es
   siempre menor que el estándar en los 13 puentes térmicos.
 - Suite final: 347 unitarios, pyflakes limpio.
+
+## [ARCH:zonas] Reestructuración de navegación por zonas
+
+A petición del usuario, tras un DAFO extremo del HTML/pestañas: la
+estructura plana de 7 pestañas mezclaba consulta, trabajo y
+visualización sin ninguna distinción, con orden puramente histórico
+(el de las sesiones en que se fueron añadiendo), un flujo real de
+generación partido en dos pestañas no contiguas (Sección → salto
+silencioso a Visor), y dos "islas" (Cronograma, Catálogo) sin ninguna
+relación estructural con el resto.
+
+- **3 zonas**: Diseño (Sección vertical + Visor de plano, presentados
+  como un flujo explícito de 2 pasos numerados, no un salto de pestaña
+  sorpresa), Consulta (Relaciones entre tipos + Fichas + Catálogo
+  constructivo), Planificación (Cronograma de obra, presentada
+  honestamente como herramienta aparte, no forzada a parecer
+  conectada).
+- **Matriz de adyacencia + Sinergias fusionadas** en una sola pestaña
+  "Relaciones entre tipos" con selector de vista (tabla/red) --
+  confirmado explícitamente con el usuario como decisión de contenido
+  separada de la reorganización de navegación. Ambos contenidos
+  originales conservados intactos, solo re-envueltos.
+- Extraído y reensamblado con BeautifulSoup (no regex/string
+  splicing a mano) para manipular HTML real de forma fiable.
+- **Bug real encontrado y corregido durante la propia reestructuración**:
+  los scripts clásicos se quedaron en su posición original (el final
+  de la estructura plana anterior) tras reordenar los paneles en
+  zonas -- como el reordenamiento dejó contenido real DESPUÉS de los
+  scripts en el documento, un navegador real habría fallado al
+  ejecutar código de nivel superior (`document.getElementById(...)`
+  en `09-init.js`) sobre elementos que todavía no existían en ese
+  punto del análisis del HTML. `jsdom` no lo detectó (analiza el
+  documento completo antes de ejecutar), así que se verificó también
+  con `wkhtmltoimage` (motor más estricto) tras corregirlo. Movidos
+  los 11 scripts locales al final real del `<body>`, con un test
+  permanente que impide que esto vuelva a pasar en silencio.
+- **Bug de estado real encontrado y corregido**: el manejador de clic
+  de pestañas anterior quitaba `active` de TODAS las pestañas y
+  paneles del documento globalmente, no solo del grupo relevante --
+  esto habría dejado zonas ya visitadas sin ningún panel activo al
+  volver a ellas. Corregido acotando el manejador al grupo
+  (`.flow-indicator` o `.subtabs-row`) más cercano del propio tab
+  pulsado. Verificado explícitamente con un test que visita varias
+  zonas/pestañas y confirma que el estado se conserva al volver.
+- También se limpiaron comentarios HTML huérfanos (marcadores de las
+  pestañas antiguas, sin nada a lo que apuntar tras el reordenamiento)
+  y se corrigió el orden de atributos de un `<link>` reformateado por
+  BeautifulSoup.
+- Verificado con `jsdom` (todas las zonas, subpestañas, selector de
+  vista, cronograma, modo espejo, salto automático al generar) y
+  `wkhtmltoimage` (captura real + confirmación cuantitativa de
+  píxeles).
+- Tests de sanidad reescritos: estructura de 3 zonas, fusión
+  Matriz+Sinergias con contenido conservado, posición correcta de
+  scripts respecto al contenido.
+- Suite final: 349 unitarios, pyflakes limpio.

@@ -1,5 +1,19 @@
 # Guía de uso — housing_generator
 
+## Estructura de navegación (3 zonas)
+
+El dashboard se organiza en 3 zonas, no en una fila plana de pestañas:
+
+- **Zona 1 — Diseño**: el flujo real de generación, en 2 pasos
+  explícitos -- *1. Programa y generación* (selección de estancias +
+  botón "generar plano ahora") → *2. Resultado* (visor de plano, modo
+  espejo).
+- **Zona 2 — Consulta**: referencia sin estado -- *Relaciones entre
+  tipos* (Matriz de adyacencia y Sinergias fusionadas, con selector de
+  vista tabla/red), *Fichas por tipo*, *Catálogo constructivo*.
+- **Zona 3 — Planificación**: *Cronograma de obra*, sola -- es una
+  herramienta aparte, no consume nada del generador.
+
 > Documento de referencia sobre **cómo usar** el proyecto. Para entender
 > cómo funciona por dentro, ver `docs/COMO_FUNCIONA.md`. Para el estado
 > de pendientes y decisiones históricas, ver `docs/CONTINUIDAD.md` y
