@@ -377,3 +377,13 @@ def test_scope_notes_moved_to_dedicated_panel_not_always_visible():
     # comprobado indirectamente: cada indicador enlaza a su ancla
     for ancla in ["nota-relaciones", "nota-catalogo", "nota-cronograma"]:
         assert f'data-nota="{ancla}"' in html, f"falta el indicador para {ancla}"
+
+
+def test_export_plano_generado_button_exists():
+    # a peticion del usuario, tras probar el flujo real: exportar la
+    # SELECCION (paso 1) y confundirla con el plano YA GENERADO
+    # causaba el error "falta rooms" al intentar recargarla. Este
+    # boton exporta el resultado real (rooms/doors/metadata) desde el
+    # propio visor, en un unico archivo consolidado.
+    html = _read(HTML_PATH)
+    assert 'id="export-plano"' in html

@@ -8,6 +8,31 @@ const PLANO_ZONE_LABEL = {day:'Día', night:'Noche', service:'Servicio', circula
 let LOADED_PLANS = [];   // [{label, data}], data = el JSON tal cual ({rooms, doors, metadata})
 let ACTIVE_PLAN = 0;
 
+function exportarPlanoGenerado(){
+  // formato consolidado UNICO (a diferencia de los edificio_planta_*.json
+  // del CLI, uno por planta) -- retomado tras una observacion real del
+  // usuario: exportar la SELECCION (entrada) desde el paso 1 y luego
+  // intentar cargarla en el visor confundia dos formatos JSON distintos
+  // con el mismo origen visual (el mismo boton "Exportar"). Este boton
+  // vive en el visor, exporta el RESULTADO ya generado (rooms/doors/
+  // metadata reales), listo para recargar directamente, sin pasar por
+  // el CLI. Ver [ARCH:exportar-plano-generado].
+  if(LOADED_PLANS.length === 0) return;
+
+  const floors = Object.fromEntries(LOADED_PLANS.map(p => [p.label, p.data]));
+  const payload = {floors};
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'plano_generado.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function labelForPlanFile(filename){
   const m = filename.match(/planta_(\w+)/i) || filename.match(/(sotano|semisotano|bajo_cubierta)/i);
   if(m) return m[0].replace(/_/g,' ').replace(/^\w/, c => c.toUpperCase());

@@ -86,6 +86,26 @@ document.getElementById('plano-file-input').addEventListener('change', async (ev
     return;
   }
 
+  // Formato consolidado unico (plano_generado.json, boton "exportar
+  // plano generado" del propio visor): un solo archivo con
+  // {"floors": {"<etiqueta>": {rooms, doors, metadata}, ...}} -- se
+  // detecta ANTES de la validacion multi-archivo de mas abajo, ya que
+  // este SI es valido aunque no tenga "rooms" en el nivel superior
+  // (esta un nivel mas adentro, por planta). Ver [ARCH:exportar-plano-generado].
+  if(loaded.length === 1 && loaded[0].data.floors && typeof loaded[0].data.floors === 'object'){
+    const floors = loaded[0].data.floors;
+    const entradas = Object.entries(floors);
+    const invalidas = entradas.filter(([, data]) => !Array.isArray(data.rooms));
+    if(invalidas.length === 0 && entradas.length > 0){
+      LOADED_PLANS = entradas.map(([label, data]) => ({label, data}));
+      ACTIVE_PLAN = 0;
+      PLANO_TRANSFORM = {mirrorH: false, mirrorV: false, rotation: 0};
+      renderPlanoTabs();
+      renderPlano();
+      return;
+    }
+  }
+
   // BUG REAL encontrado por el usuario probando de verdad: cargar
   // "seleccion_plantas.json" (la exportacion de la pestaña Sección
   // vertical -- tipos y cantidades, SIN geometria resuelta) en vez de
@@ -138,3 +158,4 @@ document.getElementById('mirror-reset').addEventListener('click', () => {
   setPlanoTransform({mirrorH: false, mirrorV: false, rotation: 0});
   updateMirrorButtonStates();
 });
+document.getElementById('export-plano').addEventListener('click', exportarPlanoGenerado);

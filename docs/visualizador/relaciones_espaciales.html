@@ -93,7 +93,7 @@
     </div>
 <div class="plano-loader">
 <input accept=".json" id="plano-file-input" multiple="" type="file"/>
-<span class="net-hint">Selecciona uno o varios JSON (uno por planta) -- se detecta automáticamente por nombre de archivo.</span>
+<span class="net-hint">Selecciona uno o varios JSON por planta (del CLI), o un único <code>plano_generado.json</code> (del botón "exportar plano generado" de aquí abajo) -- se detecta automáticamente.</span>
 </div>
 <div class="floor-tabs" id="floor-tabs"></div>
 <div class="mirror-controls" id="mirror-controls">
@@ -102,6 +102,7 @@
 <button class="picker-btn mirror-btn" id="mirror-v" title="Espejo vertical">⇵ vertical</button>
 <button class="picker-btn mirror-btn" id="mirror-rotate" title="Rotar 90°">↻ rotar 90°</button>
 <button class="picker-btn" id="mirror-reset">restablecer</button>
+<button class="picker-btn primary" id="export-plano" title="Exporta el resultado ya generado en un unico archivo, listo para recargar aqui mismo">exportar plano generado</button>
 </div>
 <div id="plano-content">
 <div class="plano-empty">Carga un archivo para ver la planta generada.</div>
