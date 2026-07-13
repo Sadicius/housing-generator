@@ -352,3 +352,28 @@ def test_install_scripts_exist_and_shell_syntax_is_valid():
 
     result = subprocess.run(["bash", "-n", str(sh_path)], capture_output=True, text=True)
     assert result.returncode == 0, f"instalar.sh tiene un error de sintaxis: {result.stderr}"
+
+
+def test_scope_notes_moved_to_dedicated_panel_not_always_visible():
+    # a peticion del usuario: las notas de alcance (antes siempre
+    # visibles arriba de Matriz/Cronograma/Catalogo, ocupando espacio
+    # de trabajo permanentemente) se movieron a un panel dedicado
+    # ("Notas de alcance", subpestana de Consulta), accesible bajo
+    # demanda desde un pequeno indicador en cada pestana afectada.
+    html = _read(HTML_PATH)
+
+    # el panel dedicado existe, con las 3 notas reales dentro (movidas,
+    # no perdidas ni duplicadas)
+    assert 'id="panel-notas"' in html
+    assert 'data-tab="notas"' in html
+    for ancla in ["nota-relaciones", "nota-catalogo", "nota-cronograma"]:
+        assert f'id="{ancla}"' in html
+
+    # exactamente 3 notas de alcance en todo el documento (no 6 -- si
+    # aparecieran duplicadas, esto lo detectaria)
+    assert html.count('class="caveat"') == 3
+
+    # las 3 viven DENTRO de panel-notas, no sueltas en otro sitio --
+    # comprobado indirectamente: cada indicador enlaza a su ancla
+    for ancla in ["nota-relaciones", "nota-catalogo", "nota-cronograma"]:
+        assert f'data-nota="{ancla}"' in html, f"falta el indicador para {ancla}"

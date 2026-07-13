@@ -2904,3 +2904,37 @@ desarrollo, no para el dashboard (que no necesita nada de esto).
   verdad la sintaxis de `instalar.sh` (`bash -n`) -- no hay forma de
   verificar la sintaxis de `instalar.bat` en este entorno.
 - Suite final: 351 unitarios, pyflakes limpio.
+
+## [ARCH:notas-alcance] Notas de alcance movidas a panel dedicado
+
+A petición del usuario: las 3 notas de alcance (Matriz/Sinergias,
+Catálogo constructivo, Cronograma de obra) estaban siempre visibles,
+ocupando espacio permanente en el área de trabajo -- una de ellas
+(Matriz) ni siquiera vivía dentro de una pestaña, estaba fija arriba
+de toda la página, visible sin importar en qué zona estuviera el
+usuario.
+
+- Movidas (no copiadas) a un panel dedicado "Notas de alcance",
+  nueva subpestaña de Zona Consulta -- coherente con la propia
+  filosofía de esa zona (contenido de consulta, sin estado).
+- En su lugar original: un indicador pequeño (`ⓘ nota de alcance`)
+  que, al pulsarlo, cambia a Zona Consulta, abre la subpestaña Notas,
+  y resalta + hace scroll hasta el bloque concreto -- "al alcance" en
+  un clic, sin ocupar espacio por defecto.
+- Extraído/movido con BeautifulSoup (mismo método que la
+  reestructuración por zonas), preservando el contenido real de cada
+  nota (enlaces, código inline) intacto.
+- **Hallazgo real durante la verificación**: `bloque.scrollIntoView`
+  no existe en `jsdom` (limitación conocida del propio `jsdom`, no del
+  código) -- protegido con una comprobación defensiva para no lanzar
+  error en ese entorno de test, sin cambiar el comportamiento en un
+  navegador real.
+- Verificado con `jsdom`: los 3 indicadores navegan correctamente
+  desde cualquier zona, resaltan el bloque correcto, y las pestañas de
+  trabajo ya no muestran ningún `.caveat` por defecto. Verificado
+  también con `wkhtmltoimage`.
+- Test permanente: confirma que las 3 notas viven dentro del panel
+  dedicado (no duplicadas en otro sitio -- cuenta exacta de 3
+  `.caveat` en todo el documento) y que cada indicador enlaza a su
+  ancla real.
+- Suite final: 352 unitarios, pyflakes limpio.

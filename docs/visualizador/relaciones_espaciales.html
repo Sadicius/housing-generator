@@ -25,10 +25,8 @@
 <div><span>escala</span>s/e</div>
 </div>
 </div>
-<div class="caveat">
-<b>⚠ nota de alcance</b> — "Obligatorio (cerca/lejos)" tiene validador real (<code>AdjacencyConstraintValidator</code>). "Preferencia (cerca/alejar)" también se aplica de verdad al generar (<code>SoftConstraintScorer</code>, distancia de saltos en el grafo real: cerca ≤2, alejar ≥3) — nunca a costa de una restricción obligatoria. "Condicional" no es un valor de este catálogo — es un marcador de una regla aparte (acceso de baño según nº de baños) que depende del <code>Program</code> real, no se puede expresar como par de tipos. La preferencia de planta (pestaña "Sección vertical") sí está implementada, incluido multi-planta con escalera y contorno progresivo.
-  </div>
-<div class="zonas-bar"><button class="zona-btn active" data-zona="diseno"><span class="zona-num">ZONA 1</span>Diseño<span class="zona-desc">Configurar y generar tu vivienda</span></button><button class="zona-btn" data-zona="consulta"><span class="zona-num">ZONA 2</span>Consulta<span class="zona-desc">Referencia normativa y de materiales</span></button><button class="zona-btn" data-zona="planificacion"><span class="zona-num">ZONA 3</span>Planificación<span class="zona-desc">Cronograma de ejecución de obra</span></button></div><div class="zona-panel active" id="zona-diseno"><div class="flow-indicator"><button class="tab flow-step active" data-tab="section"><span class="step-num">1</span>Programa y generación</button><span class="flow-arrow">→</span><button class="tab flow-step" data-tab="plano"><span class="step-num">2</span>Resultado (visor de plano)</button></div><div class="panel active" id="panel-section">
+
+<button class="nota-indicador" data-nota="nota-relaciones">ⓘ nota de alcance</button><div class="zonas-bar"><button class="zona-btn active" data-zona="diseno"><span class="zona-num">ZONA 1</span>Diseño<span class="zona-desc">Configurar y generar tu vivienda</span></button><button class="zona-btn" data-zona="consulta"><span class="zona-num">ZONA 2</span>Consulta<span class="zona-desc">Referencia normativa y de materiales</span></button><button class="zona-btn" data-zona="planificacion"><span class="zona-num">ZONA 3</span>Planificación<span class="zona-desc">Cronograma de ejecución de obra</span></button></div><div class="zona-panel active" id="zona-diseno"><div class="flow-indicator"><button class="tab flow-step active" data-tab="section"><span class="step-num">1</span>Programa y generación</button><span class="flow-arrow">→</span><button class="tab flow-step" data-tab="plano"><span class="step-num">2</span>Resultado (visor de plano)</button></div><div class="panel active" id="panel-section">
 <div class="auto-config-box">
 <h3>Generar selección automática</h3>
 <div class="auto-config-fields">
@@ -108,18 +106,7 @@
 <div id="plano-content">
 <div class="plano-empty">Carga un archivo para ver la planta generada.</div>
 </div>
-
-
-
-
-
-
-
-
-
-
-
-</div></div><div class="zona-panel" id="zona-consulta"><div class="subtabs-row"><button class="tab subtab active" data-tab="relaciones">Relaciones entre tipos</button><button class="tab subtab" data-tab="cards">Fichas por tipo</button><button class="tab subtab" data-tab="catalogo">Catálogo constructivo</button></div><div class="panel active" id="panel-relaciones"><div class="view-toggle"><button class="view-btn active" data-view="tabla">Vista tabla</button><button class="view-btn" data-view="red">Vista red</button></div><div class="relaciones-view active" id="view-tabla"><div id="panel-matrix-inner">
+</div></div><div class="zona-panel" id="zona-consulta"><div class="subtabs-row"><button class="tab subtab active" data-tab="relaciones">Relaciones entre tipos</button><button class="tab subtab" data-tab="cards">Fichas por tipo</button><button class="tab subtab" data-tab="catalogo">Catálogo constructivo</button><button class="tab subtab" data-tab="notas">Notas de alcance</button></div><div class="panel active" id="panel-relaciones"><div class="view-toggle"><button class="view-btn active" data-view="tabla">Vista tabla</button><button class="view-btn" data-view="red">Vista red</button></div><div class="relaciones-view active" id="view-tabla"><div id="panel-matrix-inner">
 <div class="controls">
 <input class="search" id="search-matrix" placeholder="Filtrar por tipo… (ej. cocina, garage, bathroom)"/>
 <div class="legend" id="legend-matrix"></div>
@@ -167,10 +154,8 @@
 <input class="search" id="search-cards" placeholder="Filtrar por tipo…"/>
 </div>
 <div class="cards" id="cards-wrap"></div>
-</div><div class="panel" id="panel-catalogo">
-<div class="caveat">
-<b>⚠ nota de alcance</b> — composición extraída de las definiciones reales del <a href="https://www.codigotecnico.org/pdf/Programas/CEC/CAT-EC-v06.1_SEPBRE_09_Completo.pdf" rel="noopener" target="_blank">Catálogo de Elementos Constructivos del CTE</a> (oficial, Instituto Eduardo Torroja + CEPCO + AICIA). Subconjunto representativo (10 por categoría; 13 en puentes térmicos, lista real y cerrada del propio catálogo). Fachadas y cubiertas con materiales/espesores para cumplir el estándar <b>Passivhaus</b> (U 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K) -- estándar <b>voluntario</b> más exigente reconocido, no el mínimo legal (que sigue siendo el CTE). Forjados sin cambios: estructura intermedia sin salto térmico. Particiones interiores (verticales y horizontales) centradas en propiedades <b>acústicas</b>, no térmicas -- son interiores a la vivienda, no envolvente. Puentes térmicos: comparativa construcción estándar vs. Passivhaus (aislamiento continuo por el exterior, principio central del estándar), con valores Ψ de referencia real. Los valores U/Ψ están <b>calculados</b> con la física estándar y conductividades reales de cada material, no transcritos directamente de las tablas del documento original.
-    </div>
+</div><div class="panel" id="panel-catalogo"><button class="nota-indicador" data-nota="nota-catalogo">ⓘ nota de alcance</button>
+
 <div class="controls">
 <button class="picker-btn cat-tab active" data-cat="fachadas">Fachadas</button>
 <button class="picker-btn cat-tab" data-cat="cubiertas">Cubiertas</button>
@@ -181,10 +166,14 @@
 <button class="picker-btn cat-tab" data-cat="puentesTermicos">Puentes térmicos</button>
 </div>
 <div class="catalogo-grid" id="catalogo-grid"></div>
-</div></div><div class="zona-panel" id="zona-planificacion"><div class="panel active" id="panel-cronograma">
-<div class="caveat">
+</div><div class="panel" id="panel-notas"><p class="notas-intro">Notas de alcance de todo el proyecto, reunidas aquí para no ocupar espacio en cada pestaña -- accede a ellas desde el indicador ⓘ en Matriz, Cronograma o Catálogo.</p><div class="nota-bloque" id="nota-relaciones"><div class="nota-bloque-titulo">Relaciones entre tipos</div><div class="caveat">
+<b>⚠ nota de alcance</b> — "Obligatorio (cerca/lejos)" tiene validador real (<code>AdjacencyConstraintValidator</code>). "Preferencia (cerca/alejar)" también se aplica de verdad al generar (<code>SoftConstraintScorer</code>, distancia de saltos en el grafo real: cerca ≤2, alejar ≥3) — nunca a costa de una restricción obligatoria. "Condicional" no es un valor de este catálogo — es un marcador de una regla aparte (acceso de baño según nº de baños) que depende del <code>Program</code> real, no se puede expresar como par de tipos. La preferencia de planta (pestaña "Sección vertical") sí está implementada, incluido multi-planta con escalera y contorno progresivo.
+  </div></div><div class="nota-bloque" id="nota-catalogo"><div class="nota-bloque-titulo">Catálogo constructivo</div><div class="caveat">
+<b>⚠ nota de alcance</b> — composición extraída de las definiciones reales del <a href="https://www.codigotecnico.org/pdf/Programas/CEC/CAT-EC-v06.1_SEPBRE_09_Completo.pdf" rel="noopener" target="_blank">Catálogo de Elementos Constructivos del CTE</a> (oficial, Instituto Eduardo Torroja + CEPCO + AICIA). Subconjunto representativo (10 por categoría; 13 en puentes térmicos, lista real y cerrada del propio catálogo). Fachadas y cubiertas con materiales/espesores para cumplir el estándar <b>Passivhaus</b> (U 0.10-0.15 W/m²K, Uw ventana ≤0.80 W/m²K) -- estándar <b>voluntario</b> más exigente reconocido, no el mínimo legal (que sigue siendo el CTE). Forjados sin cambios: estructura intermedia sin salto térmico. Particiones interiores (verticales y horizontales) centradas en propiedades <b>acústicas</b>, no térmicas -- son interiores a la vivienda, no envolvente. Puentes térmicos: comparativa construcción estándar vs. Passivhaus (aislamiento continuo por el exterior, principio central del estándar), con valores Ψ de referencia real. Los valores U/Ψ están <b>calculados</b> con la física estándar y conductividades reales de cada material, no transcritos directamente de las tablas del documento original.
+    </div></div><div class="nota-bloque" id="nota-cronograma"><div class="nota-bloque-titulo">Cronograma de obra</div><div class="caveat">
 <b>⚠ nota de alcance</b> — esta pestaña NO estima duraciones por sí sola. No existe, que hayamos podido confirmar, una fuente pública con rendimientos de obra reales por fase (la <a href="https://www.observatoriodavivenda.gal/gl/utilidades/base-de-datos-da-construcion-de-galicia-bdc" rel="noopener" target="_blank">Base de datos da Construción de Galicia</a> es una herramienta oficial de precios/presupuestos, no de plazos). Introduce tú mismo las fases y su duración estimada -- esto solo las encadena y las dibuja.
-    </div>
+    </div></div></div></div><div class="zona-panel" id="zona-planificacion"><div class="panel active" id="panel-cronograma"><button class="nota-indicador" data-nota="nota-cronograma">ⓘ nota de alcance</button>
+
 <div class="controls">
 <label class="areas-lock-toggle">Inicio de obra <input id="gantt-start-date" type="date"/></label>
 </div>

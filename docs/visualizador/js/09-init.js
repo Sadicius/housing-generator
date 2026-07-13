@@ -58,6 +58,17 @@ document.querySelectorAll('.view-btn').forEach(btn => {
   });
 });
 
+document.querySelectorAll('.nota-indicador').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelector('[data-zona="consulta"]').dispatchEvent(new Event('click', {bubbles:true}));
+    document.querySelector('[data-tab="notas"]').dispatchEvent(new Event('click', {bubbles:true}));
+    const bloque = document.getElementById(btn.dataset.nota);
+    document.querySelectorAll('.nota-bloque').forEach(b => b.classList.remove('highlight'));
+    bloque.classList.add('highlight');
+    if(bloque.scrollIntoView) bloque.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+});
+
 document.getElementById('search-matrix').addEventListener('input', e => filterMatrix(e.target.value));
 document.getElementById('search-section').addEventListener('input', e => filterSection(e.target.value));
 document.getElementById('search-cards').addEventListener('input', e => filterCards(e.target.value));

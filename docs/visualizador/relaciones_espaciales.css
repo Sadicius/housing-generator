@@ -540,3 +540,19 @@ table.matrix th.dim{opacity:.25;}
   .zona-btn{border-bottom:1px solid var(--line); border-left:3px solid transparent;}
   .zona-btn.active{border-bottom-color:var(--line); border-left-color:var(--terracota);}
 }
+
+/* ---------------- NOTAS DE ALCANCE (panel dedicado) ---------------- */
+.nota-indicador{
+  display:inline-flex; align-items:center; gap:6px; margin-bottom:14px; padding:6px 12px;
+  border:1px solid var(--line); background:transparent; color:var(--ink-faint);
+  font-family:'Space Mono',monospace; font-size:10.5px; cursor:pointer;
+}
+.nota-indicador:hover{border-color:var(--terracota); color:var(--terracota);}
+
+.notas-intro{font-family:'Archivo',sans-serif; font-size:12.5px; color:var(--ink-faint); margin:0 0 20px; line-height:1.6;}
+.nota-bloque{margin-bottom:20px;}
+.nota-bloque-titulo{
+  font-family:'Space Mono',monospace; font-size:10px; color:var(--terracota); text-transform:uppercase;
+  letter-spacing:0.05em; margin-bottom:8px;
+}
+.nota-bloque.highlight .caveat{border-color:var(--terracota);}
