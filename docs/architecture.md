@@ -2452,3 +2452,33 @@ exacta se confirmó que faltaban tres piezas enteras.
 Mapeo "estancia" → LIVING_ROOM: el decreto exige en otro apartado que
 exista "al menos una estancia mayor"; este proyecto ya adoptó como
 convención que la estancia mayor es siempre el salón.
+
+## [ARCH:espacio-acceso] EspacioAccesoValidator
+
+Numeración exacta incierta tras la renumeración del Decreto 128/2023
+(probablemente A.3.3 "Espacios de comunicación" en la versión
+vigente): cuadrado inscribible de 1.50m en contacto con la puerta de
+entrada. "En contacto con la puerta" NO se comprueba -- este proyecto
+no modela puertas/accesos (mismo hueco identificado en
+relaciones_espaciales.md). Documentado como alcance pendiente
+sistemático, no como aviso repetido caso a caso.
+
+Sin ENTRANCE_HALL en el programa, no aplica (la norma exime este caso
+cuando el acceso es directo a través de la estancia mayor -- ya
+cubierto por el mínimo de Tabla 1).
+
+## [ARCH:day-night-zoning] day_night_zoning_validator.py
+
+Zonificación día/noche: estancias de una misma zona deben quedar
+agrupadas, sin necesitar compartir pared (a diferencia de núcleo
+húmedo). Umbral según `nhv.lua` (evaluarZonificacionDiaNoche): 2 para
+ambas zonas.
+
+Bug real corregido: CORRIDOR y ENTRANCE_HALL son SpaceCategory.
+CIRCULACION pero tienen zone=DAY por defecto -- sin excluirlos, un
+pasillo junto a los dormitorios generaba una violación falsa de
+zonificación día, aunque cumpliera perfectamente su función de
+circulación hacia zona noche.
+
+Zonificación de servicio: NO existe en `nhv.lua` (solo cubre día/
+noche) -- extensión propia de este proyecto, marcada como tal.
