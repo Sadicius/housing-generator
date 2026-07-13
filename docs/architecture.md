@@ -2873,3 +2873,34 @@ mencionaba el dashboard en absoluto (documentaba solo el CLI).
   comprueba que TODOS los enlaces locales de `INICIO.html` apuntan a
   archivos que existen de verdad, no rutas rotas.
 - Suite final: 350 unitarios, pyflakes limpio.
+
+## [ARCH:instalar-scripts] instalar.sh / instalar.bat -- automatizar el entorno del CLI
+
+A petición del usuario, tras crear INICIO.html: los 3 pasos manuales
+de instalación del CLI (venv, activar, pip install) también merecían
+un solo paso -- aclarado explícitamente que esto es para el CLI/
+desarrollo, no para el dashboard (que no necesita nada de esto).
+
+- `instalar.sh` (Mac/Linux) e `instalar.bat` (Windows): idempotentes
+  (si `.venv` ya existe, lo reutilizan en vez de recrearlo), detectan
+  si Python está instalado con un mensaje de error claro si no,
+  imprimen las dos formas de usar el entorno después (activar vs.
+  llamar directamente sin activar).
+- **`instalar.sh` verificado de extremo a extremo**, no solo revisado:
+  ejecutado en una copia aislada del proyecto, confirmado que crea el
+  entorno, instala las dependencias correctas, y que el CLI + la suite
+  de tests (350 en ese momento) funcionan de verdad con ese entorno
+  recién creado. Confirmada también la idempotencia (segunda ejecución
+  reutiliza `.venv` sin recrearlo).
+- **`instalar.bat` NO se ha podido ejecutar** en este entorno (sin
+  Windows/cmd.exe disponibles) -- revisado a mano con cuidado siguiendo
+  convenciones estándar de batch, pero sin verificación de ejecución
+  real. Comunicado explícitamente esta limitación al usuario, no
+  presentado como "verificado" cuando no lo está.
+- `README.md` e `INICIO.html` actualizados mencionando los scripts
+  como opción para quien use el CLI, dejando claro que el dashboard no
+  los necesita.
+- Test permanente: confirma que ambos archivos existen, y verifica de
+  verdad la sintaxis de `instalar.sh` (`bash -n`) -- no hay forma de
+  verificar la sintaxis de `instalar.bat` en este entorno.
+- Suite final: 351 unitarios, pyflakes limpio.

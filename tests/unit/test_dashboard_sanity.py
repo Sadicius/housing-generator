@@ -334,3 +334,21 @@ def test_inicio_launcher_links_point_to_real_files():
 
     # el enlace principal debe apuntar al dashboard real, no a una copia
     assert 'href="docs/visualizador/relaciones_espaciales.html"' in html
+
+
+def test_install_scripts_exist_and_shell_syntax_is_valid():
+    # instalar.sh/instalar.bat automatizan venv+pip install para el CLI
+    # (no hace falta para el dashboard). La version .sh se verifica de
+    # verdad (bash -n, chequeo de sintaxis sin ejecutar) -- la .bat NO
+    # se puede verificar en este entorno (sin Windows/cmd.exe
+    # disponibles), revisada a mano con cuidado pero sin ejecucion real.
+    import subprocess
+
+    root = Path(__file__).parents[2]
+    sh_path = root / "instalar.sh"
+    bat_path = root / "instalar.bat"
+    assert sh_path.exists(), "instalar.sh deberia existir en la raiz del proyecto"
+    assert bat_path.exists(), "instalar.bat deberia existir en la raiz del proyecto"
+
+    result = subprocess.run(["bash", "-n", str(sh_path)], capture_output=True, text=True)
+    assert result.returncode == 0, f"instalar.sh tiene un error de sintaxis: {result.stderr}"

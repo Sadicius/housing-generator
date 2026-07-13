@@ -19,6 +19,13 @@ para automatización o desarrollo, no hace falta para uso normal.
 
 ## Instalación (solo para desarrollo o uso por CLI)
 
+Automática (recomendado): ejecuta **`instalar.sh`** (Mac/Linux) o
+**`instalar.bat`** (Windows, doble clic) desde la raíz del proyecto --
+crea el entorno virtual e instala todo. Es idempotente, puedes
+ejecutarlo de nuevo sin problema si algo cambia.
+
+Manual, si prefieres hacerlo tú mismo:
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
