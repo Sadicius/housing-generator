@@ -2846,3 +2846,30 @@ relación estructural con el resto.
   Matriz+Sinergias con contenido conservado, posición correcta de
   scripts respecto al contenido.
 - Suite final: 349 unitarios, pyflakes limpio.
+
+## [ARCH:inicio-launcher] INICIO.html -- punto de entrada del proyecto
+
+A petición del usuario: un archivo único para "iniciar todo", dado que
+el dashboard real vive en una ruta anidada
+(`docs/visualizador/relaciones_espaciales.html`) y el README no
+mencionaba el dashboard en absoluto (documentaba solo el CLI).
+
+- `INICIO.html` en la raíz del proyecto -- se abre con doble clic,
+  mismo patrón "sin servidor" que el resto (reutiliza
+  `docs/visualizador/relaciones_espaciales.css` vía ruta relativa,
+  misma estética cianotipo).
+- Enlace principal al dashboard real, resumen de las 3 zonas, y
+  enlaces a toda la documentación (`GUIA_USO.md`, `COMO_FUNCIONA.md`,
+  `architecture.md`, `CONTINUIDAD.md`, `README.md`) con una nota
+  honesta: los `.md` pueden descargarse en vez de mostrarse según la
+  configuración del navegador, no es un fallo del archivo.
+- `README.md` actualizado: el dashboard pasa a presentarse como la
+  forma principal de uso (generación real vía Pyodide, sin instalar
+  Python), el CLI queda como opción para desarrollo/automatización,
+  no como el único camino documentado.
+- Verificado con `wkhtmltoimage` desde la raíz real del proyecto
+  (confirmación cuantitativa de píxeles: el CSS real cargó
+  correctamente por la ruta relativa) y con un test permanente que
+  comprueba que TODOS los enlaces locales de `INICIO.html` apuntan a
+  archivos que existen de verdad, no rutas rotas.
+- Suite final: 350 unitarios, pyflakes limpio.

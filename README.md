@@ -5,7 +5,19 @@ y organización por adyacencias, construido con **arquitectura hexagonal
 (ports & adapters)** para permitir intercambiar algoritmos de generación
 (slicing simple, CSP, genético, ML) sin tocar la lógica de dominio.
 
-## Instalación
+## Empezar aquí
+
+Abre **[`INICIO.html`](INICIO.html)** con doble clic -- es el punto de
+entrada del proyecto, con acceso al dashboard interactivo (generación real
+en el propio navegador, sin instalar nada) y a toda la documentación.
+
+El dashboard (`docs/visualizador/relaciones_espaciales.html`) es la forma
+principal de usar el proyecto: interfaz completa con generación real vía
+Pyodide (Python compilado a WebAssembly, corriendo en el navegador), sin
+necesitar Python instalado localmente ni servidor. El CLI de abajo es útil
+para automatización o desarrollo, no hace falta para uso normal.
+
+## Instalación (solo para desarrollo o uso por CLI)
 
 ```bash
 python -m venv .venv

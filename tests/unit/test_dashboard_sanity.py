@@ -315,3 +315,22 @@ def test_pyodide_bundle_is_not_stale_against_the_real_source():
         "el bundle embebido (py_bundle.js) de bridge.py esta DESACTUALIZADO respecto al "
         "codigo fuente real -- ejecutar: python scripts/regenerar_bundle_pyodide.py"
     )
+
+
+def test_inicio_launcher_links_point_to_real_files():
+    # INICIO.html en la raiz del proyecto es el punto de entrada --
+    # confirma que sus enlaces (dashboard real + documentacion) apuntan
+    # a archivos que de verdad existen, no rutas rotas.
+    root = Path(__file__).parents[2]
+    inicio_path = root / "INICIO.html"
+    assert inicio_path.exists(), "INICIO.html deberia existir en la raiz del proyecto"
+
+    html = inicio_path.read_text(encoding="utf-8")
+    hrefs = re.findall(r'href="([^"]+)"', html)
+    rutas_locales = [h for h in hrefs if not h.startswith("http")]
+    assert rutas_locales, "INICIO.html no tiene ningun enlace local"
+    for ruta in rutas_locales:
+        assert (root / ruta).exists(), f"INICIO.html enlaza a '{ruta}', que no existe"
+
+    # el enlace principal debe apuntar al dashboard real, no a una copia
+    assert 'href="docs/visualizador/relaciones_espaciales.html"' in html

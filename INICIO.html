@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>housing_generator — inicio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="docs/visualizador/relaciones_espaciales.css">
+<style>
+  body{margin:0; padding:40px 24px; background:var(--bg); min-height:100vh; box-sizing:border-box;}
+  .inicio-wrap{max-width:760px; margin:0 auto;}
+  .inicio-hero{border:1px solid var(--line); background:var(--bg-panel); padding:36px 40px; position:relative;}
+  .inicio-hero::before{content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--terracota);}
+  .inicio-eyebrow{font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.08em; color:var(--terracota); text-transform:uppercase; margin-bottom:10px;}
+  .inicio-hero h1{font-family:'Space Grotesk',sans-serif; font-size:32px; font-weight:700; color:var(--ink); margin:0 0 14px;}
+  .inicio-hero p{font-family:'Archivo',sans-serif; font-size:14px; line-height:1.6; color:var(--ink-dim); margin:0;}
+
+  .inicio-cta{
+    display:block; margin-top:28px; padding:18px 24px; background:var(--terracota); color:var(--bg);
+    text-align:center; text-decoration:none; font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600;
+    border:none; cursor:pointer;
+  }
+  .inicio-cta:hover{background:var(--oxido);}
+  .inicio-cta .cta-sub{display:block; font-family:'Space Mono',monospace; font-size:11px; font-weight:400; margin-top:4px; opacity:0.85;}
+
+  .inicio-zonas{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); margin-top:1px; border:1px solid var(--line);}
+  .inicio-zona{background:var(--bg-panel-2); padding:16px 18px;}
+  .inicio-zona .zn{font-family:'Space Mono',monospace; font-size:9.5px; color:var(--terracota); text-transform:uppercase; letter-spacing:0.05em;}
+  .inicio-zona h3{font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:var(--ink); margin:4px 0 6px;}
+  .inicio-zona p{font-family:'Archivo',sans-serif; font-size:11.5px; color:var(--ink-faint); margin:0; line-height:1.5;}
+
+  .inicio-docs{margin-top:32px;}
+  .inicio-docs h4{font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px;}
+  .inicio-doclist{display:flex; flex-direction:column; gap:2px;}
+  .inicio-doclink{
+    display:flex; justify-content:space-between; gap:12px; padding:11px 16px; background:var(--bg-panel);
+    border:1px solid var(--line); color:var(--ink-dim); text-decoration:none; font-family:'Archivo',sans-serif; font-size:12.5px;
+  }
+  .inicio-doclink:hover{border-color:var(--terracota); color:var(--ink);}
+  .inicio-doclink .doc-desc{font-family:'Space Mono',monospace; font-size:10.5px; color:var(--ink-faint);}
+
+  .inicio-req{margin-top:28px; padding:14px 18px; border:1px dashed var(--line); font-family:'Archivo',sans-serif; font-size:11.5px; color:var(--ink-faint); line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="inicio-wrap">
+
+  <div class="inicio-hero">
+    <div class="inicio-eyebrow">housing_generator</div>
+    <h1>Generador de plantas de vivienda</h1>
+    <p>Sistema generativo de plantas residenciales, con validación normativa real (Decreto 29/2010 de Galicia) y generación real en el propio navegador. Este es el punto de entrada del proyecto.</p>
+
+    <a class="inicio-cta" href="docs/visualizador/relaciones_espaciales.html">
+      Abrir el generador
+      <span class="cta-sub">docs/visualizador/relaciones_espaciales.html</span>
+    </a>
+  </div>
+
+  <div class="inicio-zonas">
+    <div class="inicio-zona">
+      <div class="zn">Zona 1</div>
+      <h3>Diseño</h3>
+      <p>Configura el programa de la vivienda y genera el plano real.</p>
+    </div>
+    <div class="inicio-zona">
+      <div class="zn">Zona 2</div>
+      <h3>Consulta</h3>
+      <p>Relaciones entre tipos, fichas y catálogo constructivo.</p>
+    </div>
+    <div class="inicio-zona">
+      <div class="zn">Zona 3</div>
+      <h3>Planificación</h3>
+      <p>Cronograma de ejecución de obra.</p>
+    </div>
+  </div>
+
+  <div class="inicio-docs">
+    <h4>Documentación</h4>
+    <div class="inicio-doclist">
+      <a class="inicio-doclink" href="docs/GUIA_USO.md"><span>Guía de uso</span><span class="doc-desc">cómo usar cada zona</span></a>
+      <a class="inicio-doclink" href="docs/COMO_FUNCIONA.md"><span>Cómo funciona</span><span class="doc-desc">arquitectura interna</span></a>
+      <a class="inicio-doclink" href="docs/architecture.md"><span>Referencia técnica</span><span class="doc-desc">decisiones documentadas, [ARCH:tag]</span></a>
+      <a class="inicio-doclink" href="docs/CONTINUIDAD.md"><span>Continuidad</span><span class="doc-desc">pendientes reales</span></a>
+      <a class="inicio-doclink" href="README.md"><span>README</span><span class="doc-desc">instalación y CLI</span></a>
+    </div>
+  </div>
+
+  <div class="inicio-req">
+    Los enlaces de documentación son archivos <code>.md</code> -- tu navegador puede
+    ofrecer descargarlos en vez de mostrarlos, según su configuración; ábrelos con
+    cualquier editor de texto o visor de Markdown si es así. El generador
+    (<code>relaciones_espaciales.html</code>) se abre directamente, sin instalar nada
+    ni necesitar conexión salvo para la generación real en el navegador (Pyodide, vía CDN).
+  </div>
+
+</div>
+</body>
+</html>
