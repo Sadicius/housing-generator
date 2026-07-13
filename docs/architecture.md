@@ -2383,3 +2383,32 @@ Regla deliberadamente simple: un par tiene puerta si y solo si hay
 realmente los colocó adyacentes. El umbral de MUST_BE_NEAR (1.0m) ya
 se eligió específicamente "para que quepa una puerta" -- este grafo
 hace explícito lo que ese umbral ya representaba implícitamente.
+
+## [ARCH:servicio-minimum-area] ServicioMinimumAreaValidator
+
+Tabla 2 (A.3.2.2): superficie mínima por tipo de servicio, según
+número de estancias de la vivienda. "aseo" no aparece como clave
+hasta 4 estancias -- fiel al original, no un olvido (con menos, la
+norma no exige aseo independiente).
+
+Alcance: "cocina integrada" y "trastero" (B.2.5, regla fija) NO se
+comprueban aquí -- tienen sus propios validadores dedicados
+(`CocinaIntegradaValidator`, `TrasteroMinimumAreaValidator`).
+`total_num_estancias_override`: mismo motivo que
+`EstanciaMinimumAreaValidator`, edificio completo en multi-planta.
+
+## [ARCH:escalera-alineacion] EscaleraAlineacionValidator
+
+Confirmado por investigación externa (Infinigen Indoors 2024, apéndice
+D.5 "Adding staircases"): calcula la intersección de la huella de
+escalera en plantas consecutivas, rechaza si no intersecan lo
+suficiente. Adaptado a nuestra arquitectura (plantas generadas
+independientes, no búsqueda conjunta): la planta de abajo se genera
+primero, su escalera resuelta se pasa como referencia FIJA al validar
+la planta de arriba -- restricción dura más dentro del mismo recocido,
+sin necesitar un tipo de movimiento nuevo.
+
+Bug real corregido: `floor_below_exists=True, reference_boundary=None`
+(hay planta inferior, pero sin escalera declarada) se trataba antes
+igual que "no hay planta inferior" -- dejaba pasar una escalera que no
+conecta con la planta de abajo, sin detectarlo.

@@ -4,13 +4,7 @@ from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import SpaceCategory
 
-# Tabla 2 (A.3.2.2 en nhv.lua / Decreto 29/2010): superficie util minima
-# por TIPO DE SERVICIO, segun el numero de estancias de la vivienda (no
-# el tamano del servicio en si). Portado literalmente de la fuente
-# normativa. "aseo" no aparece como clave hasta 4 estancias -- eso es
-# fiel al original, no un olvido: con menos de 4 estancias la norma no
-# exige un aseo independiente, asi que si el programa declara uno de
-# todas formas, no hay minimo que comprobar (ver nota en el validador).
+# Tabla 2 (A.3.2.2). Ver [ARCH:servicio-minimum-area].
 TABLA_2: Dict[int, Dict[str, float]] = {
     1: {"cocina": 5, "bano": 5, "lavadero": 1.5, "tendedero": 1.5, "almacenamiento": 1},
     2: {"cocina": 7, "bano": 5, "lavadero": 1.5, "tendedero": 1.5, "almacenamiento": 2},
@@ -34,24 +28,9 @@ def tabla_servicios_para(num_estancias: int) -> Dict[str, float]:
 
 
 class ServicioMinimumAreaValidator(ConstraintValidatorPort):
-    """Tabla 2: superficie minima por tipo de servicio (cocina, bano,
-    aseo, lavadero, tendedero, almacenamiento), segun el numero de
-    estancias de la vivienda.
-
-    NOTA DE ALCANCE: "cocina integrada en estancia mayor" (superficie
-    combinada distinta) y "trastero" B.2.5 (regla fija de 4.00m2,
-    distinta de "almacenamiento") NO se comprueban en ESTE validador --
-    pero SÍ están cubiertas, cada una en su propio validador dedicado
-    (`CocinaIntegradaValidator`, `TrasteroMinimumAreaValidator`),
-    construidos en incrementos posteriores a como se escribió
-    originalmente esta nota. No son pendientes: son piezas propias,
-    exactamente como esta nota anticipaba que deberían resolverse.
-
-    `total_num_estancias_override`: mismo motivo que en
-    `EstanciaMinimumAreaValidator` -- para vivienda MULTI-PLANTA, Tabla 2
-    depende del numero de estancias del EDIFICIO COMPLETO, no solo de
-    las de esta planta.
-    """
+    """Tabla 2: superficie mínima por tipo de servicio (cocina, baño,
+    aseo, lavadero, tendedero, almacenamiento), según número de
+    estancias. Ver [ARCH:servicio-minimum-area]."""
 
     def __init__(self, total_num_estancias_override: Optional[int] = None):
         self._total_override = total_num_estancias_override
@@ -66,10 +45,7 @@ class ServicioMinimumAreaValidator(ConstraintValidatorPort):
             if room.service_subtype is None:
                 continue
             if room.integrated_in_largest_room:
-                # cocina integrada: se valida con CocinaIntegradaValidator
-                # (superficie combinada con la estancia mayor), no aqui --
-                # misma exclusion que en nhv.lua (`not e.integradaEnEstanciaMayor`).
-                continue
+                continue  # se valida en CocinaIntegradaValidator
             minimo = tabla.get(room.service_subtype)
             if minimo is None:
                 continue
