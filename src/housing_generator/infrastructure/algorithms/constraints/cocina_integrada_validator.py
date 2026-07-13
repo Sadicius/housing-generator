@@ -11,50 +11,22 @@ from housing_generator.infrastructure.algorithms.constraints.servicio_minimum_ar
     tabla_servicios_para,
 )
 
-# A.3.2.2 / nhv.lua (validarCocinaIntegrada): cuando la cocina se abre en
-# un unico espacio con la estancia mayor (caso tipico de un estudio), la
-# superficie minima del CONJUNTO es la SUMA de los minimos de cada pieza
-# por separado (Tabla 1 para la estancia mayor + Tabla 2 para la cocina,
-# cada una segun el numero de estancias) -- no un numero fijo propio.
-# Ademas exige una apertura vertical minima de relacion entre ambas.
+# A.3.2.2 / nhv.lua (validarCocinaIntegrada): superficie minima del
+# CONJUNTO = suma de minimos de cada pieza. Ver [ARCH:cocina-integrada].
 APERTURA_VERTICAL_MIN_M2 = 3.5
 
 
 class CocinaIntegradaValidator(ConstraintValidatorPort):
     """Valida la cocina integrada en la estancia mayor (RoomType.KITCHEN
-    con `integrated_in_largest_room=True`).
-
-    Fiel al comportamiento de la fuente, con tres casos distintos:
-    - Si NO hay ninguna cocina marcada como integrada: la funcion NO
-      APLICA -- lista vacia, sin avisos. Esto es distinto de "no
-      verificable": simplemente no es un caso relevante para este
-      programa.
-    - Si hay cocina integrada pero no hay salon (`RoomType.LIVING_ROOM`)
-      en el programa: AVISO (no se puede determinar la estancia mayor).
-    - Si hay ambos: se comprueba la superficie combinada (violacion si
-      no alcanza el minimo) y la apertura vertical (violacion si es
-      insuficiente; AVISO si no se declaro, nunca aprobacion silenciosa).
-
-    `total_num_estancias_override`: **[RESUELTO]** bug real encontrado en
-    auditoria de logica -- este validador NUNCA recibio el mismo arreglo
-    multi-planta que sus dos primos (`EstanciaMinimumAreaValidator`,
-    `ServicioMinimumAreaValidator`). Sin esto, en un edificio de 2
-    plantas con cocina integrada abajo y dormitorios arriba (el caso
-    normal), `num_estancias` solo contaba las estancias de ESTA planta,
-    aplicando una fila de Tabla 1/2 mas baja de la real -- podia APROBAR
-    SILENCIOSAMENTE una superficie combinada realmente insuficiente para
-    el edificio completo. `None` (por defecto, caso de una sola planta)
-    preserva el comportamiento anterior exacto."""
+    con `integrated_in_largest_room=True`): sin cocina integrada, no
+    aplica; con cocina pero sin salón, aviso; con ambos, comprueba
+    superficie combinada + apertura vertical. Ver [ARCH:cocina-integrada].
+    """
 
     def __init__(self, total_num_estancias_override: Optional[int] = None):
         self._total_override = total_num_estancias_override
 
     def validate(self, layout: Layout) -> ValidationResult:
-        # Refactor por complejidad (radon cc: 16, "C" -- el mas alto del
-        # proyecto junto a EstanciaMinimumAreaValidator, mismo tratamiento
-        # aplicado alli): este metodo hacia DOS cosas independientes a la
-        # vez (superficie combinada, apertura vertical). Separado en dos
-        # metodos con responsabilidad unica, sin cambiar el comportamiento.
         cocina = next(
             (r for r in layout.rooms if r.room_type == RoomType.KITCHEN and r.integrated_in_largest_room),
             None,

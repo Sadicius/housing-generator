@@ -5,20 +5,7 @@ from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import AdjacencyStrength
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 
-# Diseno ya decidido en relaciones_espaciales.md, sin conectar hasta
-# ahora -- primer punto retomado de docs/CONTINUIDAD.md. Investigacion
-# externa confirmada (curriculum-based course timetabling, arxiv
-# 1409.7186): la tecnica estandar para combinar restricciones duras y
-# blandas en una funcion de coste de recocido simulado es una SUMA
-# PONDERADA, con un peso grande para lo duro (parametro del algoritmo,
-# no derivado de una formula) y pesos pequenos especificos por tipo de
-# restriccion blanda -- exactamente el patron aplicado aqui, no una
-# tecnica inventada sin precedente.
-#
-# Metrica: saltos en el grafo de adyacencia REAL (misma fuente que
-# nucleo humedo/zonificacion/topologia de pasillo -- GeometryAdjacencyGraphBuilder,
-# con su cache ya corregida), NO el grafo de puertas disperso ni
-# contacto geometrico directo -- decision ya tomada y documentada.
+# Ver [ARCH:soft-constraint-scorer].
 TARGET_CERCA_SALTOS = 2
 TARGET_ALEJAR_SALTOS = 3
 PESO_CERCA_NO_SATISFECHO = 1.0
@@ -26,18 +13,9 @@ PESO_ALEJAR_NO_SATISFECHO = 1.0
 
 
 class SoftConstraintScorer:
-    """Calcula la penalizacion blanda (SHOULD_BE_NEAR/SHOULD_BE_AWAY,
-    "Preferencia cerca/alejar" del catalogo) de un Layout, para sumarla
-    a las violaciones duras en la funcion objetivo del recocido
-    simulado. Nunca genera una ValidationResult ni bloquea nada -- es
-    puramente un numero a minimizar, subordinado siempre a las
-    restricciones duras (ver SimulatedAnnealingLayoutGenerator._score).
-
-    Si `adjacency_requirements` no contiene ningun SHOULD_BE_NEAR/
-    SHOULD_BE_AWAY, `score()` siempre devuelve 0 -- inerte por
-    completo, no cambia el comportamiento de programas que solo
-    declaran restricciones duras (compatibilidad hacia atras real, no
-    solo de interfaz)."""
+    """Calcula la penalización blanda de un Layout, para sumarla a las
+    violaciones duras en la función objetivo del recocido -- nunca
+    bloquea nada. Ver [ARCH:soft-constraint-scorer]."""
 
     def __init__(
         self,
@@ -59,17 +37,8 @@ class SoftConstraintScorer:
 
         for req in self._soft_requirements:
             if req.room_a_id not in graph or req.room_b_id not in graph:
-                # Solo dispara si la estancia NO esta colocada (is_placed
-                # excluida por GeometryAdjacencyGraphBuilder.build()) --
-                # una estancia colocada pero totalmente AISLADA (sin
-                # ninguna pared compartida) SI aparece como nodo en el
-                # grafo (add_node se llama para toda estancia colocada,
-                # tenga o no aristas), asi que ese caso NO entra aqui:
-                # se resuelve mas abajo via distance=inf (nx.has_path
-                # devuelve False si no hay ninguna arista), con el mismo
-                # resultado final. Comentario corregido en auditoria --
-                # el anterior atribuia el caso "aislada" a esta rama por
-                # error, aunque el resultado numerico ya era correcto.
+                # solo dispara si la estancia no esta colocada. Ver
+                # [ARCH:soft-constraint-scorer].
                 if req.strength == AdjacencyStrength.SHOULD_BE_NEAR:
                     penalty += PESO_CERCA_NO_SATISFECHO
                 continue

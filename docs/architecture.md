@@ -2265,3 +2265,39 @@ completamente distinto que reutilizó la misma dirección, en silencio.
 Corregido guardando una REFERENCIA real al objeto (no solo su id):
 mientras la referencia esté viva, Python no puede reutilizar esa
 memoria.
+
+## [ARCH:cocina-integrada] CocinaIntegradaValidator
+
+Cocina abierta en un único espacio con la estancia mayor: la
+superficie mínima del conjunto es la SUMA de los mínimos de cada
+pieza por separado (Tabla 1 + Tabla 2), no un número fijo propio. Tres
+casos: sin cocina integrada declarada = no aplica (lista vacía, no es
+"no verificable"); con cocina pero sin salón = aviso; con ambos = se
+comprueba superficie combinada + apertura vertical mínima.
+
+`total_num_estancias_override`: bug real corregido -- este validador
+nunca recibió el mismo arreglo multi-planta que sus dos primos
+(`EstanciaMinimumAreaValidator`, `ServicioMinimumAreaValidator`). Sin
+esto, en un edificio de 2 plantas podía aprobar silenciosamente una
+superficie combinada insuficiente para el edificio completo.
+
+## [ARCH:soft-constraint-scorer] SoftConstraintScorer
+
+Penalización blanda (SHOULD_BE_NEAR/SHOULD_BE_AWAY) para sumar a las
+violaciones duras en la función objetivo del recocido -- nunca
+bloquea nada, subordinada siempre a lo duro. Técnica confirmada por
+investigación externa (curriculum-based course timetabling, arxiv
+1409.7186): suma ponderada con peso grande para lo duro, pesos
+pequeños por tipo de restricción blanda. Métrica: saltos en el grafo
+de adyacencia real (misma fuente que núcleo húmedo/zonificación), no
+grafo de puertas ni contacto directo.
+
+Si no hay ningún SHOULD_BE_NEAR/SHOULD_BE_AWAY declarado, `score()`
+siempre devuelve 0 -- inerte, no cambia el comportamiento de
+programas que solo declaran restricciones duras.
+
+El caso "estancia no colocada" (`room_id not in graph`) solo dispara
+si la estancia no está colocada -- una estancia colocada pero
+totalmente aislada (sin ninguna pared compartida) SÍ aparece como
+nodo, así que ese caso se resuelve más abajo vía `distance=inf`,
+mismo resultado final.
