@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Union
 import networkx as nx
 from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
 from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
@@ -12,14 +12,16 @@ class GroupingConstraintValidator(ConstraintValidatorPort):
     distancia (paredes a cruzar) ≤ `max_distance` entre sí, sobre el
     grafo de adyacencia real. Mecanismo genérico: sirve tanto para
     núcleo húmedo como para zonificación día/noche/servicio, solo
-    cambian los parámetros.
+    cambian los parámetros. `max_distance` puede ser un entero fijo, o
+    una función del número de miembros del grupo (para exigencias que
+    se relajan con grupos más grandes -- ver [ARCH:nucleo-humedo-distancia]).
     """
 
     def __init__(
         self,
         graph_builder: AdjacencyGraphBuilderPort,
         predicate: Callable[[Room], bool],
-        max_distance: int,
+        max_distance: Union[int, Callable[[int], int]],
         label: str,
     ):
         self._graph_builder = graph_builder
@@ -30,6 +32,7 @@ class GroupingConstraintValidator(ConstraintValidatorPort):
     def validate(self, layout: Layout) -> ValidationResult:
         graph = self._graph_builder.build(layout)
         members = [r.id for r in layout.rooms if r.is_placed and self._predicate(r)]
+        max_distance = self._max_distance(len(members)) if callable(self._max_distance) else self._max_distance
 
         violations: List[str] = []
         for i, room_a_id in enumerate(members):
@@ -40,10 +43,10 @@ class GroupingConstraintValidator(ConstraintValidatorPort):
                         f"'{room_a_id}' y '{room_b_id}' ({self._label}) no estan conectadas "
                         f"en el grafo de adyacencia real"
                     )
-                elif distance > self._max_distance:
+                elif distance > max_distance:
                     violations.append(
                         f"'{room_a_id}' y '{room_b_id}' ({self._label}) estan a distancia "
-                        f"{distance}, por encima del maximo permitido ({self._max_distance})"
+                        f"{distance}, por encima del maximo permitido ({max_distance})"
                     )
         return ValidationResult(violations=violations)
 

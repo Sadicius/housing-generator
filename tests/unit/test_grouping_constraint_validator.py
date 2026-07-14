@@ -87,3 +87,22 @@ def test_grouping_ignores_rooms_not_matching_predicate():
     )
 
     assert validator.validate(layout).violations == []
+
+
+def test_max_distance_can_be_a_function_of_group_size():
+    # max_distance como funcion del numero de miembros del grupo -- no
+    # solo un entero fijo. Ver [ARCH:nucleo-humedo-distancia].
+    a = _placed_room("a", RoomType.LIVING_ROOM, box(0, 0, 3, 3))
+    b = _placed_room("b", RoomType.BEDROOM, box(3, 0, 6, 3))    # toca a, distancia 1
+    c = _placed_room("c", RoomType.KITCHEN, box(6, 0, 9, 3))    # toca b, a queda a distancia 2
+
+    layout = Layout(lot=_dummy_lot(), rooms=[a, b, c], zones=[])
+
+    # con 3 miembros, permite distancia 2; con menos, exige distancia 1
+    validator = GroupingConstraintValidator(
+        graph_builder=GeometryAdjacencyGraphBuilder(),
+        predicate=lambda r: True,
+        max_distance=lambda n: 2 if n >= 3 else 1,
+        label="test",
+    )
+    assert validator.validate(layout).violations == []
