@@ -259,15 +259,15 @@ generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
-**Re-buscar semillas tras el arreglo de área objetivo + huella
-construible** ([ARCH:area-objetivo]): el problema de raíz está
-confirmado resuelto (ninguna violación restante es ya de desviación
-de área), pero varios fixtures de tests de integración y el programa
-de ejemplo del CLI (`build_sample_program`/`build_sample_lot`, 11
-estancias con varias restricciones de adyacencia estrictas
-simultáneas) no convergieron con las semillas por defecto dentro del
-tiempo disponible. Necesita una búsqueda de semillas más extensa (o
-más iteraciones) que la que cupo en esa sesión.
+**Escenario complejo (11 estancias, 6 adyacencias simultáneas) sigue
+sin converger** ([ARCH:area-objetivo-acumulada]): tras 3 rondas de
+diagnóstico por aislamiento de variables (bug real en BanoAcceso,
+distancia graduada de núcleo húmedo, movimiento reset_ratio), el
+CARÁCTER del problema cambió por completo -- ya no son desviaciones
+de área masivas, son las 6 restricciones de adyacencia simultáneas
++ proporciones ajustadas. Pendiente: búsqueda de semillas más extensa,
+o valorar si necesita un movimiento dedicado de "acercar hacia
+adyacencia pendiente" para el recocido simulado.
 
 **Modo espejo no transforma todavía el VACÍO** ([ARCH:area-objetivo]):
 el visor omite dibujar la zona de vacío si el plano está transformado
