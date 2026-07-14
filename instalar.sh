@@ -1,6 +1,6 @@
 #!/bin/bash
 # Instala el entorno de Python para el CLI de housing_generator --
-# NO hace falta para usar el dashboard (docs/visualizador/
+# NO hace falta para usar el dashboard (html/
 # relaciones_espaciales.html), que no necesita instalar nada. Esto es
 # solo para desarrollo o uso del CLI (python -m housing_generator...).
 #

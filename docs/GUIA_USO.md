@@ -260,7 +260,7 @@ proyecto.
 
 ## Ver el resultado como un plano real
 
-Pestaña "Visor de plano" de `docs/visualizador/relaciones_espaciales.html`
+Pestaña "Visor de plano" de `html/relaciones_espaciales.html`
 (el mismo dashboard de siempre, no un archivo aparte) — carga el JSON
 que genera el CLI (`--output layout.json`, o los varios
 `edificio_planta_*.json` de `--import-seleccion`) y dibuja la planta
@@ -276,7 +276,7 @@ uno por su nombre de archivo y las muestra como pestañas.
 
 ## El dashboard interactivo
 
-`docs/visualizador/relaciones_espaciales.html` — se abre directamente
+`html/relaciones_espaciales.html` — se abre directamente
 en un navegador, sin instalar nada. Permite explorar:
 - La matriz de 120 pares de relaciones espaciales entre tipos de estancia
 - Qué tipos de estancia son habituales en cada planta
@@ -355,7 +355,7 @@ consecutivas antes de rendirse (`--retry-seeds`, ver más abajo).
 
 ## Estructura del dashboard (13 archivos, no 1)
 
-`docs/visualizador/` tiene: `relaciones_espaciales.html` (estructura),
+`html/` tiene: `relaciones_espaciales.html` (estructura),
 `.css` (estilos), `py_bundle.js` (código Python embebido para
 Pyodide), y `js/` con 10 archivos, uno por pestaña/concepto
 (`00-shared.js` con los datos y utilidades comunes, `01-matriz.js`...

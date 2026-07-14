@@ -3278,3 +3278,37 @@ completa encontrada en esta sesión -- documentado como tal en
   movimientos sobre nodos internos evitan subárboles completamente
   bloqueados.
 - Suite final: 381 unitarios, pyflakes y mypy limpios (83 archivos).
+
+## [ARCH:reorganizacion-docs] Fase 1: mover docs/visualizador a html/
+
+A petición del usuario, tras revisar cómo organizan su documentación
+otros proyectos reales (ox_lib de Overextended, rsg-docs) para
+inspirar una reorganización propia: separar claramente "la aplicación
+en sí" de "documentación sobre el proyecto" -- `docs/visualizador/`
+pasa a ser `html/`, en la raíz del proyecto, al mismo nivel que `src/`
+y `tests/`.
+
+- Movido con `git mv` (preserva el historial de cada archivo).
+- Como todo dentro de la carpeta usa rutas relativas entre sí
+  (CSS/JS/bundle referenciándose unos a otros), mover la carpeta
+  entera no rompió nada internamente -- solo hubo que actualizar las
+  referencias que apuntan HACIA ella desde fuera: `INICIO.html`,
+  `README.md`, `scripts/regenerar_bundle_pyodide.py` (ruta de
+  salida del bundle), `tests/unit/test_dashboard_sanity.py`
+  (`VISUALIZADOR_DIR`), `docs/CONTINUIDAD.md`, `docs/GUIA_USO.md`,
+  `instalar.sh`, y un comentario en `domain/enums.py`.
+- De paso, corregido un "5 pestañas" obsoleto en `CONTINUIDAD.md`
+  (ya son 7, en 3 zonas) que apareció al revisar esa misma línea.
+- Las 6 menciones a la ruta antigua que quedan en `architecture.md`
+  (histórico cronológico) se dejan intactas a propósito -- describen
+  fielmente la estructura que existía en ese momento de la sesión, no
+  deben reescribirse.
+- Verificado con `jsdom` (dashboard completo funcional desde la nueva
+  ruta) y `wkhtmltoimage` (INICIO.html carga el CSS real
+  correctamente desde la raíz). Bundle Pyodide regenerado en la
+  nueva ubicación.
+- Suite final: 381 unitarios, todos los tests de sanidad del
+  dashboard actualizados y en verde.
+
+Fase 2 (reorganización de `docs/` en carpetas temáticas) documentada
+por separado, en curso.

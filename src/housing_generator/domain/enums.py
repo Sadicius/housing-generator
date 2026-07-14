@@ -127,7 +127,7 @@ DEFAULT_SERVICE_SUBTYPE = {
 # [ARCH:enums].
 #
 # DISPLAY_NAMES debe coincidir EXACTAMENTE con DISPLAY en
-# docs/visualizador/js/00-shared.js -- ver [ARCH:enums].
+# html/js/00-shared.js -- ver [ARCH:enums].
 DISPLAY_NAMES = {
     RoomType.LIVING_ROOM: "Salón",
     RoomType.DINING_ROOM: "Comedor",

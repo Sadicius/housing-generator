@@ -10,7 +10,7 @@ import json
 import re
 from pathlib import Path
 
-VISUALIZADOR_DIR = Path(__file__).parents[2] / "docs" / "visualizador"
+VISUALIZADOR_DIR = Path(__file__).parents[2] / "html"
 HTML_PATH = VISUALIZADOR_DIR / "relaciones_espaciales.html"
 CSS_PATH = VISUALIZADOR_DIR / "relaciones_espaciales.css"
 JS_DIR = VISUALIZADOR_DIR / "js"
@@ -333,7 +333,7 @@ def test_inicio_launcher_links_point_to_real_files():
         assert (root / ruta).exists(), f"INICIO.html enlaza a '{ruta}', que no existe"
 
     # el enlace principal debe apuntar al dashboard real, no a una copia
-    assert 'href="docs/visualizador/relaciones_espaciales.html"' in html
+    assert 'href="html/relaciones_espaciales.html"' in html
 
 
 def test_install_scripts_exist_and_shell_syntax_is_valid():

@@ -18,7 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 SRC = ROOT / "src"
-PY_BUNDLE_JS = ROOT / "docs" / "visualizador" / "py_bundle.js"
+PY_BUNDLE_JS = ROOT / "html" / "py_bundle.js"
 
 
 def build_bundle() -> dict:

@@ -149,8 +149,8 @@ docs/
   relaciones_espaciales.md   catálogo de 120 pares de adyacencia + huecos de modelo
   niveles_plantas.md         niveles, escalera (CTE DB-SUA 1), bajantes
 
-docs/visualizador/relaciones_espaciales.html   dashboard standalone (5 pestañas,
-                                                 incluido el Visor de plano)
+html/relaciones_espaciales.html                dashboard standalone (7 pestañas
+                                                 en 3 zonas, incluido el Visor de plano)
 ```
 
 Para entender el estado real, **`docs/architecture.md` es la fuente de verdad**
