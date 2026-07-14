@@ -6,7 +6,7 @@ from housing_generator.domain.enums import RoomType
 from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
 
 # CTE DB-SUA 1, escalera de uso restringido (confirmado, ver
-# docs/niveles_plantas.md) -- 0.80m, no el de uso general (1.00-1.20m).
+# docs/fuentes/niveles_plantas.md) -- 0.80m, no el de uso general (1.00-1.20m).
 ESCALERA_ANCHO_LIBRE_MIN_M = 0.80
 
 

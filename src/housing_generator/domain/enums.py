@@ -170,7 +170,7 @@ DEFAULT_MIN_EXTERIOR_SIDES = {
 
 
 # Niveles/plantas de una vivienda -- formaliza como enum lo que hasta
-# ahora solo vivia como texto en docs/niveles_plantas.md y en el
+# ahora solo vivia como texto en docs/fuentes/niveles_plantas.md y en el
 # dashboard (JS). SOTANO=-2 ... BAJO_CUBIERTA=4 permite comparar
 # "por encima/por debajo de" con < > directamente sobre el valor.
 class NivelPlanta(str, Enum):

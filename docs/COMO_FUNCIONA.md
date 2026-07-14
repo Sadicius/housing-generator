@@ -3,7 +3,7 @@
 > Documento de referencia sobre el funcionamiento interno del sistema,
 > tal como está **hoy**. Para instrucciones de uso, ver
 > `docs/GUIA_USO.md`. Para el porqué de cada decisión y su historial,
-> ver `docs/architecture.md` (log cronológico) — este documento no
+> ver `docs/historico/architecture.md` (log cronológico) — este documento no
 > repite ese razonamiento, solo describe el resultado actual.
 
 ## Qué hace el sistema
@@ -164,7 +164,7 @@ por planta, contando las 4 de `GroupingConstraintValidator`).
 
 `domain/services/type_adjacency_catalog.py`: 120 pares únicos entre los
 16 `RoomType` no-circulación, clasificados en 5 categorías
-(`docs/relaciones_espaciales.md` tiene el detalle completo con motivo
+(`docs/fuentes/relaciones_espaciales.md` tiene el detalle completo con motivo
 de cada relación). 82 de esas 120 tienen una entrada ejecutable en
 `DEFAULT_TYPE_ADJACENCY`; las 38 restantes son "Neutro" (sin entrada,
 ausencia = sin requisito) o se resuelven con lógica propia

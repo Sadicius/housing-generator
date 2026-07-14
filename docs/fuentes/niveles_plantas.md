@@ -85,7 +85,7 @@ recorrido en zigzag por la vivienda.
 conectado a `GenerateBuildingUseCase`. Comprueba solape en planta con
 alguna húmeda de la planta inmediatamente inferior YA RESUELTA (pasada
 como referencia fija a la búsqueda de la planta actual). Ver
-`docs/architecture.md`, sección "Multi-planta: primer incremento real".
+`docs/historico/architecture.md`, sección "Multi-planta: primer incremento real".
 
 ## Escalera (conexión entre plantas)
 
@@ -93,7 +93,7 @@ como referencia fija a la búsqueda de la planta actual). Ver
 añadido al dominio + `EscaleraAlineacionValidator` (huella con >=90% de
 solape entre plantas consecutivas, referencia fija a la planta inferior
 ya resuelta) + `EscaleraAnchoLibreValidator` (0.80m, ancho libre uso
-restringido). Ver `docs/architecture.md`, sección "Multi-planta: primer
+restringido). Ver `docs/historico/architecture.md`, sección "Multi-planta: primer
 incremento real".
 
 **Dimensiones — CONFIRMADO por CTE DB-SUA 1** (investigación
@@ -132,7 +132,7 @@ otro -- no se modela como volumen 3D con altura de paso propia).
 
 ## Auditoría de coherencia entre documentos (encontrado, sin resolver)
 
-**Actualizado tras implementar multi-planta real (ver `docs/architecture.md`,
+**Actualizado tras implementar multi-planta real (ver `docs/historico/architecture.md`,
 secciones "Multi-planta: primer incremento real" y "Catálogo de 120
 pares formalizado")**: las tres tensiones de abajo ya NO "dependen de
 tener multi-planta" -- multi-planta existe. La 1 y la 3 siguen sin
@@ -193,7 +193,7 @@ entre reglas que hoy viven en documentos/validadores separados):
 > tiempo (mismo problema encontrado en `architecture.md` y
 > `relaciones_espaciales.md` -- ver la convención en `CONTINUIDAD.md`).
 
-Todo lo siguiente está **[RESUELTO]**, ver `docs/architecture.md`
+Todo lo siguiente está **[RESUELTO]**, ver `docs/historico/architecture.md`
 sección "Multi-planta: primer incremento real" para el detalle:
 - `Building` (nueva entidad) agrupa varias `Layout`, una por planta.
 - `Room.level` (`NivelPlanta`) formaliza el nivel de cada estancia.
@@ -209,7 +209,7 @@ sección "Multi-planta: primer incremento real" para el detalle:
 - **[RESUELTO]** Contorno edificable reducido progresivamente planta a
   planta (`Lot.retranqueo_incremento_por_planta_m`, opcional -- `None`
   por defecto preserva el comportamiento anterior de mismo contorno
-  para todas). Ver `docs/architecture.md`, sección "Dos pendientes
+  para todas). Ver `docs/historico/architecture.md`, sección "Dos pendientes
   resueltos: catálogo automático conectado + contorno progresivo".
 
 **Lo único que sigue sin implementar de verdad**: geometría de

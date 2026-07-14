@@ -307,7 +307,7 @@ CORRIDOR (Preferencia cerca).
   entrada de catálogo -- `BanoAccesoGeneralValidator`.
 - **[RESUELTO]** Los tres huecos de modelo (acceso/puertas, topología
   de paso/terminal, cardinalidad) están todos resueltos -- ver las
-  secciones de este documento y `docs/architecture.md`.
+  secciones de este documento y `docs/historico/architecture.md`.
 - El "grafo de burbujas" del dashboard que se mencionaba aquí como
   paso intermedio fue ELIMINADO en una ronda posterior -- sustituido
   por selección directa de estancias en la pestaña de sección vertical,

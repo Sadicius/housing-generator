@@ -1,5 +1,5 @@
 """Comprobaciones de sanidad sobre el dashboard (HTML/CSS/JS/bundle,
-ahora en 4 archivos separados -- ver docs/architecture.md, sección de
+ahora en 4 archivos separados -- ver docs/historico/architecture.md, sección de
 la separación de archivos), ejecutables con pytest normal (sin
 necesitar Node/navegador). Cierran huecos reales encontrados durante
 la sesión que nunca se convirtieron en test permanente, aplicando la
@@ -398,3 +398,21 @@ def test_vacio_shape_rendering_exists():
     assert "vacio-shape" in content
     css = _read(CSS_PATH)
     assert ".vacio-shape" in css
+
+
+def test_docs_readme_links_point_to_real_files():
+    # docs/README.md es el indice de toda la reorganizacion por temas
+    # -- confirma que sus enlaces (locales, no http) apuntan a archivos
+    # que existen de verdad, mismo patron que test_inicio_launcher.
+    import re
+    root = Path(__file__).parents[2]
+    readme_path = root / "docs" / "README.md"
+    assert readme_path.exists()
+
+    content = readme_path.read_text(encoding="utf-8")
+    links = re.findall(r"\]\(([^)]+)\)", content)
+    locales = [link for link in links if not link.startswith("http")]
+    assert locales, "docs/README.md no tiene ningun enlace local"
+    for link in locales:
+        resolved = (root / "docs" / link).resolve()
+        assert resolved.exists(), f"docs/README.md enlaza a '{link}', que no existe"

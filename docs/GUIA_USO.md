@@ -17,7 +17,7 @@ El dashboard se organiza en 3 zonas, no en una fila plana de pestañas:
 > Documento de referencia sobre **cómo usar** el proyecto. Para entender
 > cómo funciona por dentro, ver `docs/COMO_FUNCIONA.md`. Para el estado
 > de pendientes y decisiones históricas, ver `docs/CONTINUIDAD.md` y
-> `docs/architecture.md`.
+> `docs/historico/architecture.md`.
 
 ## Instalación
 

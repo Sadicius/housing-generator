@@ -2,9 +2,9 @@
 
 > Este documento existe para que una conversación nueva (sin el historial de
 > esta) pueda retomar el trabajo sin perder contexto. Los docs técnicos
-> detallados siguen en `docs/architecture.md` (decisiones + auditorías),
-> `docs/relaciones_espaciales.md` (catálogo de 120 pares + huecos de modelo)
-> y `docs/niveles_plantas.md` (niveles, escalera, bajantes). Este documento
+> detallados siguen en `docs/historico/architecture.md` (decisiones + auditorías),
+> `docs/fuentes/relaciones_espaciales.md` (catálogo de 120 pares + huecos de modelo)
+> y `docs/fuentes/niveles_plantas.md` (niveles, escalera, bajantes). Este documento
 > es un resumen de alto nivel para orientarse rápido, no un sustituto de esos.
 >
 > Para USAR el proyecto (CLI, API Python, ejemplos verificados), ver
@@ -143,20 +143,32 @@ src/housing_generator/
   interface/cli/     punto de entrada de línea de comandos
 
 docs/
+  README.md                  índice de toda la documentación, empezar aquí
   GUIA_USO.md                como usar el proyecto (CLI, API Python, ejemplos verificados)
   COMO_FUNCIONA.md           arquitectura y algoritmo, estado actual
-  architecture.md            decisiones + auditorías, en orden cronológico
-  relaciones_espaciales.md   catálogo de 120 pares de adyacencia + huecos de modelo
-  niveles_plantas.md         niveles, escalera (CTE DB-SUA 1), bajantes
+  CONTINUIDAD.md              este archivo -- pendientes reales
+  historico/architecture.md   decisiones + auditorías, en orden cronológico (append-only)
+  referencia/                 la misma info que architecture.md, pero consolidada por TEMA
+    generador/                 partición, huella construible, área objetivo, bloqueo progresivo
+    validadores/                los 20+ validadores, agrupados por que exigencia comparten
+    infraestructura/            composition root, enums, geometría, persistencia
+    dashboard/                  zonas, cronograma, catálogo constructivo, lanzador
+  fuentes/
+    relaciones_espaciales.md   catálogo de 120 pares de adyacencia + huecos de modelo
+    niveles_plantas.md         niveles, escalera (CTE DB-SUA 1), bajantes
+  calidad/
+    fitness-functions.md       comprobaciones automaticas y continuas (p.ej. codigo muerto)
 
 html/relaciones_espaciales.html                dashboard standalone (7 pestañas
                                                  en 3 zonas, incluido el Visor de plano)
 ```
 
-Para entender el estado real, **`docs/architecture.md` es la fuente de verdad**
+Para entender el estado real, **`docs/historico/architecture.md` es la fuente de verdad**
 — cada sección nueva se añadió cronológicamente con lo que se decidió, lo que
 se encontró roto, y por qué. Merece la pena leerlo entero antes de tocar nada
-grande.
+grande. Para buscar una decisión CONCRETA rápido sin leer todo el histórico,
+`docs/referencia/` tiene la misma información consolidada por tema -- busca la
+etiqueta `[ARCH:tag]` con `grep -rn "ARCH:tag" docs/`.
 
 ## Los 21 validadores normativos/prácticos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
 
@@ -198,7 +210,7 @@ ya resuelta a la siguiente. `RoomType.STAIRCASE` conecta plantas.
 **[RESUELTO]** El contorno edificable puede reducirse progresivamente
 planta a planta (`Lot.retranqueo_incremento_por_planta_m`, opcional --
 `None` por defecto preserva el comportamiento de mismo contorno para
-todas). Ver `docs/architecture.md`.
+todas). Ver `docs/historico/architecture.md`.
 
 ## Los tres huecos de modelo originales — TODOS resueltos
 
@@ -308,7 +320,7 @@ real (`cdn.jsdelivr.net`) está bloqueado en este entorno de trabajo, así
 que la carga real de `shapely` dentro del navegador NUNCA se probó de
 extremo a extremo. Alta confianza en que funcione (documentación
 oficial con fecha, no una suposición), pero sigue siendo, técnicamente,
-sin confirmar en el escenario real. Ver `docs/architecture.md`, sección
+sin confirmar en el escenario real. Ver `docs/historico/architecture.md`, sección
 "Generador real en el navegador (Pyodide)".
 
 **[INVESTIGADO, no es un hueco genuino] Zona de desembarco de
@@ -329,7 +341,7 @@ cubierta en espíritu por `PasilloTopologiaValidator` +
 Auditoría de flujo completo realizada a petición del usuario (recopilar
 fallos/huecos de flujo, no solo bugs sueltos). El hallazgo #1
 (`tipo_vivienda` sin conectar) ya está RESUELTO -- ver
-`docs/architecture.md`. El hueco de fondo (no había forma de generar
+`docs/historico/architecture.md`. El hueco de fondo (no había forma de generar
 sin salir a una terminal) también está RESUELTO -- ver la sección de
 Pyodide arriba. Quedan estos, por orden de cómo se listaron:
 

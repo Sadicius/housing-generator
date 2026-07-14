@@ -35,7 +35,7 @@ def test_catalog_generated_requirements_produce_a_valid_layout():
     # dificil que nuestros ejemplos curados a mano (44 requisitos frente
     # a 4-6 tipicos). Semilla actualizada tras quitar la exigencia de
     # contacto exterior de GARAGE (min_exterior_sides 1->0, sin base
-    # normativa real -- ver docs/architecture.md): cambiar una
+    # normativa real -- ver docs/historico/architecture.md): cambiar una
     # restriccion dura cambia la dinamica de aceptacion del recocido,
     # la semilla que antes convergia (10) dejo de hacerlo con la misma
     # busqueda -- mismo patron ya documentado en CONTINUIDAD.md.

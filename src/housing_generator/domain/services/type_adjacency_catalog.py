@@ -1,6 +1,6 @@
 """Catálogo de relaciones espaciales entre tipos de estancia,
 formalizado como estructura ejecutable del dominio. Generado
-programáticamente desde docs/relaciones_espaciales.md. Ver
+programáticamente desde docs/fuentes/relaciones_espaciales.md. Ver
 [ARCH:type-adjacency-catalog] para qué pares se omiten y por qué.
 """
 from typing import Dict, List, Optional, Tuple

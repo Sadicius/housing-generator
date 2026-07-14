@@ -78,9 +78,9 @@ tests/
 ├── unit/          # Dominio y algoritmos aislados
 └── integration/   # Caso de uso completo (composition root real)
 
-docs/architecture.md   # Decisiones de arquitectura y fundamentos de dominio
-docs/relaciones_espaciales.md  # Catalogo de 120 relaciones entre tipos de estancia
-docs/niveles_plantas.md  # Catalogo de preferencia de planta/nivel por tipo (no implementado)
+docs/historico/architecture.md   # Decisiones de arquitectura y fundamentos de dominio
+docs/fuentes/relaciones_espaciales.md  # Catalogo de 120 relaciones entre tipos de estancia
+docs/fuentes/niveles_plantas.md  # Catalogo de preferencia de planta/nivel por tipo (no implementado)
 html/relaciones_espaciales.html  # Dashboard interactivo (matriz, plantas, burbujas arrastrables, sinergias, fichas)
 examples/sample_program.json  # Programa de ejemplo en formato de datos
 ```
