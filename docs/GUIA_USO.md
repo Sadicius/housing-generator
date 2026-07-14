@@ -301,8 +301,8 @@ una terminal, sin exportar ni volver a cargar ningún archivo. Debajo
 del botón se puede ajustar la parcela (ancho×fondo), la semilla, las
 iteraciones, y activar vivienda accesible, todo en el mismo sitio.
 
-Al pulsar, cambia automáticamente a la pestaña "Visor de plano" con el
-resultado real. Si la primera semilla no converge, reintenta solas
+Al pulsar, pasa automáticamente al paso "2. Resultado" (dentro de la
+misma Zona Diseño) con el resultado real. Si la primera semilla no converge, reintenta solas
 (igual que `--retry-seeds` del CLI) e informa cuál funcionó. Si quieres
 otra variante, basta con cambiar la semilla y volver a pulsar -- sin
 repetir la selección de estancias.
@@ -353,17 +353,17 @@ Por defecto usa una parcela de ejemplo (14x16m) — `--lot-size ANCHOxFONDO`
 primera semilla no converge, el CLI reintenta solas hasta 5 semillas
 consecutivas antes de rendirse (`--retry-seeds`, ver más abajo).
 
-## Estructura del dashboard (10 archivos, no 1)
+## Estructura del dashboard (13 archivos, no 1)
 
 `docs/visualizador/` tiene: `relaciones_espaciales.html` (estructura),
 `.css` (estilos), `py_bundle.js` (código Python embebido para
-Pyodide), y `js/` con 8 archivos, uno por pestaña/concepto
+Pyodide), y `js/` con 10 archivos, uno por pestaña/concepto
 (`00-shared.js` con los datos y utilidades comunes, `01-matriz.js`...
-`07-init.js`, que arranca todo al final). Separados a petición del
+`09-init.js`, que arranca todo al final). Separados a petición del
 usuario -- **sigue abriéndose igual, con doble clic sobre el
 `.html`, sin servidor**: todos se cargan con `<link>`/`<script
 src="">` clásicos, en el orden correcto (`00-shared` primero,
-`07-init` al final), que sí funcionan desde `file://` (a diferencia de
+`09-init` al final), que sí funcionan desde `file://` (a diferencia de
 `fetch()` o los módulos ES, que sí necesitarían un servidor -- se
 comprobó esto explícitamente antes de separar, no se asumió). Si
 mueves el `.html`, mueve `.css`, `py_bundle.js` y la carpeta `js/`
