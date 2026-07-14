@@ -362,20 +362,22 @@ def test_scope_notes_moved_to_dedicated_panel_not_always_visible():
     # demanda desde un pequeno indicador en cada pestana afectada.
     html = _read(HTML_PATH)
 
-    # el panel dedicado existe, con las 3 notas reales dentro (movidas,
-    # no perdidas ni duplicadas)
+    # el panel dedicado existe, con las 4 notas reales dentro (movidas,
+    # no perdidas ni duplicadas) -- nota-ancho-practico anadida despues,
+    # mismo patron.
     assert 'id="panel-notas"' in html
     assert 'data-tab="notas"' in html
-    for ancla in ["nota-relaciones", "nota-catalogo", "nota-cronograma"]:
+    anclas = ["nota-relaciones", "nota-catalogo", "nota-cronograma", "nota-ancho-practico"]
+    for ancla in anclas:
         assert f'id="{ancla}"' in html
 
-    # exactamente 3 notas de alcance en todo el documento (no 6 -- si
+    # exactamente 4 notas de alcance en todo el documento (no 8 -- si
     # aparecieran duplicadas, esto lo detectaria)
-    assert html.count('class="caveat"') == 3
+    assert html.count('class="caveat"') == len(anclas)
 
-    # las 3 viven DENTRO de panel-notas, no sueltas en otro sitio --
+    # las 4 viven DENTRO de panel-notas, no sueltas en otro sitio --
     # comprobado indirectamente: cada indicador enlaza a su ancla
-    for ancla in ["nota-relaciones", "nota-catalogo", "nota-cronograma"]:
+    for ancla in anclas:
         assert f'data-nota="{ancla}"' in html, f"falta el indicador para {ancla}"
 
 

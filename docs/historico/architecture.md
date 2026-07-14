@@ -2035,3 +2035,26 @@ desde el CLI (solo escribiendo Python a mano).
 - Suite final: 382 unitarios, pyflakes y mypy limpios. Test de
   integración específico de retranqueo verificado en verde; el test
   pre-existente ahora en `xfail` documentado, no oculto.
+
+## [ARCH:ancho-practico-dashboard] AnchoLibrePracticoValidator mencionado en el dashboard
+
+Tercer y último punto 🟢 de la lista priorizada: `AnchoLibrePracticoValidator`
+(1.20m, NO normativo) no se mencionaba en ningún sitio del dashboard --
+si una generación fallaba por esta restricción, el usuario no tenía
+forma de saber, desde la interfaz, que existía.
+
+- Nuevo indicador `ⓘ ancho libre práctico (1.20m)` al principio del
+  paso "1. Programa y generación" (Zona Diseño) -- justo donde el
+  usuario configura el programa y donde más falta hace verlo.
+- Nueva nota en el panel dedicado de Notas de alcance (Zona Consulta),
+  mismo patrón ya establecido -- explica qué es, a qué tipos aplica,
+  y deja claro que NO es una cita del Decreto 29/2010.
+- Test de sanidad actualizado (ahora 4 notas, no 3).
+- Verificado con `jsdom` (indicador navega correctamente, resalta el
+  bloque correcto) y `wkhtmltoimage` (renderiza sin errores).
+
+Con esto se cierran los tres puntos 🟢 de la ronda de pendientes
+priorizada con el usuario -- quedan los 🟡 y 🔴 para las siguientes
+rondas, documentados en `docs/CONTINUIDAD.md`.
+
+Suite final: 382 unitarios, pyflakes y mypy limpios.
