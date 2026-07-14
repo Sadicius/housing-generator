@@ -199,12 +199,26 @@ def _clear_stale_overrides(node: PartitionNode, room_ids: set) -> bool:
 
 
 def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, float]) -> PartitionNode:
-    """Genera un árbol vecino mediante uno de cuatro movimientos:
+    """Genera un árbol vecino mediante uno de cinco movimientos:
     intercambiar hojas, invertir dirección, intercambiar subárboles,
-    o "deslizar pared" (perturbar la proporción de un corte). Ver
-    [ARCH:partition-node]."""
+    "deslizar pared" (perturbar la proporción de un corte), o
+    "restablecer corte" (deshacer un ratio_override, volver a la
+    proporción justa derivada del área). Ver [ARCH:partition-node].
+
+    BUG REAL encontrado en diagnostico por aislamiento de variables
+    (a peticion del usuario): slide_wall solo AÑADE deriva (aunque
+    acotada por corte, ver SLIDE_WALL_MAX_DEVIATION), nunca la
+    deshace -- una estancia con varios antecesores, cada uno con su
+    propio ratio_override activo de forma independiente, acumula la
+    deriva de TODOS ellos a la vez (confirmado empiricamente: una
+    estancia con 4 antecesores, 2 con override activo, llegaba a
+    60-70% de desviacion final aunque cada corte individual estuviera
+    dentro del +-20% permitido). "reset_ratio" le da a la busqueda una
+    forma real de deshacer esa deriva cuando ya no hace falta, no solo
+    de generarla. Ver [ARCH:area-objetivo-acumulada].
+    """
     new_tree = copy.deepcopy(tree)
-    move = rng.choice(("swap_leaves", "flip_direction", "swap_children", "slide_wall"))
+    move = rng.choice(("swap_leaves", "flip_direction", "swap_children", "slide_wall", "reset_ratio"))
 
     if move == "swap_leaves":
         leaves = new_tree.leaves()
@@ -217,6 +231,16 @@ def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, fl
     internals = new_tree.internal_nodes()
     if not internals:
         return new_tree
+
+    if move == "reset_ratio":
+        # solo tiene sentido sobre nodos que YA tienen un override --
+        # si ninguno lo tiene, no hay nada que deshacer, se ignora el
+        # movimiento (el arbol vuelve tal cual, equivalente a "no-op").
+        overridden = [n for n in internals if n.ratio_override is not None]
+        if overridden:
+            rng.choice(overridden).ratio_override = None
+        return new_tree
+
     target = rng.choice(internals)
 
     if move == "flip_direction":

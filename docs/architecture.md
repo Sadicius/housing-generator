@@ -3145,3 +3145,53 @@ dos.
   compensación acumulada en árboles profundos, ya documentado en
   [ARCH:area-objetivo], distinto y ya identificado).
 - Suite final: 377 unitarios, pyflakes y mypy limpios.
+
+## [ARCH:area-objetivo-acumulada] reset_ratio -- deshacer deriva acumulada
+
+A petición del usuario, continuando el diagnóstico sistemático:
+confirmado empíricamente que una estancia con varios antecesores en
+el árbol, cada uno con su propio `ratio_override` activo de forma
+independiente, acumula la deriva de TODOS ellos a la vez -- una
+estancia real con 4 antecesores, 2 con override activo, llegaba a
+60-70% de desviación final aunque cada corte individual estuviera
+dentro del ±20% permitido por corte.
+
+- **Causa raíz**: `slide_wall` solo AÑADE deriva (acotada por corte),
+  pero ningún movimiento existente la DESHACE -- no había forma de
+  que la búsqueda revirtiera un `ratio_override` que ya no hiciera
+  falta.
+- **Nuevo movimiento `reset_ratio`** (5º movimiento, junto a
+  swap_leaves/flip_direction/swap_children/slide_wall): elige un nodo
+  interno CON override activo y lo limpia, volviendo a la proporción
+  justa derivada del área. No-op si no hay ningún override que
+  deshacer (no falla, no cambia nada).
+- **Impacto confirmado empíricamente**: en el escenario de programa
+  mínimo, de 2/15 a 6/15 semillas convergiendo. En el escenario
+  complejo (11 estancias, 6 adyacencias), las desviaciones de área
+  restantes bajaron de 60-90%+ a 15-17% (rozando el umbral) -- el
+  problema de área está prácticamente resuelto también para árboles
+  profundos; lo que queda ahí ahora es dificultad REAL de adyacencia/
+  proporción simultáneas, no un bug escondido.
+- Tests nuevos: `reset_ratio` limpia un override existente (verificado
+  sobre múltiples semillas), y es no-op verificado cuando no hay nada
+  que resetear (RNG de mentira para forzar el movimiento exacto, sin
+  depender de que otros movimientos como slide_wall no interfieran).
+- Suite final: 378 unitarios, pyflakes limpio.
+
+### Estado del escenario complejo (11 estancias, 6 adyacencias) -- honesto
+
+Tras los tres arreglos de esta ronda de diagnóstico (BanoAcceso,
+distancia graduada de núcleo húmedo, reset_ratio), el escenario más
+exigente del proyecto (`build_sample_program`) sigue sin converger en
+20 semillas probadas -- pero el CARÁCTER del problema cambió por
+completo: antes las violaciones eran desviaciones de área masivas
+(cientos/miles %) mezcladas con todo lo demás; ahora son
+específicamente las 6 restricciones de adyacencia simultáneas
+(living-entrance, living-garage MUST_BE_AWAY siendo adyacentes) y
+proporciones ajustadas (dining 11.4:1, garage 5:1) -- una dificultad
+combinatoria real de satisfacer TODO a la vez, no un bug. Sigue
+pendiente en `CONTINUIDAD.md`: o bien una búsqueda de semillas más
+extensa, o considerar si 6 restricciones MUST_BE_NEAR/AWAY
+simultáneas es razonable para un único recocido simulado con este
+conjunto de movimientos, o si necesita su propio movimiento dedicado
+(p.ej. "acercar hacia adyacencia pendiente").

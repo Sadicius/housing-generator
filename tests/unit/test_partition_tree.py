@@ -184,7 +184,56 @@ def test_slide_wall_move_sets_ratio_override_within_bounds():
     assert found_override, "ningun seed de los probados activo slide_wall -- revisar"
 
 
-def test_slide_wall_starts_from_current_effective_ratio_not_fixed_value():
+def test_reset_ratio_clears_an_existing_override():
+    # BUG REAL encontrado en diagnostico por aislamiento de variables:
+    # slide_wall solo ANADE deriva, nunca la deshace -- reset_ratio le
+    # da a la busqueda una forma real de deshacerla. Ver
+    # [ARCH:area-objetivo-acumulada].
+    tree = PartitionNode(
+        direction="v",
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+        ratio_override=0.73,  # ya tiene un override activo
+    )
+    areas = {"a": 50.0, "b": 50.0}
+
+    found_reset = False
+    for seed in range(200):
+        new_tree = random_neighbor(tree, random.Random(seed), areas)
+        if new_tree.ratio_override is None:
+            found_reset = True
+            break
+    assert found_reset, "ningun seed de los probados activo reset_ratio -- revisar"
+
+
+def test_reset_ratio_is_a_noop_when_nothing_to_reset():
+    # sin ningun override activo en todo el arbol, reset_ratio no tiene
+    # nada que hacer -- no debe fallar ni cambiar nada. Se fuerza el
+    # movimiento concreto (no otros, como slide_wall, que SI activarian
+    # un override donde no lo habia) con un RNG de mentira.
+    tree = PartitionNode(
+        direction="v",
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 50.0, "b": 50.0}
+
+    class _FakeRngSiempreResetRatio:
+        def choice(self, seq):
+            return "reset_ratio" if "reset_ratio" in seq else seq[0]
+
+        def sample(self, seq, k):
+            return list(seq)[:k]
+
+        def uniform(self, a, b):
+            return 0.0
+
+    new_tree = random_neighbor(tree, _FakeRngSiempreResetRatio(), areas)
+    assert new_tree.ratio_override is None
+    assert new_tree.first.room_id == "a" and new_tree.second.room_id == "b"  # arbol intacto
+
+
+
     # con areas muy desiguales (90/10 -> ratio base 0.9), el resultado de
     # un deslizamiento debe quedar cerca de 0.9 (clamped a 0.85 maximo),
     # NO cerca de 0.5 -- confirma que parte de la proporcion real actual.
