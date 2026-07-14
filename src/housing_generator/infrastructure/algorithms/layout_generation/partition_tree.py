@@ -198,7 +198,25 @@ def _clear_stale_overrides(node: PartitionNode, room_ids: set) -> bool:
     return contiene
 
 
-def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, float]) -> PartitionNode:
+def _subtree_room_ids(node: PartitionNode) -> set:
+    """Room_ids de todas las hojas bajo `node` (incluida ella misma si
+    es hoja) -- usado por el bloqueo progresivo para saber si un nodo
+    interno tiene algo sin resolver debajo. Ver [ARCH:locking-progresivo]."""
+    return {leaf.room_id for leaf in node.leaves()}
+
+
+ESCAPE_PROBABILITY = 0.15  # NO normativo, criterio de ingenieria: con
+# que frecuencia se ignora el bloqueo por completo en un movimiento,
+# para no quedarse atascado si arreglar una estancia exige tocar
+# temporalmente una ya bloqueada. Ver [ARCH:locking-progresivo].
+
+
+def random_neighbor(
+    tree: PartitionNode,
+    rng: random.Random,
+    areas: Dict[str, float],
+    locked_room_ids: Optional[set] = None,
+) -> PartitionNode:
     """Genera un árbol vecino mediante uno de cinco movimientos:
     intercambiar hojas, invertir dirección, intercambiar subárboles,
     "deslizar pared" (perturbar la proporción de un corte), o
@@ -216,32 +234,51 @@ def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, fl
     dentro del +-20% permitido). "reset_ratio" le da a la busqueda una
     forma real de deshacer esa deriva cuando ya no hace falta, no solo
     de generarla. Ver [ARCH:area-objetivo-acumulada].
+
+    `locked_room_ids`: BLOQUEO PROGRESIVO (a peticion del usuario, tras
+    diagnostico real: contacto exterior simultaneo para varias
+    estancias NO es dificil geometricamente -- una topologia en tira
+    con direccion consistente lo resuelve trivialmente -- pero nuestra
+    propia busqueda, ciega, podia deshacer una buena disposicion ya
+    conseguida sin ninguna proteccion). Las estancias en este conjunto
+    (sin ninguna violacion actual) quedan protegidas: swap_leaves solo
+    intercambia entre estancias SIN bloquear, y el resto de movimientos
+    solo actuan sobre nodos cuyo subarbol tenga al menos una estancia
+    sin resolver. Con probabilidad `ESCAPE_PROBABILITY`, se ignora el
+    bloqueo por completo (valvula de escape, evita atascos si arreglar
+    algo exige tocar temporalmente una estancia ya bloqueada). `None`
+    (por defecto) preserva el comportamiento anterior sin bloqueo.
     """
+    ignorar_bloqueo = not locked_room_ids or rng.random() < ESCAPE_PROBABILITY
+    bloqueadas: set = set() if ignorar_bloqueo or locked_room_ids is None else locked_room_ids
+
     new_tree = copy.deepcopy(tree)
     move = rng.choice(("swap_leaves", "flip_direction", "swap_children", "slide_wall", "reset_ratio"))
 
     if move == "swap_leaves":
         leaves = new_tree.leaves()
-        if len(leaves) >= 2:
-            a, b = rng.sample(leaves, 2)
+        elegibles = [leaf for leaf in leaves if leaf.room_id not in bloqueadas]
+        if len(elegibles) >= 2:
+            a, b = rng.sample(elegibles, 2)
             a.room_id, b.room_id = b.room_id, a.room_id
             _clear_stale_overrides(new_tree, {a.room_id, b.room_id})
         return new_tree
 
     internals = new_tree.internal_nodes()
-    if not internals:
+    elegibles_internos = [n for n in internals if _subtree_room_ids(n) - bloqueadas]
+    if not elegibles_internos:
         return new_tree
 
     if move == "reset_ratio":
         # solo tiene sentido sobre nodos que YA tienen un override --
         # si ninguno lo tiene, no hay nada que deshacer, se ignora el
         # movimiento (el arbol vuelve tal cual, equivalente a "no-op").
-        overridden = [n for n in internals if n.ratio_override is not None]
+        overridden = [n for n in elegibles_internos if n.ratio_override is not None]
         if overridden:
             rng.choice(overridden).ratio_override = None
         return new_tree
 
-    target = rng.choice(internals)
+    target = rng.choice(elegibles_internos)
 
     if move == "flip_direction":
         # ciclo None -> "h" -> "v" -> None (ver [ARCH:partition-node])

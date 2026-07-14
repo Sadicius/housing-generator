@@ -72,7 +72,7 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
 
         current_tree = build_random_tree(room_ids, self._rng)
         current_layout = self._materialize(current_tree, current_footprint_width, footprint_area, program, lot, areas)
-        current_hard, current_soft = self._score(current_layout)
+        current_hard, current_soft, current_locked = self._evaluate(current_layout, room_ids)
 
         best_layout = current_layout
         best_hard, best_soft = current_hard, current_soft
@@ -88,11 +88,14 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
                     current_footprint_width, footprint_area, buildable_w, buildable_h, self._rng
                 )
             else:
-                candidate_tree = random_neighbor(current_tree, self._rng, areas)
+                # bloqueo progresivo: las estancias SIN violaciones
+                # actuales quedan protegidas de la mayoria de
+                # movimientos -- ver [ARCH:locking-progresivo].
+                candidate_tree = random_neighbor(current_tree, self._rng, areas, locked_room_ids=current_locked)
                 candidate_footprint_width = current_footprint_width
 
             candidate_layout = self._materialize(candidate_tree, candidate_footprint_width, footprint_area, program, lot, areas)
-            candidate_hard, candidate_soft = self._score(candidate_layout)
+            candidate_hard, candidate_soft, candidate_locked = self._evaluate(candidate_layout, room_ids)
 
             # comparacion lexicografica: si lo duro cambia, decide solo
             # el delta duro; lo blando solo cuenta si empata. Ver
@@ -106,7 +109,7 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
             if accepted:
                 current_tree, current_layout = candidate_tree, candidate_layout
                 current_footprint_width = candidate_footprint_width
-                current_hard, current_soft = candidate_hard, candidate_soft
+                current_hard, current_soft, current_locked = candidate_hard, candidate_soft, candidate_locked
                 if (current_hard, current_soft) < (best_hard, best_soft):
                     best_layout = current_layout
                     best_hard, best_soft = current_hard, current_soft
@@ -118,10 +121,20 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
         best_layout.metadata["soft_penalty"] = best_soft
         return best_layout
 
-    def _score(self, layout: Layout) -> tuple:
-        hard_violations = len(self._constraint_validator.validate(layout).violations)
-        soft_penalty = self._soft_scorer.score(layout) if self._soft_scorer else 0.0
-        return (hard_violations, soft_penalty)
+    def _evaluate(self, layout: Layout, all_room_ids: List[str]) -> tuple:
+        """Una sola validacion por layout, reutilizada para la
+        puntuacion (duro/blando) Y el bloqueo progresivo -- evita
+        validar dos veces por iteracion. Devuelve
+        (hard, soft, locked_room_ids)."""
+        violations = self._constraint_validator.validate(layout).violations
+        hard = len(violations)
+        soft = self._soft_scorer.score(layout) if self._soft_scorer else 0.0
+        violating_ids = {
+            room_id for room_id in all_room_ids
+            if any(f"'{room_id}'" in v for v in violations)
+        }
+        locked = set(all_room_ids) - violating_ids
+        return hard, soft, locked
 
     def _materialize(
         self,

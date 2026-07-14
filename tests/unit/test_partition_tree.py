@@ -381,3 +381,90 @@ def test_place_tree_uses_the_direction_that_minimizes_worst_ratio_not_just_conta
     a_w, a_h = a_bounds[2]-a_bounds[0], a_bounds[3]-a_bounds[1]
     b_w, b_h = b_bounds[2]-b_bounds[0], b_bounds[3]-b_bounds[1]
     assert (a_w*a_h + b_w*b_h) == pytest.approx(200.0)  # 20x10, sin huecos ni solapes
+
+
+def test_locked_rooms_are_never_touched_by_swap_leaves():
+    # bloqueo progresivo (a peticion del usuario): swap_leaves nunca
+    # debe elegir una estancia bloqueada como origen NI destino, salvo
+    # que la valvula de escape se active. Se fuerza swap_leaves
+    # especificamente (RNG de mentira) -- ese movimiento NUNCA
+    # reestructura el arbol, solo intercambia etiquetas entre hojas,
+    # asi que navegar por posicion fija (first.first, etc.) es fiable.
+    tree = PartitionNode(
+        direction="v",
+        first=PartitionNode(
+            direction="h",
+            first=PartitionNode(room_id="a"),
+            second=PartitionNode(room_id="b"),
+        ),
+        second=PartitionNode(
+            direction="h",
+            first=PartitionNode(room_id="c"),
+            second=PartitionNode(room_id="d"),
+        ),
+    )
+    areas = {"a": 25.0, "b": 25.0, "c": 25.0, "d": 25.0}
+    locked = {"a", "b"}  # c y d libres
+
+    class _FakeRngSiempreSwapLeaves:
+        def __init__(self, real_rng):
+            self._real = real_rng
+
+        def choice(self, seq):
+            return "swap_leaves" if "swap_leaves" in seq else self._real.choice(seq)
+
+        def sample(self, seq, k):
+            return self._real.sample(seq, k)
+
+        def random(self):
+            return self._real.random()
+
+    a_tocada = 0
+    for seed in range(300):
+        real_rng = random.Random(seed)
+        new_tree = random_neighbor(tree, _FakeRngSiempreSwapLeaves(real_rng), areas, locked_room_ids=locked)
+        # posicion fija fiable: swap_leaves nunca reestructura el arbol
+        if new_tree.first.first.room_id != "a":
+            a_tocada += 1
+
+    # con ESCAPE_PROBABILITY=0.15, en 300 intentos se esperan ~45 escapes --
+    # confirma que la mayoria de las veces el bloqueo SI protegio, no que
+    # nunca se activo el escape (lo cual seria sospechoso, no bloqueo real).
+    assert 0 < a_tocada < 150
+
+
+def test_locking_none_preserves_previous_behavior():
+    # locked_room_ids=None (por defecto) debe comportarse exactamente
+    # igual que antes de anadir el bloqueo -- ninguna restriccion.
+    tree = PartitionNode(
+        direction="v",
+        first=PartitionNode(room_id="a"),
+        second=PartitionNode(room_id="b"),
+    )
+    areas = {"a": 50.0, "b": 50.0}
+    # sin error, comportamiento normal
+    for seed in range(50):
+        new_tree = random_neighbor(tree, random.Random(seed), areas, locked_room_ids=None)
+        assert {leaf.room_id for leaf in new_tree.leaves()} == {"a", "b"}
+
+
+def test_internal_moves_skip_fully_locked_subtrees():
+    # si el subarbol ENTERO de un nodo interno esta bloqueado (todas
+    # sus hojas sin violaciones), ese nodo no deberia ser elegido para
+    # flip_direction/swap_children/slide_wall/reset_ratio -- salvo
+    # escape. Arbol: (a,b) bloqueado a la izquierda, (c) libre a la
+    # derecha -- el nodo raiz SI es elegible (contiene a c), pero el
+    # nodo (a,b) NO deberia tocarse casi nunca.
+    left = PartitionNode(direction="h", first=PartitionNode(room_id="a"), second=PartitionNode(room_id="b"))
+    tree = PartitionNode(direction="v", first=left, second=PartitionNode(room_id="c"))
+    areas = {"a": 20.0, "b": 20.0, "c": 20.0}
+    locked = {"a", "b"}
+
+    left_direction_changed = 0
+    for seed in range(300):
+        new_tree = random_neighbor(tree, random.Random(seed), areas, locked_room_ids=locked)
+        if new_tree.first.direction != "h":
+            left_direction_changed += 1
+    # se espera que cambie sobre todo por la valvula de escape (~15%),
+    # no en la mayoria de los intentos.
+    assert left_direction_changed < 150

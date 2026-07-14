@@ -259,15 +259,20 @@ generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
-**Escenario complejo (11 estancias, 6 adyacencias simultáneas) sigue
-sin converger** ([ARCH:area-objetivo-acumulada]): tras 3 rondas de
-diagnóstico por aislamiento de variables (bug real en BanoAcceso,
-distancia graduada de núcleo húmedo, movimiento reset_ratio), el
-CARÁCTER del problema cambió por completo -- ya no son desviaciones
-de área masivas, son las 6 restricciones de adyacencia simultáneas
-+ proporciones ajustadas. Pendiente: búsqueda de semillas más extensa,
-o valorar si necesita un movimiento dedicado de "acercar hacia
-adyacencia pendiente" para el recocido simulado.
+**Escenario complejo (9-11 estancias) sigue sin converger del todo**
+([ARCH:locking-progresivo]): investigación profunda con técnicas
+reales (min-conflicts, calibración de temperatura, bloqueo
+progresivo) redujo las violaciones simultáneas de 5-7 a típicamente
+2, pero no llegó a cero en esta sesión, ni con más iteraciones. El
+usuario confirmó que mi diagnóstico anterior ("contacto exterior
+simultáneo es geométricamente difícil") estaba mal planteado -- una
+topología en tira con dirección consistente lo resuelve trivialmente;
+el problema real es que ni la construcción inicial del árbol ni la
+búsqueda protegen esa propiedad una vez conseguida. Pendiente real:
+seguir puliendo el bloqueo progresivo (quizás sesgar
+`build_random_tree` hacia formas más planas de partida), o aceptar
+que este escenario concreto necesita más presupuesto de cómputo del
+disponible en una sesión.
 
 **Modo espejo no transforma todavía el VACÍO** ([ARCH:area-objetivo]):
 el visor omite dibujar la zona de vacío si el plano está transformado
