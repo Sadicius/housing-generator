@@ -49,15 +49,19 @@ def test_no_bathrooms_anywhere_does_not_raise():
 
 
 def test_all_bathrooms_captured_in_bedrooms_on_every_floor_raises():
-    # planta baja: bano SOLO toca un dormitorio (sin circulacion)
+    # planta baja: bano SOLO toca un dormitorio -- pero SI hay
+    # circulacion en la planta (sin tocar el bano), para que el fallo
+    # sea real ("capturado"), no "no aplica por falta de circulacion".
     bed_pb = _placed("bed_pb", RoomType.BEDROOM, box(0, 0, 3, 4))
     bath_pb = _placed("bath_pb", RoomType.BATHROOM, box(3, 0, 5, 4))
-    layout_pb = Layout(lot=_lot(), rooms=[bed_pb, bath_pb], zones=[])
+    corridor_pb = _placed("corridor_pb", RoomType.CORRIDOR, box(0, 4, 3, 6))  # toca a bed_pb, no a bath_pb
+    layout_pb = Layout(lot=_lot(), rooms=[bed_pb, bath_pb, corridor_pb], zones=[])
 
     # planta superior: mismo problema, otro bano tambien capturado
     bed_ps = _placed("bed_ps", RoomType.BEDROOM, box(0, 0, 3, 4))
     bath_ps = _placed("bath_ps", RoomType.BATHROOM, box(3, 0, 5, 4))
-    layout_ps = Layout(lot=_lot(), rooms=[bed_ps, bath_ps], zones=[])
+    corridor_ps = _placed("corridor_ps", RoomType.CORRIDOR, box(0, 4, 3, 6))
+    layout_ps = Layout(lot=_lot(), rooms=[bed_ps, bath_ps, corridor_ps], zones=[])
 
     building = Building(floors={
         NivelPlanta.PLANTA_BAJA: layout_pb,

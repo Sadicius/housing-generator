@@ -35,12 +35,31 @@ def test_no_bathrooms_does_not_apply():
     assert result.violations == [] and result.warnings == []
 
 
+def test_no_circulation_at_all_in_program_does_not_apply():
+    # BUG REAL encontrado en auditoria de diagnostico: sin NINGUNA
+    # estancia de circulacion en el programa (valido -- "programa
+    # minimo" no exige recibidor/pasillo), la regla era estructuralmente
+    # IMPOSIBLE de satisfacer sea cual fuera la geometria -- un bano
+    # tocando directamente el salon (sin ningun corridor/entrance_hall
+    # en absoluto) no deberia fallar esto, no hay nada con lo que
+    # exigir la adyacencia.
+    bath = _placed("bath", RoomType.BATHROOM, box(0, 0, 2, 3))
+    living = _placed("living", RoomType.LIVING_ROOM, box(2, 0, 6, 3))
+    layout = Layout(lot=_dummy_lot(), rooms=[bath, living], zones=[])
+
+    result = _validator().validate(layout)
+    assert result.violations == [] and result.warnings == []
+
+
 def test_single_bathroom_captured_in_bedroom_only_fails():
-    # el bano SOLO toca el dormitorio, no hay pasillo/recibidor
+    # el bano SOLO toca el dormitorio -- pero SI hay circulacion en el
+    # programa (en otro sitio, sin tocar el bano), para que el fallo
+    # sea real ("capturado", no "no aplica por falta de circulacion").
     bed = _placed("bed", RoomType.BEDROOM, box(0, 0, 3, 4))
     bath = _placed("bath", RoomType.BATHROOM, box(3, 0, 5, 4))  # comparte pared solo con bed
+    corridor = _placed("corridor", RoomType.CORRIDOR, box(0, 4, 3, 6))  # toca a bed, NO a bath
 
-    layout = Layout(lot=_dummy_lot(), rooms=[bed, bath], zones=[])
+    layout = Layout(lot=_dummy_lot(), rooms=[bed, bath, corridor], zones=[])
     violations = _validator().validate(layout).violations
 
     assert len(violations) == 1
@@ -78,8 +97,9 @@ def test_two_bathrooms_both_captured_fails():
     bath1 = _placed("bath1", RoomType.BATHROOM, box(3, 0, 5, 3))  # solo toca bed1
     bed2 = _placed("bed2", RoomType.BEDROOM, box(0, 3, 3, 6))
     bath2 = _placed("bath2", RoomType.BATHROOM, box(3, 3, 5, 6))  # solo toca bed2
+    corridor = _placed("corridor", RoomType.CORRIDOR, box(0, 6, 3, 8))  # toca solo a bed2, ningun bano
 
-    layout = Layout(lot=_dummy_lot(), rooms=[bed1, bath1, bed2, bath2], zones=[])
+    layout = Layout(lot=_dummy_lot(), rooms=[bed1, bath1, bed2, bath2, corridor], zones=[])
     violations = _validator().validate(layout).violations
 
     assert len(violations) == 1

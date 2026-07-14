@@ -3065,3 +3065,41 @@ las violaciones restantes ya NO son de área (el problema de raíz está
 resuelto), son de otro tipo, y encontrar semillas nuevas que
 converjan con todas las restricciones a la vez es trabajo pendiente,
 no un fallo del arreglo.
+
+## [ARCH:bano-acceso] Bug real encontrado en diagnóstico sistemático: exigencia imposible
+
+A petición del usuario: en vez de seguir buscando semillas a ciegas,
+diagnóstico sistemático aislando variables una a una para el problema
+de convergencia. Metodología: probar SIN adyacencia (línea base),
+luego con menos estancias, para separar "dificultad por adyacencia"
+de otras causas.
+
+- **Hallazgo real**: incluso el programa MÍNIMO absoluto (6 estancias,
+  sin ninguna adyacencia declarada) fallaba en 15/15 semillas
+  probadas. Investigado el motivo exacto en vez de asumir "es
+  difícil": `BanoAccesoGeneralValidator` calcula `circulation_ids`
+  filtrando estancias de categoría CIRCULACIÓN presentes en el
+  programa -- si el programa no tiene NINGUNA (válido: "programa
+  mínimo" no exige recibidor/pasillo), ese conjunto queda vacío y la
+  condición `neighbors & circulation_ids` nunca puede cumplirse, sea
+  cual sea la geometría. No era "difícil de satisfacer" -- era
+  MATEMÁTICAMENTE IMPOSIBLE, sin que nada lo señalara como tal.
+- **[RESUELTO]** Corregido con el mismo patrón "no aplica" que ya
+  usa `EspacioAccesoValidator`: sin ninguna circulación en el
+  programa, la regla no se puede evaluar, no se exige.
+- **3 tests existentes corregidos** (`test_bano_acceso_validator.py`,
+  `test_generate_building_bano_acceso.py`): probaban "baño capturado
+  en dormitorio" pero su propio montaje TAMPOCO tenía circulación en
+  absoluto -- sin darse cuenta, estaban probando el bug (siempre
+  falla sin circulación), no el caso real que pretendían. Corregidos
+  añadiendo un corridor real en la escena, que no toca al baño.
+- **Impacto medido, no solo teórico**: en el escenario del programa
+  mínimo, este único arreglo mejoró la convergencia de 0/15 a 3/15
+  semillas -- confirma que era un bug real con impacto real, no un
+  caso extremo sin importancia.
+- El escenario más complejo (`build_sample_program`, 11 estancias, 6
+  restricciones de adyacencia simultáneas) SÍ tiene recibidor
+  declarado, así que este bug concreto no era su bottleneck principal
+  -- sigue pendiente de una búsqueda de semillas más extensa,
+  documentado en `CONTINUIDAD.md`.
+- Suite final: 374 unitarios, pyflakes limpio.

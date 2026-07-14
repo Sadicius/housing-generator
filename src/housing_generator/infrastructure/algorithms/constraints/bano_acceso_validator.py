@@ -12,7 +12,9 @@ class BanoAccesoGeneralValidator(ConstraintValidatorPort):
     """Al menos un BATHROOM debe tener adyacencia real con circulación
     (CORRIDOR o ENTRANCE_HALL) -- ninguno puede quedar capturado
     exclusivamente dentro de un dormitorio si es el único con acceso
-    general. Sin BATHROOM colocado, no aplica. Ver [ARCH:bano-acceso].
+    general. Sin BATHROOM colocado, o sin NINGUNA circulación en el
+    programa (no aplica -- no hay nada con lo que exigir adyacencia),
+    no aplica. Ver [ARCH:bano-acceso].
     """
 
     def __init__(self, graph_builder: AdjacencyGraphBuilderPort):
@@ -28,6 +30,14 @@ class BanoAccesoGeneralValidator(ConstraintValidatorPort):
             r.id for r in layout.rooms
             if r.is_placed and r.space_category == SpaceCategory.CIRCULACION
         }
+        if not circulation_ids:
+            # BUG REAL encontrado en auditoria de diagnostico: sin
+            # NINGUNA estancia de circulacion en el programa (valido --
+            # "programa minimo" no exige recibidor/pasillo), esta regla
+            # era IMPOSIBLE de satisfacer sea cual fuera la geometria
+            # (neighbors & circulation_ids nunca podia ser no-vacio).
+            # Mismo patron "no aplica" que EspacioAccesoValidator.
+            return ValidationResult()
 
         for bath in bathrooms:
             if bath.id not in graph:
