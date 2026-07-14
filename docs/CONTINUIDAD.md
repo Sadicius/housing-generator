@@ -24,7 +24,7 @@ Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
 multi-planta con escalera y contorno progresivo, vivienda aislada y
 pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 381/381 tests (54 commits).
+**Estado en el momento de escribir esto**: 382/382 tests (96 commits).
 Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
 coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
 comando, no en este número.
@@ -284,7 +284,13 @@ búsqueda protegen esa propiedad una vez conseguida. Pendiente real:
 seguir puliendo el bloqueo progresivo (quizás sesgar
 `build_random_tree` hacia formas más planas de partida), o aceptar
 que este escenario concreto necesita más presupuesto de cómputo del
-disponible en una sesión.
+disponible en una sesión. **Consecuencia real de esto**:
+`tests/integration/test_cli.py::test_sample_program_generates_a_valid_layout_with_fixed_seed`
+está marcado `xfail` (con el motivo completo documentado en el propio
+test) -- confirmado que ya fallaba antes de encontrarlo (no es una
+regresión puntual), ni 15 semillas nuevas con reintento real lo
+resuelven. Si se retoma este escenario, quitar el `xfail` es la señal
+de que se ha resuelto de verdad.
 
 **Modo espejo no transforma todavía el VACÍO** ([ARCH:area-objetivo]):
 el visor omite dibujar la zona de vacío si el plano está transformado
@@ -343,24 +349,15 @@ fallos/huecos de flujo, no solo bugs sueltos). El hallazgo #1
 (`tipo_vivienda` sin conectar) ya está RESUELTO -- ver
 `docs/historico/architecture.md`. El hueco de fondo (no había forma de generar
 sin salir a una terminal) también está RESUELTO -- ver la sección de
-Pyodide arriba. Quedan estos, por orden de cómo se listaron:
+Pyodide arriba. **[RESUELTO] `--retranqueo`/`--retranqueo-incremento`
+en el CLI** y **[RESUELTO] `AnchoLibrePracticoValidator` mencionado en
+el dashboard** -- ver `[ARCH:cli-retranqueo]` y
+`[ARCH:ancho-practico-dashboard]`. Quedan estos:
 
-- **`retranqueo_m` (retranqueo básico de vivienda aislada) no es
-  configurable desde el CLI** -- toda vivienda generada por CLI tiene
-  retranqueo cero, aunque el concepto está implementado y probado.
-  Necesitaría un `--retranqueo N` análogo a `--lot-size`.
-- **`retranqueo_incremento_por_planta_m` (contorno progresivo entre
-  plantas) tampoco tiene ninguna opción de CLI** -- función construida
-  e investigada (Devans, Infinigen) pero solo accesible escribiendo
-  Python a mano.
 - **El panel de generación automática de "Sección vertical" solo cubre
   1-2 plantas** (planta baja/superior) -- sótano, semisótano y bajo
   cubierta quedan fuera de la generación automática (sí accesibles a
   mano, chip a chip, sin cambios).
-- **`AnchoLibrePracticoValidator` (1.20m) no aparece mencionado en
-  ningún sitio del dashboard** -- el usuario no tiene forma de saber,
-  desde la interfaz, que esta restricción existe y puede estar
-  bloqueando una generación.
 - **Las puertas del visor son una marca genérica (0.9m) en la pared
   compartida, no una posición/ancho/sentido de apertura real** --
   documentado como limitación en su momento, pero fácil de olvidar.
