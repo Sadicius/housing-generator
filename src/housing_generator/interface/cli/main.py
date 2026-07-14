@@ -113,7 +113,26 @@ def main():
              "acercarse al tamano real de tu parcela, o para dar mas margen si el "
              "programa importado es grande.",
     )
+    parser.add_argument(
+        "--retranqueo", type=float, default=None,
+        help="Separacion minima a los lindes de parcela, en metros (vivienda AISLADA) -- "
+             "concepto ya implementado y probado (Lot.retranqueo_m), sin forma de "
+             "activarlo desde el CLI hasta ahora. Por defecto, sin retranqueo (area "
+             "edificable = parcela completa), igual que antes de anadir este flag.",
+    )
+    parser.add_argument(
+        "--retranqueo-incremento", type=float, default=None,
+        help="Cuanto se reduce el contorno edificable, en metros, de cada planta "
+             "respecto a la de abajo (vivienda multi-planta) -- concepto ya implementado "
+             "y probado (Lot.retranqueo_incremento_por_planta_m), sin forma de activarlo "
+             "desde el CLI hasta ahora. Requiere --retranqueo tambien (no tiene sentido "
+             "incrementar un retranqueo que no existe). Por defecto, mismo contorno para "
+             "todas las plantas, igual que antes de anadir este flag.",
+    )
     args = parser.parse_args()
+
+    if args.retranqueo_incremento is not None and args.retranqueo is None:
+        raise SystemExit("--retranqueo-incremento requiere tambien --retranqueo (no tiene sentido incrementar un retranqueo que no existe).")
 
     if args.import_seleccion:
         seleccion = import_seleccion_plantas(args.import_seleccion)
@@ -123,10 +142,17 @@ def main():
             lot = Lot(
                 boundary=Boundary(polygon=box(0, 0, float(w_str), float(h_str))),
                 medianera_sides=seleccion.medianera_sides,
+                retranqueo_m=args.retranqueo,
+                retranqueo_incremento_por_planta_m=args.retranqueo_incremento,
             )
         else:
             base_lot = build_sample_lot()
-            lot = Lot(boundary=base_lot.boundary, medianera_sides=seleccion.medianera_sides)
+            lot = Lot(
+                boundary=base_lot.boundary,
+                medianera_sides=seleccion.medianera_sides,
+                retranqueo_m=args.retranqueo,
+                retranqueo_incremento_por_planta_m=args.retranqueo_incremento,
+            )
         if seleccion.medianera_sides:
             print(f"(tipo_vivienda del JSON -> medianera en: {', '.join(sorted(seleccion.medianera_sides))})")
 
@@ -166,6 +192,13 @@ def main():
 
     program = build_sample_program(auto_adjacency=args.auto_adjacency)
     lot = build_sample_lot()
+    if args.retranqueo is not None or args.retranqueo_incremento is not None:
+        lot = Lot(
+            boundary=lot.boundary,
+            entrance_side=lot.entrance_side,
+            retranqueo_m=args.retranqueo,
+            retranqueo_incremento_por_planta_m=args.retranqueo_incremento,
+        )
 
     use_case = build_generate_layout_use_case(
         adjacency_requirements=program.adjacency_requirements,
