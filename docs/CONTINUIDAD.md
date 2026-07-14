@@ -259,6 +259,21 @@ generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
+**Re-buscar semillas tras el arreglo de área objetivo + huella
+construible** ([ARCH:area-objetivo]): el problema de raíz está
+confirmado resuelto (ninguna violación restante es ya de desviación
+de área), pero varios fixtures de tests de integración y el programa
+de ejemplo del CLI (`build_sample_program`/`build_sample_lot`, 11
+estancias con varias restricciones de adyacencia estrictas
+simultáneas) no convergieron con las semillas por defecto dentro del
+tiempo disponible. Necesita una búsqueda de semillas más extensa (o
+más iteraciones) que la que cupo en esa sesión.
+
+**Modo espejo no transforma todavía el VACÍO** ([ARCH:area-objetivo]):
+el visor omite dibujar la zona de vacío si el plano está transformado
+(mirrorH/V/rotación), en vez de dibujarlo en el sitio equivocado --
+limitación conocida, documentada, pendiente de resolver.
+
 **Cytoscape.js para la pestaña "Sinergias"** (investigado a fondo, no
 implementado -- decisión explícita de posponerlo): sustituiría la red
 SVG dibujada a mano (posicionamiento radial estático) por una red

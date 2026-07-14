@@ -16,6 +16,12 @@ from housing_generator.infrastructure.algorithms.layout_generation.partition_tre
     place_tree,
     random_neighbor,
 )
+from housing_generator.infrastructure.algorithms.layout_generation.footprint import (
+    footprint_target_area,
+    footprint_rectangle,
+    initial_footprint_width,
+    resize_footprint_width,
+)
 from housing_generator.infrastructure.algorithms.layout_generation.soft_constraint_scorer import (
     SoftConstraintScorer,
 )
@@ -52,8 +58,20 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
         room_ids = [r.id for r in program.rooms]
         areas = {r.id: r.dimensions.area_m2 for r in program.rooms}
 
+        # huella construible: NO ocupa el 100% de la parcela -- se
+        # calcula del tamano justo para el programa declarado (+
+        # margen), el resto queda como VACIO real (exterior). La
+        # PROPORCION de la huella (ancho:alto) tambien es parte de la
+        # busqueda, no fija -- confirmado explicitamente. Ver
+        # [ARCH:area-objetivo].
+        buildable = lot.buildable_area.polygon
+        bminx, bminy, bmaxx, bmaxy = buildable.bounds
+        buildable_w, buildable_h = bmaxx - bminx, bmaxy - bminy
+        footprint_area = footprint_target_area(sum(areas.values()))
+        current_footprint_width = initial_footprint_width(footprint_area, buildable_w, buildable_h)
+
         current_tree = build_random_tree(room_ids, self._rng)
-        current_layout = self._materialize(current_tree, program, lot, areas)
+        current_layout = self._materialize(current_tree, current_footprint_width, footprint_area, program, lot, areas)
         current_hard, current_soft = self._score(current_layout)
 
         best_layout = current_layout
@@ -64,8 +82,16 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
             if best_hard == 0 and best_soft == 0:
                 break
 
-            candidate_tree = random_neighbor(current_tree, self._rng, areas)
-            candidate_layout = self._materialize(candidate_tree, program, lot, areas)
+            if self._rng.random() < 0.2:  # 20%: redimensionar huella, no tocar arbol
+                candidate_tree = current_tree
+                candidate_footprint_width = resize_footprint_width(
+                    current_footprint_width, footprint_area, buildable_w, buildable_h, self._rng
+                )
+            else:
+                candidate_tree = random_neighbor(current_tree, self._rng, areas)
+                candidate_footprint_width = current_footprint_width
+
+            candidate_layout = self._materialize(candidate_tree, candidate_footprint_width, footprint_area, program, lot, areas)
             candidate_hard, candidate_soft = self._score(candidate_layout)
 
             # comparacion lexicografica: si lo duro cambia, decide solo
@@ -79,6 +105,7 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
             accepted = delta <= 0 or self._rng.random() < math.exp(-delta / max(temperature, 1e-9))
             if accepted:
                 current_tree, current_layout = candidate_tree, candidate_layout
+                current_footprint_width = candidate_footprint_width
                 current_hard, current_soft = candidate_hard, candidate_soft
                 if (current_hard, current_soft) < (best_hard, best_soft):
                     best_layout = current_layout
@@ -99,13 +126,17 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
     def _materialize(
         self,
         tree: PartitionNode,
+        footprint_width: float,
+        footprint_area: float,
         program: Program,
         lot: Lot,
         areas: Dict[str, float],
     ) -> Layout:
-        # area edificable: parcela completa, o reducida por retranqueo
-        # (ver Lot.buildable_area).
-        placements = place_tree(tree, lot.buildable_area.polygon, areas)
+        # huella construible dentro del area edificable, NO toda ella
+        # -- ver footprint.py, [ARCH:area-objetivo].
+        buildable_polygon = lot.buildable_area.polygon
+        footprint_polygon = footprint_rectangle(buildable_polygon, footprint_width, footprint_area, lot.entrance_side)
+        placements = place_tree(tree, footprint_polygon, areas)
 
         placed_rooms = []
         for room in program.rooms:
@@ -118,4 +149,20 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
             zones_map.setdefault(room.zone, []).append(room.id)
         built_zones = [Zone(zone_type=zone_type, room_ids=ids) for zone_type, ids in zones_map.items()]
 
-        return Layout(lot=lot, rooms=placed_rooms, zones=built_zones)
+        layout = Layout(lot=lot, rooms=placed_rooms, zones=built_zones)
+        # VACIO: exterior real (jardin/patio), no un Room del dominio
+        # -- solo geometria para el visor. Coordenadas directas (no WKT)
+        # para que el visor las dibuje sin necesitar un parser de WKT en
+        # JS -- una lista de anillos, cada uno lista de [x,y] (soporta
+        # Polygon y MultiPolygon si la resta produce varias piezas
+        # separadas). Ver [ARCH:area-objetivo].
+        vacio_polygon = buildable_polygon.difference(footprint_polygon)
+        layout.metadata["vacio_rings"] = self._polygon_to_rings(vacio_polygon)
+        return layout
+
+    @staticmethod
+    def _polygon_to_rings(geom) -> List[List[List[float]]]:
+        if geom.is_empty:
+            return []
+        polygons = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
+        return [[list(coord) for coord in poly.exterior.coords] for poly in polygons]

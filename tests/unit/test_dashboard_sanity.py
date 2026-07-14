@@ -387,3 +387,14 @@ def test_export_plano_generado_button_exists():
     # propio visor, en un unico archivo consolidado.
     html = _read(HTML_PATH)
     assert 'id="export-plano"' in html
+
+
+def test_vacio_shape_rendering_exists():
+    # a peticion del usuario: la huella construible no ocupa el 100%
+    # de la parcela, el sobrante (vacio, exterior real) se dibuja como
+    # capa de fondo en el visor. Ver [ARCH:area-objetivo].
+    content = _read_js()
+    assert "vacio_rings" in content
+    assert "vacio-shape" in content
+    css = _read(CSS_PATH)
+    assert ".vacio-shape" in css

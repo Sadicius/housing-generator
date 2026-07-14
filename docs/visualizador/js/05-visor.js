@@ -143,6 +143,21 @@ function renderPlano(){
   // hacia arriba (norte = +y, ver Lot) -- se invierte con un transform,
   // no recalculando coordenadas a mano (mas facil de verificar).
   let svgBody = `<g transform="translate(0, ${vbY*2+vbH}) scale(1,-1)">`;
+
+  // VACIO (exterior real, jardin/patio) -- capa de fondo, dibujada
+  // ANTES que las estancias. Solo con el plano sin transformar
+  // (mirrorH/V/rotation en su valor por defecto): las coordenadas del
+  // vacio vienen del propio Python, sin pasar por applyPlanoTransform
+  // -- transformarlas tambien queda pendiente, no se dibuja mal en vez
+  // de dibujarse en el sitio equivocado. Ver [ARCH:area-objetivo].
+  const transformDefault = !PLANO_TRANSFORM.mirrorH && !PLANO_TRANSFORM.mirrorV && PLANO_TRANSFORM.rotation === 0;
+  if(transformDefault && Array.isArray(floor.data.metadata?.vacio_rings)){
+    floor.data.metadata.vacio_rings.forEach(ring => {
+      const points = ring.map(([x,y]) => `${x},${y}`).join(' ');
+      svgBody += `<polygon class="vacio-shape" points="${points}"></polygon>`;
+    });
+  }
+
   rooms.forEach(r => {
     const [x0,y0,x1,y1] = r.bounds;
     const color = PLANO_ZONE_COLOR[r.zone] || 'var(--ink-faint)';

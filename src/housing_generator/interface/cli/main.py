@@ -50,6 +50,10 @@ def build_sample_program(auto_adjacency: bool = False) -> Program:
 
 
 def build_sample_lot() -> Lot:
+    # 14x16=224m2 -- ya no hace falta ajustar esto a mano al tamano del
+    # programa: SimulatedAnnealingLayoutGenerator calcula su propia
+    # huella construible (footprint.py), el sobrante queda como vacio
+    # real (jardin/patio), no infla las estancias. Ver [ARCH:area-objetivo].
     return Lot(boundary=Boundary(polygon=box(0, 0, 14, 16)))
 
 

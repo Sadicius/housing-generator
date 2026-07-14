@@ -556,3 +556,6 @@ table.matrix th.dim{opacity:.25;}
   letter-spacing:0.05em; margin-bottom:8px;
 }
 .nota-bloque.highlight .caveat{border-color:var(--terracota);}
+
+/* ---------------- VACIO (exterior real, jardin/patio) ---------------- */
+.vacio-shape{fill:var(--bg); stroke:var(--line-soft); stroke-width:0.04; stroke-dasharray:0.15,0.1;}

@@ -97,6 +97,20 @@ def _worst_aspect_ratio(width: float, height: float, ratio: float, direction: st
     return max(r1, r2)
 
 
+def _area_derived_ratio(node: PartitionNode, areas: Dict[str, float]) -> float:
+    """Proporcion derivada PURAMENTE del area declarada de cada
+    subarbol, ignorando cualquier ratio_override existente -- el punto
+    de referencia "justo" tanto para el corte por defecto (place_tree)
+    como para acotar cuanto puede alejarse slide_wall (ver mas abajo,
+    [ARCH:area-objetivo])."""
+    assert node.first is not None and node.second is not None, \
+        "Nodo interno sin first/second -- invariante del arbol violada"
+    first_area = sum(_leaf_area(leaf, areas) for leaf in node.first.leaves())
+    second_area = sum(_leaf_area(leaf, areas) for leaf in node.second.leaves())
+    total = first_area + second_area or 1.0
+    return first_area / total
+
+
 def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float]) -> Dict[str, Polygon]:
     """Recorre el arbol y devuelve, para cada room_id, el rectangulo que
     le corresponde dentro de `rectangle`, proporcional al area total de
@@ -108,10 +122,7 @@ def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float])
     assert node.first is not None and node.second is not None, \
         "Nodo interno sin first/second -- invariante del arbol violada"
     minx, miny, maxx, maxy = rectangle.bounds
-    first_area = sum(_leaf_area(leaf, areas) for leaf in node.first.leaves())
-    second_area = sum(_leaf_area(leaf, areas) for leaf in node.second.leaves())
-    total = first_area + second_area or 1.0
-    ratio = node.ratio_override if node.ratio_override is not None else (first_area / total)
+    ratio = node.ratio_override if node.ratio_override is not None else _area_derived_ratio(node, areas)
 
     # direccion efectiva: automatica minimiza la peor proporcion
     # resultante (ver [ARCH:partition-node]), o la forzada por override.
@@ -139,8 +150,23 @@ def place_tree(node: PartitionNode, rectangle: Polygon, areas: Dict[str, float])
 
 
 SLIDE_WALL_STEP = 0.08          # perturbacion maxima por movimiento (+-8%)
-SLIDE_WALL_MIN_RATIO = 0.15      # limites para evitar cortes degenerados
-SLIDE_WALL_MAX_RATIO = 0.85
+# BUG REAL encontrado por el usuario (captura de pantalla: un Pasillo
+# de 4.0m2 declarados generado mas grande que un Dormitorio de 8.0m2)
+# e investigado a fondo tras anadir AreaObjetivoValidator: los limites
+# ABSOLUTOS anteriores (0.15/0.85) permitian que el ratio de CUALQUIER
+# corte se alejara hasta esos extremos sin importar su proporcion
+# "justa" (derivada del area) -- para un corte cuya proporcion justa
+# es, p.ej., 3% (una estancia diminuta junto a un subarbol grande),
+# nada impedia deslizarlo hasta el 85% (28 veces su area justa) tras
+# muchas iteraciones de recocido, sin ninguna fuerza que lo devolviera
+# -- confirmado empiricamente: 0 de 20 semillas distintas conseguian
+# generar un layout valido con validacion de area activa, no era mala
+# suerte de semilla, era estructural. Corregido acotando RELATIVO a la
+# proporcion justa de cada corte (`_area_derived_ratio`), no con una
+# ventana absoluta igual para todos los cortes. Ver [ARCH:area-objetivo].
+SLIDE_WALL_MAX_DEVIATION = 0.20  # +-20% relativo al ratio justo (derivado del area)
+SLIDE_WALL_ABSOLUTE_MIN = 0.05    # limite de seguridad, evita cortes degenerados
+SLIDE_WALL_ABSOLUTE_MAX = 0.95
 
 
 def _current_ratio(node: PartitionNode, areas: Dict[str, float]) -> float:
@@ -149,12 +175,27 @@ def _current_ratio(node: PartitionNode, areas: Dict[str, float]) -> float:
     el punto de partida real para "deslizar" desde ahi, no un valor fijo."""
     if node.ratio_override is not None:
         return node.ratio_override
+    return _area_derived_ratio(node, areas)
+
+
+def _clear_stale_overrides(node: PartitionNode, room_ids: set) -> bool:
+    """Limpia `ratio_override` en cualquier nodo interno cuyo subarbol
+    contenga alguna de las estancias en `room_ids` -- tras un
+    swap_leaves, un ratio_override ya fijado en un antecesor quedaria
+    calculado para la estancia VIEJA (area distinta), sin que nada lo
+    invalidase. Devuelve si el subarbol de `node` contiene alguna de
+    esas estancias (para la recursion). Ver [ARCH:area-objetivo]."""
+    if node.is_leaf:
+        return node.room_id in room_ids
     assert node.first is not None and node.second is not None, \
         "Nodo interno sin first/second -- invariante del arbol violada"
-    first_area = sum(_leaf_area(leaf, areas) for leaf in node.first.leaves())
-    second_area = sum(_leaf_area(leaf, areas) for leaf in node.second.leaves())
-    total = first_area + second_area or 1.0
-    return first_area / total
+    contiene = (
+        _clear_stale_overrides(node.first, room_ids)
+        or _clear_stale_overrides(node.second, room_ids)
+    )
+    if contiene:
+        node.ratio_override = None
+    return contiene
 
 
 def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, float]) -> PartitionNode:
@@ -170,6 +211,7 @@ def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, fl
         if len(leaves) >= 2:
             a, b = rng.sample(leaves, 2)
             a.room_id, b.room_id = b.room_id, a.room_id
+            _clear_stale_overrides(new_tree, {a.room_id, b.room_id})
         return new_tree
 
     internals = new_tree.internal_nodes()
@@ -186,9 +228,19 @@ def random_neighbor(tree: PartitionNode, rng: random.Random, areas: Dict[str, fl
         else:
             target.direction = None
     elif move == "swap_children":
+        # el ratio_override (si lo hay) representa "fraccion de first" --
+        # tras intercambiar first/second, ese numero fijo quedaria
+        # aplicado al lado CONTRARIO del que se calculo, invirtiendo el
+        # corte -- mismo tipo de problema que swap_leaves. Se limpia
+        # para que se recalcule desde el area real de cada lado.
         target.first, target.second = target.second, target.first
+        target.ratio_override = None
     else:  # slide_wall
         current = _current_ratio(target, areas)
+        natural = _area_derived_ratio(target, areas)
         delta = rng.uniform(-SLIDE_WALL_STEP, SLIDE_WALL_STEP)
-        target.ratio_override = min(SLIDE_WALL_MAX_RATIO, max(SLIDE_WALL_MIN_RATIO, current + delta))
+        proposed = current + delta
+        min_bound = max(natural * (1 - SLIDE_WALL_MAX_DEVIATION), SLIDE_WALL_ABSOLUTE_MIN)
+        max_bound = min(natural * (1 + SLIDE_WALL_MAX_DEVIATION), SLIDE_WALL_ABSOLUTE_MAX)
+        target.ratio_override = min(max_bound, max(min_bound, proposed))
     return new_tree
