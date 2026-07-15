@@ -2640,3 +2640,49 @@ direcciones -- verificado explícitamente que SÍ detecta la regresión
 mensaje correcto, luego restaurado).
 
 Suite final: 403 unitarios (1 nuevo), pyflakes limpio.
+
+## [ARCH:btree-partition] Bug real reportado por el usuario en un navegador de verdad
+
+El usuario probó el dashboard en un navegador real (algo que este
+entorno de desarrollo no puede hacer -- el CDN de Pyodide está
+bloqueado aquí) y encontró un error real al generar sin retranqueo:
+
+```
+TypeError: float() argument must be a string or a real number, not 'JsNull'
+```
+
+### Diagnóstico
+
+Localizada la línea exacta (línea 8 del código Python generado por
+`generarEdificioReal`):
+`retranqueo_m=(float(retranqueo_js) if retranqueo_js is not None else None)`.
+
+Causa raíz: el comentario original asumía que
+`pyodide.globals.set('x', null)` convierte `null` de JS a `None` de
+Python automáticamente -- **esa asunción era incorrecta**. El valor
+llega a Python como un objeto `JsNull` (proxy de JS), no como `None`
+real -- `JsNull is not None` da `True`, así que la rama que debería
+evitar `float()` nunca se activaba, y `float(JsNull_instance)`
+fallaba.
+
+### Corrección
+
+Evitado el paso por variable global para `retranqueo_m` y
+`retranqueo_incremento_por_planta_m` -- se construye el literal
+Python DIRECTAMENTE como texto (`'None'` o `` `float(${valor})` ``)
+en JavaScript, nunca vía la conversión null→None de
+`pyodide.globals.set()`, que resultó no ser fiable para este caso.
+
+Verificado sin depender del CDN bloqueado: interceptado
+`pyodide.runPythonAsync` con una implementación de mentira que
+captura el código generado, confirmado con `ast.parse()` de Python
+real que el código generado es sintácticamente válido tanto sin
+retranqueo (`retranqueo_m=None`) como con él
+(`retranqueo_m=float(3.5)`).
+
+Dos tests nuevos: uno que confirma el código generado real en ambos
+casos, otro (`test_retranqueo_none_case_does_not_rely_on_pyodide_null_conversion`)
+que protege explícitamente contra que se reintroduzca el patrón que
+causó el bug (`retranqueo_js` ya no debe aparecer en el archivo).
+
+Suite final: 404 unitarios (2 nuevos), pyflakes limpio.

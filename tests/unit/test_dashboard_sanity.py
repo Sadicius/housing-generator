@@ -258,6 +258,29 @@ def test_retranqueo_and_experimental_btree_controls_are_wired_end_to_end():
     assert "experimental_btree=bool(experimental_btree_js)" in js
 
 
+def test_retranqueo_none_case_does_not_rely_on_pyodide_null_conversion():
+    # BUG REAL encontrado en un navegador de verdad (no reproducible en
+    # este entorno de desarrollo, CDN de Pyodide bloqueado): sin
+    # retranqueo, el usuario obtuvo "TypeError: float() argument must
+    # be a string or a real number, not 'JsNull'". Causa raiz:
+    # `pyodide.globals.set('x', null)` NO se convierte a `None` de
+    # Python de forma fiable -- llega como un objeto `JsNull`, y
+    # `JsNull is not None` da `True`. Corregido evitando el paso por
+    # variable global para este valor -- se construye el literal
+    # Python DIRECTAMENTE como texto ('None' o 'float(numero)'), nunca
+    # via pyodide.globals.set(). Este test protege que no se reintroduzca
+    # el patron que causo el bug real.
+    js = _read(JS_DIR / "06-pyodide.js")
+    assert "retranqueo_js" not in js, (
+        "reaparecio el paso de retranqueo por variable global de pyodide -- "
+        "esto fue exactamente lo que causo el bug real de JsNull en un navegador"
+    )
+    assert "retranqueoLiteral" in js
+    assert "retranqueoIncrementoLiteral" in js
+    assert "`    retranqueo_m=${retranqueoLiteral}," in js
+    assert "`    retranqueo_incremento_por_planta_m=${retranqueoIncrementoLiteral}," in js
+
+
 def test_mirror_mode_controls_exist():
     html = _read(HTML_PATH)
     for control_id in ["mirror-h", "mirror-v", "mirror-rotate", "mirror-reset"]:

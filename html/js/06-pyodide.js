@@ -63,11 +63,24 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   pyodide.globals.set('max_it_js', maxIterations);
   pyodide.globals.set('retry_js', retrySeeds);
   pyodide.globals.set('accesible_js', viviendaAccesible);
-  // null/undefined de JS se convierten a None de Python automaticamente
-  // (conversion estandar de Pyodide) -- no hace falta tratarlos aparte.
-  pyodide.globals.set('retranqueo_js', retranqueoM ?? null);
-  pyodide.globals.set('retranqueo_incremento_js', retranqueoIncremento ?? null);
   pyodide.globals.set('experimental_btree_js', !!experimentalBtree);
+
+  // BUG REAL encontrado probando en un navegador real (Pyodide de
+  // verdad, no accesible en este entorno de desarrollo -- CDN
+  // bloqueado): `pyodide.globals.set('x', null)` NO se convierte a
+  // `None` de Python como asumia el comentario anterior -- llega como
+  // un objeto `JsNull` (proxy de JS), y `JsNull is not None` da
+  // `True`, asi que `float(JsNull_instance)` fallaba con
+  // "TypeError: float() argument must be a string or a real number,
+  // not 'JsNull'". Corregido evitando el paso por variable global
+  // para estos dos valores -- se construye el literal Python
+  // DIRECTAMENTE como texto (numero real o la palabra `None`), sin
+  // pasar nunca por la conversion null->None de pyodide.globals.set(),
+  // que resulto no ser fiable para este caso.
+  const retranqueoLiteral = (retranqueoM !== null && retranqueoM !== undefined && !isNaN(retranqueoM))
+    ? `float(${JSON.stringify(retranqueoM)})` : 'None';
+  const retranqueoIncrementoLiteral = (retranqueoIncremento !== null && retranqueoIncremento !== undefined && !isNaN(retranqueoIncremento))
+    ? `float(${JSON.stringify(retranqueoIncremento)})` : 'None';
 
   const pyCode = [
     'import json',
@@ -77,8 +90,8 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     '    payload, float(lot_w_js), float(lot_h_js),',
     '    seed=int(seed_js), max_iterations=int(max_it_js),',
     '    retry_seeds=int(retry_js), vivienda_accesible=bool(accesible_js),',
-    '    retranqueo_m=(float(retranqueo_js) if retranqueo_js is not None else None),',
-    '    retranqueo_incremento_por_planta_m=(float(retranqueo_incremento_js) if retranqueo_incremento_js is not None else None),',
+    `    retranqueo_m=${retranqueoLiteral},`,
+    `    retranqueo_incremento_por_planta_m=${retranqueoIncrementoLiteral},`,
     '    experimental_btree=bool(experimental_btree_js),',
     ')',
     'json.dumps(resultado)',
