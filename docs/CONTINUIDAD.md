@@ -271,6 +271,24 @@ generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
+**[NUEVO] Sospecha de no-determinismo entre ejecuciones con la misma
+semilla** ([ARCH:cli-programa-reducido]): `--auto-adjacency` con
+`--seed 1` produjo resultados DISTINTOS en ejecuciones separadas del
+mismo comando exacto -- convergió una vez, falló otra. Sospecha:
+iteración sobre algún `set()` en el generador o los validadores, sin
+`PYTHONHASHSEED` fijo (el orden de iteración de un `set` de strings
+puede variar entre procesos de Python). Sin investigar a fondo
+todavía -- si se confirma, sería un bug real que rompe la
+reproducibilidad de semillas en general, no solo para este escenario.
+
+**Programa de ejemplo del CLI reducido de 11 a 6 estancias**
+([ARCH:cli-programa-reducido]): a petición del usuario, para que la
+demo por defecto genere de forma fiable. 4 tests de integración que
+usaban escenarios propios (no el programa reducido) quedaron en
+`xfail` documentado -- mismo problema de fondo
+([ARCH:locking-progresivo]), no resuelto para ellos, solo
+documentado honestamente en vez de ocultado.
+
 **Escenario complejo (9-11 estancias) sigue sin converger del todo**
 ([ARCH:locking-progresivo]): investigación profunda con técnicas
 reales (min-conflicts, calibración de temperatura, bloqueo

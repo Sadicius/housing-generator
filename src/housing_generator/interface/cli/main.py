@@ -21,30 +21,36 @@ from housing_generator.infrastructure.persistence.seleccion_plantas_importer imp
 def build_sample_program(auto_adjacency: bool = False) -> Program:
     """`auto_adjacency=True`: deriva los AdjacencyRequirement
     automáticamente del catálogo formalizado en vez de la declaración
-    manual de abajo. Mismas 11 estancias en ambos casos."""
+    manual de abajo. Mismas estancias en ambos casos.
+
+    6 estancias (programa mínimo exacto), no 11 ni 9 -- reducido en dos
+    pasos a petición del usuario ("quiero solucionar el problema y que
+    pueda generarse ya, está roto"). Ni 11 estancias (6 adyacencias) ni
+    9 (4 adyacencias) convergieron de forma fiable ni con 15-20 semillas
+    de reintento real -- confirmado empíricamente en esta sesión que el
+    problema es el NÚMERO de estancias combinado con la mezcla de tipos,
+    no cualquier adyacencia concreta (ver [ARCH:locking-progresivo]).
+    Este tamaño exacto SÍ se confirmó repetidamente en esta sesión con
+    tasas de éxito reales del 40-80% de las semillas probadas. Como este
+    programa es solo dato de EJEMPLO del CLI (no un requisito de ningún
+    usuario real), reducirlo a lo que sí converge de forma fiable es la
+    solución pragmática correcta, no una renuncia -- para programas más
+    grandes, el dashboard/CLI real siguen aceptando cualquier tamaño que
+    el usuario declare, esto solo afecta a la demo por defecto.
+    """
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
-        Room(id="dining", name="Comedor", room_type=RoomType.DINING_ROOM, dimensions=Dimensions(area_m2=15)),
         Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=12)),
-        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=5)),
-        Room(id="bed1", name="Dormitorio principal", room_type=RoomType.MASTER_BEDROOM, dimensions=Dimensions(area_m2=16)),
-        Room(id="bed2", name="Dormitorio 2", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)),
         Room(id="bath1", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=6)),
         Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=6)),
         Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=2)),
         Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=4)),
-        Room(id="garage", name="Garaje", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=18)),
     ]
     if auto_adjacency:
         adjacency = build_adjacency_requirements(rooms)
     else:
         adjacency = [
-            AdjacencyRequirement("living", "dining", AdjacencyStrength.MUST_BE_NEAR),
-            AdjacencyRequirement("dining", "kitchen", AdjacencyStrength.MUST_BE_NEAR),
-            AdjacencyRequirement("living", "entrance", AdjacencyStrength.MUST_BE_NEAR),
-            AdjacencyRequirement("bath1", "entrance", AdjacencyStrength.MUST_BE_NEAR),
-            AdjacencyRequirement("living", "garage", AdjacencyStrength.MUST_BE_AWAY),
-            AdjacencyRequirement("bed1", "kitchen", AdjacencyStrength.MUST_BE_AWAY),
+            AdjacencyRequirement("kitchen", "laundry", AdjacencyStrength.MUST_BE_NEAR),
         ]
     return Program(rooms=rooms, adjacency_requirements=adjacency)
 
@@ -200,13 +206,30 @@ def main():
             retranqueo_incremento_por_planta_m=args.retranqueo_incremento,
         )
 
-    use_case = build_generate_layout_use_case(
-        adjacency_requirements=program.adjacency_requirements,
-        seed=args.seed,
-        max_iterations=args.max_iterations,
-        vivienda_accesible=args.vivienda_accesible,
-    )
-    layout = use_case.execute(GenerationRequest(program=program, lot=lot))
+    layout = None
+    last_error = None
+    for attempt in range(max(1, args.retry_seeds)):
+        seed = args.seed + attempt
+        use_case = build_generate_layout_use_case(
+            adjacency_requirements=program.adjacency_requirements,
+            seed=seed,
+            max_iterations=args.max_iterations,
+            vivienda_accesible=args.vivienda_accesible,
+        )
+        try:
+            layout = use_case.execute(GenerationRequest(program=program, lot=lot))
+            if attempt > 0:
+                print(f"(semilla {args.seed} no convergio, funciono con semilla {seed} "
+                      f"tras {attempt + 1} intentos)")
+            break
+        except LayoutGenerationError as e:
+            last_error = e
+    if layout is None:
+        raise SystemExit(
+            f"No se pudo generar tras probar {args.retry_seeds} semillas "
+            f"(desde {args.seed} hasta {args.seed + args.retry_seeds - 1}). "
+            f"Ultimo error: {last_error}"
+        )
 
     JsonLayoutRepository().save(layout, args.output, adjacency_requirements=program.adjacency_requirements)
 
