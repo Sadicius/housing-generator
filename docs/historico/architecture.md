@@ -2301,3 +2301,33 @@ correctamente los cambios genuinamente independientes.
 Suite del proyecto sin cambios -- todo este trabajo sigue siendo plan
 verificado en `docs/referencia/`, no toca código de producción
 todavía.
+
+## [ARCH:migracion-btree] Fase 3 completada -- auditoría de validadores y visor
+
+Continuación de las fases anteriores, misma sesión. Buen hallazgo,
+no un problema: la arquitectura hexagonal ya mantenida en todo el
+proyecto reduce mucho el alcance real de la migración -- verificado
+con `grep`, ni el dominio, ni la capa de aplicación, ni ninguno de
+los 24 validadores importan `partition_tree`/`PartitionNode`. Todos
+operan sobre `Layout` (resultado ya colocado), no sobre el mecanismo
+de generación.
+
+**Sin cambios** (verificado, no solo asumido): los 24 validadores,
+`GeometryAdjacencyGraphBuilder` (mide borde compartido entre
+polígonos directamente), dominio y aplicación completos,
+`planoCanvasBounds` del visor.
+
+**Cambios reales necesarios**: `ExteriorContactValidator` compara hoy
+contra `layout.lot.buildable_area.polygon` completo -- funciona
+porque la huella siempre es maciza hoy, pero con huecos internos una
+pared que da a un patio interior debe contar como exterior real
+también. `count_exterior_sides` en sí NO necesita cambios (ya es
+genérica, acepta cualquier polígono) -- solo cambia QUÉ polígono se
+le pasa. `vacio_rings` del visor probablemente necesite admitir
+huecos DENTRO de un polígono (`Polygon.interiors`), no solo piezas
+separadas. `footprint.py`: reescritura completa (ya sabido desde la
+Fase 1). Modo espejo + vacío: limitación ya conocida, sin cambios.
+
+Detalle completo en `docs/referencia/generador/prototipo-btree/README.md`.
+Continúa con la Fase 4 (implementación incremental) pendiente para
+otra sesión, dado el volumen ya cubierto hoy.

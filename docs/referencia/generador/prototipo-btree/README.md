@@ -165,10 +165,44 @@ suyo dos niveles por debajo), y acepta correctamente los cambios
 genuinamente independientes (una rama del árbol sin ningún antecesor en
 común con la estancia bloqueada).
 
+## Fase 3 -- auditoría de validadores y visor (completada)
+
+Buen hallazgo: la arquitectura hexagonal ya mantenida en todo el
+proyecto reduce mucho el alcance real de la migración -- verificado
+con `grep`, ni el dominio, ni la capa de aplicación, ni ningún
+validador importan `partition_tree`/`PartitionNode`. Todos operan
+sobre `Layout` (resultado ya colocado), no sobre el mecanismo de
+generación.
+
+### Sin cambios (verificado)
+- Los 24 validadores -- muestreados varios, todos dependen solo de
+  `Layout`, `shapely`, enums de dominio.
+- `GeometryAdjacencyGraphBuilder` -- mide borde compartido entre
+  polígonos directamente, representación-agnóstico.
+- Dominio y aplicación completos -- cero referencias al árbol.
+- `planoCanvasBounds` del visor -- ya calcula min/max genérico.
+
+### Cambios reales necesarios
+- **`ExteriorContactValidator`**: hoy compara cada estancia contra
+  `layout.lot.buildable_area.polygon` (la parcela edificable
+  completa) -- funciona hoy porque la huella siempre es maciza
+  (coincide con el borde real). Con huecos internos, una pared que da
+  a un patio interior debe contar como contacto exterior real
+  también, y hoy no lo haría. `count_exterior_sides` en sí NO necesita
+  cambios (ya es genérica, acepta cualquier polígono) -- solo hay que
+  cambiar QUÉ polígono se le pasa (el contorno real de lo construido,
+  no la parcela completa).
+- **`vacio_rings` del visor**: probablemente necesite admitir huecos
+  DENTRO de un polígono (`Polygon.interiors` de shapely), no solo
+  piezas separadas (`MultiPolygon`) como hoy -- un patio interior
+  rodeado por todos lados es un hueco, no una pieza aparte.
+- **`footprint.py`**: reescritura completa, ya establecido en la Fase 1.
+- **Modo espejo + vacío**: limitación ya conocida y documentada,
+  sigue pendiente igual, no la agrava ni la resuelve esta migración.
+
 ## Pendiente (fases futuras)
 
-- Fase 3: auditoría de validadores y visor.
-- Fase 4: implementación incremental, en paralelo al sistema actual, no
-  en sustitución directa.
+- Fase 4: implementación incremental, en paralelo al sistema actual,
+  no en sustitución directa.
 - Fase 5: comparación empírica con nuestros escenarios ya conocidos,
   decisión de corte.
