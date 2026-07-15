@@ -2526,3 +2526,36 @@ Sin pérdida de calidad ni información: 7 tests directos del
 validador, más los 401 unitarios completos, todos pasando
 exactamente igual -- mismo comportamiento, mismas violaciones
 detectadas, solo menos trabajo repetido para llegar a ellas.
+
+## [ARCH:migracion-btree] Aplicar --experimental-btree a los xfail restantes
+
+A petición del usuario ("me gustaría seguir resolviendo"), tras
+confirmar en la Fase 5 que el árbol B* resuelve un escenario xfail
+concreto: probado el mismo flag contra los otros xfail que quedaban
+en `test_cli.py`.
+
+**Resueltos, verificados con el CLI real (no reconstrucción)**:
+- `test_cli_lot_size_option_changes_the_actual_parcel_dimensions`
+  (parcela 12x11, 7 estancias) -- exactamente el mismo escenario ya
+  confirmado en la Fase 5, semilla 4. Ajustada la tolerancia de
+  límites de 1cm a 5cm -- el árbol B* calcula ancho/alto vía raíz
+  cuadrada del área × proporción, con algo más de ruido de punto
+  flotante que la subdivisión exacta del árbol de partición (margen
+  real, no relajación arbitraria).
+- `test_cli_with_import_seleccion_as_a_real_subprocess` (escenario
+  multi-planta, 2 niveles, 10 estancias) -- converge en semilla 8,
+  8 intentos.
+
+**No resuelto, probado con honestidad**:
+`test_cli_retries_seeds_automatically_when_the_first_one_does_not_converge`
+(parcela 12x10, 9 estancias con `DINING_ROOM`-`KITCHEN` obligatorio)
+-- probado con 5, 10 semillas a distintos presupuestos de
+iteraciones, sigue sin converger con el árbol B*. Se deja como está
+(generador por defecto, xfail documentado) -- no se fuerza un
+arreglo sin evidencia real que lo sostenga.
+
+Con esto, de los 4 `xfail` que había en `test_cli.py`, quedan 3
+resueltos (1 por relajación del catálogo, 2 por el árbol B*) y 1
+genuinamente sin resolver, documentado con honestidad.
+
+Suite: 401 unitarios sin cambios, pyflakes limpio.

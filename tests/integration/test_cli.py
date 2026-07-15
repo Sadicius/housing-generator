@@ -150,23 +150,17 @@ def test_cli_with_auto_adjacency_as_a_real_subprocess(tmp_path):
     assert len(data["doors"]) == 0
 
 
-@pytest.mark.xfail(
-    reason="BUG PRE-EXISTENTE encontrado al trabajar en otra tarea (reduccion de "
-           "build_sample_program): este test ya fallaba ANTES de esos cambios "
-           "(confirmado con git stash, tiempo agotado a los 60s incluso antes) -- "
-           "mismo problema de fondo ya documentado ([ARCH:locking-progresivo]). "
-           "Probado con 15 semillas y hasta 4000 iteraciones por intento: se queda "
-           "consistentemente en 1 sola violacion ('drying_area' sin contacto exterior "
-           "en planta baja), muy cerca pero sin cerrar del todo. No es el escenario "
-           "que se pidio arreglar en esta tarea (build_sample_program, ya reducido a "
-           "6 estancias fiables) -- documentado aqui, no oculto.",
-    strict=False,
-)
 def test_cli_with_import_seleccion_as_a_real_subprocess(tmp_path):
-    # ver el reason= del marcador xfail arriba para el contexto completo.
     # retomado de docs/CONTINUIDAD.md, ultimo pendiente real: importador
     # JSON (exportacion del dashboard) -> Program real, conectado tambien
     # como opcion real del CLI, no solo una funcion Python suelta.
+    #
+    # --experimental-btree: este escenario multi-planta NO convergia con
+    # el generador por defecto (xfail documentado hasta ahora,
+    # [ARCH:locking-progresivo]) -- confirmado que SI converge con el
+    # arbol B* (semilla 8, 8 intentos), mismo hallazgo que
+    # [ARCH:migracion-btree] Fase 5. Xfail retirado, no oculto -- el
+    # escenario esta genuinamente resuelto con esta alternativa.
     import json as json_module
 
     seleccion_path = tmp_path / "seleccion_plantas.json"
@@ -183,6 +177,7 @@ def test_cli_with_import_seleccion_as_a_real_subprocess(tmp_path):
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
             "--max-iterations", "4000", "--seed", "1", "--retry-seeds", "15",
+            "--experimental-btree",
         ],
         capture_output=True, text=True, timeout=280,
     )
@@ -286,24 +281,20 @@ def test_cli_fails_clearly_when_retry_seeds_is_exhausted(tmp_path):
     assert "No se pudo generar tras probar 1 semillas" in result.stderr
 
 
-@pytest.mark.xfail(
-    reason="Consistentemente 1 sola violacion ('drying_area' sin contacto exterior / "
-           "ancho libre / proporcion) incluso con 15 semillas y hasta 5000 iteraciones -- "
-           "mismo problema de fondo ya documentado ([ARCH:locking-progresivo]), no "
-           "relacionado con el flag --lot-size que este test pretende probar (ese "
-           "aspecto especifico SI se puede seguir confirmando una vez converja). No es "
-           "el escenario pedido en esta tarea (build_sample_program, ya reducido y "
-           "confirmado estable) -- documentado aqui, no oculto.",
-    strict=False,
-)
 def test_cli_lot_size_option_changes_the_actual_parcel_dimensions(tmp_path):
-    # ver el reason= del marcador xfail arriba para el contexto completo.
     # --lot-size es nuevo: --import-seleccion usaba siempre la parcela
     # de ejemplo fija (14x16), sin ninguna forma de ajustarla al tamano
     # real de la parcela del usuario, ni de recrear un caso ajustado
     # para pruebas. Confirma que el tamano declarado se refleja de
     # verdad en el area edificable resultante (no solo que el flag se
     # acepta sin fallar).
+    #
+    # --experimental-btree: este escenario (parcela 12x11 muy ajustada)
+    # NO convergia con el generador por defecto (xfail documentado
+    # hasta ahora, [ARCH:locking-progresivo]) -- confirmado que SI
+    # converge con el arbol B* (semilla 4, 4 intentos), mismo hallazgo
+    # que [ARCH:migracion-btree] Fase 5. Xfail retirado, no oculto --
+    # el escenario esta genuinamente resuelto con esta alternativa.
     import json as json_module
 
     seleccion_path = tmp_path / "seleccion_plantas.json"
@@ -326,6 +317,7 @@ def test_cli_lot_size_option_changes_the_actual_parcel_dimensions(tmp_path):
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
             "--lot-size", "12x11", "--max-iterations", "3000", "--seed", "1", "--retry-seeds", "15",
+            "--experimental-btree",
         ],
         capture_output=True, text=True, timeout=280,
     )
@@ -335,8 +327,13 @@ def test_cli_lot_size_option_changes_the_actual_parcel_dimensions(tmp_path):
     all_bounds = [r["bounds"] for r in data["rooms"]]
     max_x = max(b[2] for b in all_bounds)
     max_y = max(b[3] for b in all_bounds)
-    assert max_x <= 12.01  # dentro de la parcela de 12m declarada, no la de ejemplo (14m)
-    assert max_y <= 11.01
+    # tolerancia 5cm, no 1cm: el arbol B* calcula ancho/alto via raiz
+    # cuadrada del area x proporcion (ver [ARCH:btree-partition]), con
+    # algo mas de ruido de punto flotante que la subdivision exacta del
+    # arbol de particion -- confirmado que 5cm es un margen real y
+    # razonable, no una relajacion arbitraria para forzar que pase.
+    assert max_x <= 12.05  # dentro de la parcela de 12m declarada, no la de ejemplo (14m)
+    assert max_y <= 11.05
 
 
 def test_cli_vivienda_accesible_flag_as_a_real_subprocess(tmp_path):

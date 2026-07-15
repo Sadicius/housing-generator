@@ -295,6 +295,19 @@ usaban escenarios propios (no el programa reducido) quedaron en
 ([ARCH:locking-progresivo]), no resuelto para ellos, solo
 documentado honestamente en vez de ocultado.
 
+**[ACTUALIZADO] 3 de esos 4 xfail, ya resueltos -- por dos vías
+distintas** ([ARCH:migracion-btree], [ARCH:relaciones-obligatorias-revisadas]):
+`test_cli_with_auto_adjacency` se resolvió al relajar las relaciones
+obligatorias del catálogo (sesión aparte, sin tocar el generador).
+Tras confirmar que el árbol B* resuelve el escenario de la Fase 5, se
+probó `--experimental-btree` contra los otros 2 xfail restantes --
+ambos convergen (parcela 12x11 ajustada, semilla 4; escenario
+multi-planta de 2 niveles, semilla 8), xfail retirado en ambos,
+verificado con el CLI real, no una reconstrucción. El único que
+queda (parcela 12x10, 9 estancias con `DINING_ROOM`-`KITCHEN`
+obligatorio) se resiste con ambos generadores -- probado hasta 10
+semillas con el árbol B*, sigue sin converger.
+
 **Escenario complejo (9-11 estancias) sigue sin converger del todo**
 ([ARCH:locking-progresivo]): investigación profunda con técnicas
 reales (min-conflicts, calibración de temperatura, bloqueo
