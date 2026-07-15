@@ -2485,3 +2485,44 @@ Sin pérdida de calidad ni información: 401 unitarios, incluidos los
 19 tests que ejercitan estas funciones directamente (con formas
 degeneradas, rotadas, no rectangulares), todos pasando exactamente
 igual. pyflakes, mypy y vulture limpios.
+
+## [ARCH:pasillo-topologia] Tercera ronda: bug de rendimiento real, solo visible a mayor escala
+
+A petición del usuario ("seguir revisando aunque las ganancias sean
+cada vez más pequeñas"). Perfilado con `cProfile` en un escenario
+MÁS GRANDE (13 estancias, no las 6 de las rondas anteriores) --
+decisión deliberada: algunas ineficiencias no se notan con pocas
+estancias pero sí importan a la escala real que puede usar un
+usuario.
+
+### Hallazgo real
+
+Con 6 estancias, `PasilloTopologiaValidator` ni aparecía entre los
+primeros puestos del perfil. Con 13, pasó a ser el **primer**
+contribuyente por tiempo acumulado (5.07s de 21.1s totales, ~24%).
+Causa: para cada estancia "candidata" (protegida, no exenta), el
+validador copiaba el grafo completo, la quitaba, y luego llamaba
+`nx.node_connected_component()` -- una búsqueda BFS/DFS COMPLETA --
+UNA VEZ POR CADA otra estancia protegida, recalculando la misma
+componente conexa para estancias que ya estaban en el mismo grupo.
+Complejidad real: O(protegidas² × (V+E)) por validación, cuando
+`nx.connected_components()` da TODAS las componentes de una sola
+pasada, O(V+E) total.
+
+Corregido: componentes conexas calculadas UNA vez por candidato
+(no por par), guardadas en un diccionario nodo→componente, consultado
+para cada comparación en vez de recalcular.
+
+### Medido, no asumido
+
+Mismo escenario de 13 estancias, antes/después: `PasilloTopologiaValidator.validate()`
+5.068s → 3.333s (-34%). Tiempo total del escenario: 21.119s → 19.326s
+(~8.5%). Confirma que valía la pena seguir revisando a pesar de que
+las dos rondas anteriores ya habían encontrado los bugs más grandes
+en el escenario pequeño -- este solo se hizo visible al probar a
+escala mayor.
+
+Sin pérdida de calidad ni información: 7 tests directos del
+validador, más los 401 unitarios completos, todos pasando
+exactamente igual -- mismo comportamiento, mismas violaciones
+detectadas, solo menos trabajo repetido para llegar a ellas.

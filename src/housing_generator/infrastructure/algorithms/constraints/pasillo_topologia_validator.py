@@ -41,10 +41,24 @@ class PasilloTopologiaValidator(ConstraintValidatorPort):
             reduced = graph.copy()
             reduced.remove_node(candidate_id)
 
+            # componentes conexas calculadas UNA vez por candidato, no una
+            # vez por PAR -- bug de rendimiento real, encontrado con
+            # cProfile a escala mayor (13 estancias): node_connected_component
+            # hace su propia busqueda BFS/DFS completa cada vez que se
+            # llama, y se llamaba una vez POR CADA other_id, recalculando
+            # la misma componente para estancias que ya estaban juntas.
+            # nx.connected_components ya da TODAS las componentes en una
+            # sola pasada -- el resto es una simple consulta de diccionario.
+            component_by_node = {
+                node: component
+                for component in nx.connected_components(reduced)
+                for node in component
+            }
+
             for other_id in protected_ids:
-                if other_id == candidate_id or other_id not in reduced:
+                if other_id == candidate_id or other_id not in component_by_node:
                     continue
-                reachable = nx.node_connected_component(reduced, other_id)
+                reachable = component_by_node[other_id]
                 if not (reachable & circulation_ids):
                     violations.append(
                         f"'{rooms_by_id[candidate_id].id}' actúa como paso obligado hacia "
