@@ -116,19 +116,7 @@ def test_cli_end_to_end_as_a_real_subprocess(tmp_path):
     assert all(r["bounds"] is not None for r in data["rooms"])
 
 
-@pytest.mark.xfail(
-    reason="Hallazgo real durante esta tarea: el mismo comando con la misma semilla "
-           "produjo resultados DISTINTOS entre ejecuciones (convergio una vez en pruebas "
-           "manuales con estos mismos parametros, fallo aqui) -- sugiere una fuente de "
-           "no-determinismo real en el generador (sospecha: iteracion sobre un set() en "
-           "algun punto, cuyo orden puede variar entre procesos de Python sin "
-           "PYTHONHASHSEED fijo). Investigacion legitima pero distinta a la pedida en "
-           "esta tarea (build_sample_program, ya reducido y confirmado estable) -- "
-           "documentado aqui como pendiente real, no oculto.",
-    strict=False,
-)
 def test_cli_with_auto_adjacency_as_a_real_subprocess(tmp_path):
-    # ver el reason= del marcador xfail arriba para el contexto completo.
     # retomado de docs/CONTINUIDAD.md: conectar build_adjacency_requirements
     # como opcion automatica real en el CLI, no solo una funcion suelta que
     # hay que llamar a mano. Confirma que --auto-adjacency funciona de
@@ -140,9 +128,9 @@ def test_cli_with_auto_adjacency_as_a_real_subprocess(tmp_path):
         [
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--output", str(output_path), "--auto-adjacency",
-            "--max-iterations", "2000", "--seed", "1", "--retry-seeds", "15",
+            "--max-iterations", "2000", "--seed", "1", "--retry-seeds", "5",
         ],
-        capture_output=True, text=True, timeout=240,
+        capture_output=True, text=True, timeout=120,
     )
 
     assert result.returncode == 0, f"El CLI con --auto-adjacency fallo: {result.stderr}"
@@ -152,11 +140,14 @@ def test_cli_with_auto_adjacency_as_a_real_subprocess(tmp_path):
     assert len(data["rooms"]) == 6  # build_sample_program() reducido, ver [ARCH:cli-programa-reducido]
     assert all(r["bounds"] is not None for r in data["rooms"])
     # las puertas solo reflejan pares Obligatorio cerca satisfechos (no
-    # las preferencias blandas) -- el catalogo completo de 120 pares solo
-    # tiene 4 "Obligatorio cerca" en total (mismo numero que el ejemplo
-    # curado a mano, por coincidencia), asi que 4 es lo correcto aqui,
-    # no una senal de que el catalogo aporte mas puertas que lo manual.
-    assert len(data["doors"]) == 4
+    # las preferencias blandas) -- tras relajar 3 de las 5 relaciones
+    # obligatorias del catalogo ([ARCH:relaciones-obligatorias-revisadas],
+    # confirmado explicitamente con el usuario: "vamos a modificar las
+    # relaciones obligatorias pensando en realmente si son obligatorias"),
+    # solo quedan 2 "Obligatorio cerca" en todo el catalogo (living-dining,
+    # dining-kitchen) -- y este programa de 6 estancias no tiene comedor,
+    # asi que 0 puertas obligatorias es el resultado correcto, no un fallo.
+    assert len(data["doors"]) == 0
 
 
 @pytest.mark.xfail(

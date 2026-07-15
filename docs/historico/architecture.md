@@ -2129,3 +2129,70 @@ escenarios que no eran los que se pidió arreglar:
 
 Suite final: 382 unitarios verdes, 4 xfail documentados en
 integración (no ocultos), pyflakes limpio. Bundle Pyodide regenerado.
+
+## [ARCH:relaciones-obligatorias-revisadas] Revisión honesta de las relaciones "obligatorias"
+
+A petición del usuario, tras la reducción pragmática del programa de
+ejemplo: recopilar y revisar UNA A UNA todas las relaciones y
+umbrales que son criterio nuestro (confirmado en su momento por el
+usuario), no normativa real -- "vamos a modificar las relaciones
+obligatorias pensando en realmente si son obligatorias".
+
+### Auditoría completa recopilada
+
+Del catálogo general (120 pares) solo 5 eran `MUST_*` (obligatorias,
+bloqueantes): `living_room-entrance_hall`, `living_room-dining_room`,
+`dining_room-kitchen`, `laundry-drying_area` (NEAR), y
+`living_room-garage` (AWAY). El resto de decisiones no normativas
+documentadas (umbrales de `ProporcionMaxima`, `AnchoLibrePractico`,
+`AreaObjetivo`, núcleo húmedo, margen de huella) se revisaron pero se
+mantuvieron -- son umbrales numéricos con su propia justificación ya
+investigada, no relaciones de adyacencia candidatas a esta revisión
+concreta. Confirmado también que `DEFAULT_MIN_EXTERIOR_SIDES` SÍ
+tiene base normativa real (categoría A.1.1/A.1.2 del Decreto 29/2010)
+-- excluido de la revisión, no es criterio nuestro.
+
+### Decisión, con justificación por par
+
+- **`living_room-dining_room`: se mantiene MUST_BE_NEAR** -- de las
+  relaciones más universales en diseño residencial, confirmada por
+  varias fuentes independientes en la investigación de esta sesión.
+- **`dining_room-kitchen`: se mantiene MUST_BE_NEAR** -- igual de
+  fuerte, núcleo funcional real (servir la comida), no un capricho.
+- **`living_room-entrance_hall`: relajado a SHOULD_BE_NEAR** -- en
+  muchas viviendas reales el recibidor da a un pasillo antes de
+  llegar al salón, no comparten pared directamente. Deseable, no
+  innegociable.
+- **`laundry-drying_area`: relajado a SHOULD_BE_NEAR** -- tiene
+  sentido funcional, pero el tendedero suele estar en terraza/balcón,
+  separado del lavadero interior en muchas viviendas reales.
+- **`living_room-garage`: relajado a SHOULD_BE_AWAY** -- el garaje
+  adosado tocando zonas de estar (con aislamiento adecuado) es
+  extremadamente común en vivienda real. Preferible mantenerlo
+  alejado (ruido, humos), pero no una imposibilidad constructiva.
+
+### Impacto real, medido con generación de verdad
+
+Con el programa reducido de 6 estancias, `--auto-adjacency` pasó de
+**0 relaciones obligatorias en absoluto** (antes tenía hasta 5, según
+qué tipos estuvieran presentes) a converger en la **primera semilla
+probada, en 6.7 segundos**, sin ningún reintento -- el test
+`test_cli_with_auto_adjacency_as_a_real_subprocess`, que necesitaba
+15 semillas de margen y aun así fallaba, ahora pasa limpio con el
+margen normal del CLI (5 semillas). Confirmado también que la
+aserción de puertas del test (`len(doors) == 4`) reflejaba el
+catálogo ANTES de esta revisión -- corregida a `== 0`, correcto ahora
+que ninguna relación obligatoria aplica a este conjunto de 6
+estancias (no tiene comedor, el único tipo implicado en las 2
+relaciones que siguen siendo obligatorias).
+
+Los otros 2 escenarios `xfail` que usan `--import-seleccion` con
+programas más grandes/propios (9 estancias, dos plantas) NO se
+resolvieron con este cambio -- probado explícitamente, siguen
+fallando por el mismo problema de fondo ya documentado
+([ARCH:locking-progresivo]), confirma que la revisión de relaciones
+ayuda donde el catálogo automático es la fuente real de rigidez, pero
+no es una solución universal a la dificultad de escenarios grandes.
+
+Suite final: 382 unitarios, pyflakes y mypy limpios. Bundle Pyodide
+regenerado.

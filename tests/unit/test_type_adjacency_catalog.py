@@ -32,11 +32,16 @@ def test_get_type_adjacency_works_regardless_of_argument_order():
 
 
 def test_known_hard_pairs_map_correctly():
+    # solo living-dining y dining-kitchen siguen siendo obligatorias --
+    # las otras 3 (living-entrance, laundry-drying, living-garage) se
+    # relajaron a preferencia tras revision explicita con el usuario:
+    # "vamos a modificar las relaciones obligatorias pensando en
+    # realmente si son obligatorias". Ver [ARCH:relaciones-obligatorias-revisadas].
     assert get_type_adjacency(RoomType.LIVING_ROOM, RoomType.DINING_ROOM) == AdjacencyStrength.MUST_BE_NEAR
     assert get_type_adjacency(RoomType.DINING_ROOM, RoomType.KITCHEN) == AdjacencyStrength.MUST_BE_NEAR
-    assert get_type_adjacency(RoomType.LIVING_ROOM, RoomType.ENTRANCE_HALL) == AdjacencyStrength.MUST_BE_NEAR
-    assert get_type_adjacency(RoomType.LAUNDRY, RoomType.DRYING_AREA) == AdjacencyStrength.MUST_BE_NEAR
-    assert get_type_adjacency(RoomType.LIVING_ROOM, RoomType.GARAGE) == AdjacencyStrength.MUST_BE_AWAY
+    assert get_type_adjacency(RoomType.LIVING_ROOM, RoomType.ENTRANCE_HALL) == AdjacencyStrength.SHOULD_BE_NEAR
+    assert get_type_adjacency(RoomType.LAUNDRY, RoomType.DRYING_AREA) == AdjacencyStrength.SHOULD_BE_NEAR
+    assert get_type_adjacency(RoomType.LIVING_ROOM, RoomType.GARAGE) == AdjacencyStrength.SHOULD_BE_AWAY
 
 
 def test_generate_requirements_for_a_realistic_program():
@@ -56,7 +61,7 @@ def test_generate_requirements_for_a_realistic_program():
     assert frozenset(("living", "garage")) in pairs_generated
 
     living_garage = next(r for r in reqs if {r.room_a_id, r.room_b_id} == {"living", "garage"})
-    assert living_garage.strength == AdjacencyStrength.MUST_BE_AWAY
+    assert living_garage.strength == AdjacencyStrength.SHOULD_BE_AWAY
 
 
 def test_generate_requirements_skips_condicional_pairs():
