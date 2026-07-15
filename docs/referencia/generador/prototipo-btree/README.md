@@ -206,3 +206,41 @@ generación.
   no en sustitución directa.
 - Fase 5: comparación empírica con nuestros escenarios ya conocidos,
   decisión de corte.
+
+## Fase 4 -- implementación real, en curso
+
+A diferencia de las Fases 0-3 (prototipo aislado en `docs/referencia/`),
+esto SÍ es código de producción real, con tests reales, en
+`src/housing_generator/infrastructure/algorithms/layout_generation/btree_partition.py`
+-- en paralelo al sistema actual (`partition_tree.py`), no en
+sustitución todavía.
+
+### Completado
+
+- `BStarNode`, `build_random_tree`, `compute_positions` -- migrados
+  del prototipo aislado a código de producción real, mismos
+  resultados verificados de nuevo con tests reales (incluido el caso
+  exacto verificado a mano).
+- Los 5 movimientos: `swap_modules`, `move_module` (el nuevo, el más
+  valioso), `resize_module`, `reset_aspect_ratio`, `swap_children`.
+- `random_neighbor`: despachador con bloqueo progresivo por
+  comprobación real (recalcula posiciones antes/después, rechaza si
+  una estancia bloqueada se desplazó como efecto colateral) --
+  confirmado con test que reproduce el mismo escenario verificado en
+  el prototipo.
+- **19 tests nuevos**, todos pasando, incluida la propiedad general
+  "nunca se pierde ni duplica una estancia" probada contra 30-100
+  semillas distintas, no un solo caso.
+- Suite completa del proyecto: 401 tests (19 nuevos), mypy y pyflakes
+  limpios en 84 archivos.
+
+### Pendiente dentro de la Fase 4
+
+- Nuevo generador (`LayoutGeneratorPort`) que use esta representación
+  en el bucle de recocido simulado completo, con calibración de
+  temperatura y comparación léxica igual que el generador actual.
+- Traducir `footprint.py` (huella como resultado, no como punto de
+  partida -- ya decidido en la Fase 1) y `ExteriorContactValidator`
+  (ya identificado en la Fase 3).
+- Wiring mínimo para poder generar un `Layout` real de extremo a
+  extremo con esta representación.
