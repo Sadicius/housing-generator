@@ -2231,3 +2231,39 @@ que permitió detectar y corregir el error, en vez de dejar una
 sospecha sin fundamento archivada como si fuera un hallazgo real.
 
 No se toca ningún código -- no había nada que arreglar.
+
+## [ARCH:migracion-btree] Migración planificada a árbol B* -- Fases 0 y 1
+
+A petición del usuario, reconsiderando si la restricción de
+guillotina (particiones donde cada corte divide el rectángulo entero
+de lado a lado) era un límite fundamental o solo una elección de
+partida que ya podemos mejorar. Investigación real (no invención):
+el campo del floorplanning VLSI (de donde ya viene el squarified
+treemap que usamos) tiene una familia de representaciones
+"no-guillotina" bien probadas, usadas en producción, compatibles con
+recocido simulado -- B*-Tree (Chang & Chang 2000, 572 citas) es la
+más citada y la que se sigue usando en herramientas modernas.
+
+Documentación completa del plan, con el prototipo verificado y las 6
+decisiones de diseño confirmadas explícitamente con el usuario, en
+`docs/referencia/generador/prototipo-btree/README.md` -- no se repite
+aquí para no duplicar contenido entre el histórico y la referencia
+consolidada.
+
+Resumen de lo verificado con código real: coordenadas del prototipo
+coinciden exactamente con un cálculo hecho a mano; con 5 estancias de
+prueba, la silueta resultante NO es rectangular (14 vértices en el
+contorno, un rectángulo simple tiene 4), con 0 solapes y un 28% de
+vacío que surge solo del propio empaquetado -- incluye, por primera
+vez, VACÍO INTERIOR (dentro de la propia silueta, no solo alrededor),
+algo que nuestro sistema actual no puede representar porque la huella
+siempre es un rectángulo macizo.
+
+Decisión notable: `FOOTPRINT_BUFFER` (15%, criterio nuestro) se
+elimina en la migración -- el usuario aclaró que el motivo real detrás
+de ese número era el control de coste de obra, no el tamaño de la
+huella en sí, y `AreaObjetivoValidator` (±15% por estancia, ya
+existente) ya cubre exactamente ese objetivo real, sin necesitar un
+segundo número redundante para el conjunto.
+
+Continúa con la Fase 2 (movimientos del recocido) en la misma sesión.
