@@ -478,6 +478,13 @@ ajustadas de tamaño. Con `--import-seleccion` esto ya se maneja solo
 -- confirmado con un caso real donde la semilla 1 no convergía y la 4
 sí, sin que hiciera falta buscarla a mano.
 
+Si sigue sin converger con parcelas muy ajustadas, `--experimental-btree`
+(con `--import-seleccion`) usa una representación geométrica distinta
+(árbol B*, no guillotina) -- confirmado con un caso real donde el
+generador por defecto fallaba tras 15 semillas y este lo resolvió en
+la 4ª. Sigue siendo experimental (menos probado que el generador por
+defecto), pero es una alternativa real si un caso concreto no converge.
+
 **Cambié algo del generador (movimientos, restricciones) y una
 semilla que antes funcionaba ya no converge**
 → Comportamiento esperado, no un bug: cambiar qué restricciones o

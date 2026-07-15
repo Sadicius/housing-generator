@@ -24,7 +24,8 @@ Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
 multi-planta con escalera y contorno progresivo, vivienda aislada y
 pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 382/382 tests (96 commits).
+**Estado en el momento de escribir esto**: 401/401 tests unitarios,
+más los de integración (106 commits).
 Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
 coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
 comando, no en este número.

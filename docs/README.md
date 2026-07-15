@@ -18,7 +18,10 @@ generador en sí, no esto, ve a [`../INICIO.html`](../INICIO.html).
 Cada archivo agrupa varias piezas relacionadas, no una por archivo:
 
 - `generador/` — el motor de generación (partición, huella
-  construible, área objetivo, bloqueo progresivo).
+  construible, área objetivo, bloqueo progresivo). Incluye
+  `prototipo-btree/` -- migración planificada a árbol B* (no
+  guillotina), con las 5 fases documentadas, código de producción
+  real (`--experimental-btree` en el CLI) y comparación empírica.
 - `validadores/` — los 20+ validadores normativos, agrupados por qué
   exigencia comparten (superficies mínimas, anchos libres, geometría
   general, agrupación/zonificación, adyacencias, programa de
