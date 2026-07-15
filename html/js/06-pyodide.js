@@ -52,7 +52,7 @@ async function ensurePyodideReady(onProgress){
   return PYODIDE_LOADING;
 }
 
-async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, onProgress){
+async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, experimentalBtree, onProgress){
   const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Buscando una distribucion valida (puede reintentar varias semillas)...');
 
@@ -63,6 +63,11 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   pyodide.globals.set('max_it_js', maxIterations);
   pyodide.globals.set('retry_js', retrySeeds);
   pyodide.globals.set('accesible_js', viviendaAccesible);
+  // null/undefined de JS se convierten a None de Python automaticamente
+  // (conversion estandar de Pyodide) -- no hace falta tratarlos aparte.
+  pyodide.globals.set('retranqueo_js', retranqueoM ?? null);
+  pyodide.globals.set('retranqueo_incremento_js', retranqueoIncremento ?? null);
+  pyodide.globals.set('experimental_btree_js', !!experimentalBtree);
 
   const pyCode = [
     'import json',
@@ -72,6 +77,9 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     '    payload, float(lot_w_js), float(lot_h_js),',
     '    seed=int(seed_js), max_iterations=int(max_it_js),',
     '    retry_seeds=int(retry_js), vivienda_accesible=bool(accesible_js),',
+    '    retranqueo_m=(float(retranqueo_js) if retranqueo_js is not None else None),',
+    '    retranqueo_incremento_por_planta_m=(float(retranqueo_incremento_js) if retranqueo_incremento_js is not None else None),',
+    '    experimental_btree=bool(experimental_btree_js),',
     ')',
     'json.dumps(resultado)',
   ].join('\n');
@@ -92,11 +100,21 @@ async function handleGenerateNow(){
   const seed = parseInt(document.getElementById('gen-seed').value, 10) || 1;
   const maxIterations = parseInt(document.getElementById('gen-iterations').value, 10) || 4000;
   const accesible = document.getElementById('gen-accesible').checked;
+  const retranqueoEl = document.getElementById('gen-retranqueo');
+  const retranqueoM = retranqueoEl && retranqueoEl.value !== '' ? parseFloat(retranqueoEl.value) : null;
+  const retranqueoIncEl = document.getElementById('gen-retranqueo-incremento');
+  const retranqueoIncremento = retranqueoIncEl && retranqueoIncEl.value !== '' ? parseFloat(retranqueoIncEl.value) : null;
+  const experimentalBtreeEl = document.getElementById('gen-experimental-btree');
+  const experimentalBtree = experimentalBtreeEl ? experimentalBtreeEl.checked : false;
 
   btn.disabled = true;
   setGenerateStatus('Iniciando...', 'loading');
   try{
-    const result = await generarEdificioReal(payload, lotW, lotH, seed, maxIterations, 5, accesible, (msg) => setGenerateStatus(msg, 'loading'));
+    const result = await generarEdificioReal(
+      payload, lotW, lotH, seed, maxIterations, 5, accesible,
+      retranqueoM, retranqueoIncremento, experimentalBtree,
+      (msg) => setGenerateStatus(msg, 'loading'),
+    );
     if(!result.ok){
       setGenerateStatus('No se pudo generar: ' + result.error, 'error');
       return;

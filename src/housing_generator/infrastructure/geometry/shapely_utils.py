@@ -112,3 +112,32 @@ def evaluate_minimum_width(
     elif cumple is None:
         return ([], [f"'{room_id}': {warning_message}"])
     return ([], [])
+
+
+def polygon_to_shapes(geom) -> List[dict]:
+    """Convierte una geometría (`Polygon` o `MultiPolygon`) en una
+    lista de "formas", cada una con su anillo exterior y sus anillos
+    interiores (huecos, p.ej. un patio rodeado por todos lados)
+    AGRUPADOS juntos -- a diferencia de una lista plana de anillos,
+    esto preserva qué hueco pertenece a qué forma. Necesario para
+    renderizarlo correctamente en el visor (recorte real del hueco,
+    no otra pieza más pintada encima con el mismo color) -- hallazgo
+    real al revisar las conexiones entre Python y el dashboard: la
+    lista plana anterior no permitía distinguir "esto es un hueco de
+    esta forma" de "esto es una pieza separada del MultiPolygon".
+    Compartida entre `SimulatedAnnealingLayoutGenerator` (nunca
+    produce huecos, huella siempre maciza) y `BTreeLayoutGenerator`
+    (sí puede producirlos). Ver [ARCH:shapely-utils], [ARCH:btree-partition].
+
+    Formato: `[{"exterior": [[x,y],...], "interiors": [[[x,y],...], ...]}, ...]`
+    """
+    if geom.is_empty:
+        return []
+    polygons = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
+    return [
+        {
+            "exterior": [list(coord) for coord in poly.exterior.coords],
+            "interiors": [[list(coord) for coord in interior.coords] for interior in poly.interiors],
+        }
+        for poly in polygons
+    ]

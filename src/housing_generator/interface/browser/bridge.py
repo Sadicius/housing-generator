@@ -22,10 +22,21 @@ def generar_edificio(
     max_iterations: int = 3000,
     retry_seeds: int = 5,
     vivienda_accesible: bool = False,
+    retranqueo_m: Optional[float] = None,
+    retranqueo_incremento_por_planta_m: Optional[float] = None,
+    experimental_btree: bool = False,
 ) -> dict:
     """Genera un edificio real a partir de una selección del dashboard
     y una parcela rectangular. Reintenta semillas automáticamente
     (mismo comportamiento que `--retry-seeds` del CLI).
+
+    `retranqueo_m`/`retranqueo_incremento_por_planta_m`: mismos
+    conceptos ya conectados al CLI (`--retranqueo`/`--retranqueo-incremento`)
+    -- sin forma de usarlos desde el dashboard hasta ahora, encontrado
+    al revisar las conexiones entre Python y el dashboard a petición
+    del usuario. `experimental_btree`: mismo flag que
+    `--experimental-btree` del CLI, misma migración en curso -- ver
+    `docs/referencia/generador/prototipo-btree/`.
 
     Devuelve SIEMPRE un dict:
       {"ok": True, "semilla_usada": N, "reintentos": N,
@@ -47,6 +58,8 @@ def generar_edificio(
     lot = Lot(
         boundary=Boundary(polygon=box(0, 0, lot_width_m, lot_height_m)),
         medianera_sides=seleccion.medianera_sides,
+        retranqueo_m=retranqueo_m,
+        retranqueo_incremento_por_planta_m=retranqueo_incremento_por_planta_m,
     )
 
     building = None
@@ -61,6 +74,7 @@ def generar_edificio(
             seed=used_seed,
             max_iterations=max_iterations,
             vivienda_accesible=vivienda_accesible,
+            experimental_btree=experimental_btree,
         )
         try:
             building = use_case.execute(program, lot)

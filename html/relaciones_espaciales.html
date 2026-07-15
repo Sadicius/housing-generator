@@ -76,6 +76,9 @@
 <label>Semilla <input id="gen-seed" min="1" step="1" type="number" value="1"/></label>
 <label>Iteraciones <input id="gen-iterations" min="500" step="500" type="number" value="4000"/></label>
 <label class="areas-lock-toggle"><input id="gen-accesible" type="checkbox"/> Vivienda accesible (Ø1.50m)</label>
+<label>Retranqueo (m) <input id="gen-retranqueo" min="0" step="0.5" type="number" placeholder="sin retranqueo"/></label>
+<label>Retranqueo por planta (m) <input id="gen-retranqueo-incremento" min="0" step="0.1" type="number" placeholder="mismo contorno"/></label>
+<label class="areas-lock-toggle"><input id="gen-experimental-btree" type="checkbox"/> Árbol B* (experimental -- ver docs/referencia/generador/prototipo-btree/)</label>
 </div>
 <div class="generate-status" id="generate-status"></div>
 <div class="section-summary" id="section-summary"></div>

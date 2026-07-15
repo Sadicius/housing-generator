@@ -151,10 +151,17 @@ function renderPlano(){
   // -- transformarlas tambien queda pendiente, no se dibuja mal en vez
   // de dibujarse en el sitio equivocado. Ver [ARCH:area-objetivo].
   const transformDefault = !PLANO_TRANSFORM.mirrorH && !PLANO_TRANSFORM.mirrorV && PLANO_TRANSFORM.rotation === 0;
-  if(transformDefault && Array.isArray(floor.data.metadata?.vacio_rings)){
-    floor.data.metadata.vacio_rings.forEach(ring => {
-      const points = ring.map(([x,y]) => `${x},${y}`).join(' ');
-      svgBody += `<polygon class="vacio-shape" points="${points}"></polygon>`;
+  if(transformDefault && Array.isArray(floor.data.metadata?.vacio_shapes)){
+    // formato agrupado (exterior + interiores por forma, no una lista
+    // plana de anillos) -- un <path> por forma con fill-rule evenodd:
+    // el anillo exterior se pinta como vacio, cada anillo interior
+    // (un patio rodeado por todos lados) se RECORTA de verdad, no se
+    // pinta encima con el mismo color. Ver [ARCH:shapely-utils].
+    floor.data.metadata.vacio_shapes.forEach(shape => {
+      const anilloA_d = ring => 'M ' + ring.map(([x,y]) => `${x},${y}`).join(' L ') + ' Z';
+      let d = anilloA_d(shape.exterior);
+      (shape.interiors || []).forEach(interior => { d += ' ' + anilloA_d(interior); });
+      svgBody += `<path class="vacio-shape" fill-rule="evenodd" d="${d}"></path>`;
     });
   }
 

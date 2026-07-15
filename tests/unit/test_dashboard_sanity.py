@@ -228,6 +228,36 @@ def test_generate_now_button_and_status_area_exist():
     assert 'id="generate-config"' in html
 
 
+def test_retranqueo_and_experimental_btree_controls_are_wired_end_to_end():
+    # hallazgo real al revisar las conexiones del dashboard a peticion
+    # del usuario: la funcionalidad de retranqueo/--experimental-btree
+    # ya estaba correctamente implementada de extremo a extremo (HTML ->
+    # JS -> Python), pero sin NINGUN test que la protegiera -- si alguien
+    # tocaba uno de los tres eslabones sin querer, nada lo habria
+    # detectado. Verifica los tres eslabones reales, no solo que "algo
+    # con ese nombre existe en algun sitio".
+    html = _read(HTML_PATH)
+    js = _read(JS_DIR / "06-pyodide.js")
+
+    # eslabon 1: los tres controles existen en el HTML con el id exacto
+    # que el JS espera
+    for control_id in ("gen-retranqueo", "gen-retranqueo-incremento", "gen-experimental-btree"):
+        assert f'id="{control_id}"' in html, f"falta el control {control_id} en el HTML"
+
+    # eslabon 2: handleGenerateNow los lee del DOM y los pasa a
+    # generarEdificioReal (no silenciosamente ignorados)
+    assert "getElementById('gen-retranqueo')" in js
+    assert "getElementById('gen-retranqueo-incremento')" in js
+    assert "getElementById('gen-experimental-btree')" in js
+    assert "retranqueoM, retranqueoIncremento, experimentalBtree" in js
+
+    # eslabon 3: generarEdificioReal los reenvia de verdad al Python real
+    # (no solo los recibe y los descarta)
+    assert "retranqueo_m=" in js
+    assert "retranqueo_incremento_por_planta_m=" in js
+    assert "experimental_btree=bool(experimental_btree_js)" in js
+
+
 def test_mirror_mode_controls_exist():
     html = _read(HTML_PATH)
     for control_id in ["mirror-h", "mirror-v", "mirror-rotate", "mirror-reset"]:
@@ -396,7 +426,7 @@ def test_vacio_shape_rendering_exists():
     # de la parcela, el sobrante (vacio, exterior real) se dibuja como
     # capa de fondo en el visor. Ver [ARCH:area-objetivo].
     content = _read_js()
-    assert "vacio_rings" in content
+    assert "vacio_shapes" in content
     assert "vacio-shape" in content
     css = _read(CSS_PATH)
     assert ".vacio-shape" in css

@@ -2559,3 +2559,53 @@ resueltos (1 por relajación del catálogo, 2 por el árbol B*) y 1
 genuinamente sin resolver, documentado con honestidad.
 
 Suite: 401 unitarios sin cambios, pyflakes limpio.
+
+## Revisión del dashboard, con dos correcciones honestas
+
+A petición del usuario: "revisar, depurar y refactorizar la parte
+visual/HTML, comprobar las conexiones y cómo funciona".
+
+### Dos errores míos, corregidos con honestidad
+
+Durante la auditoría, reporté DOS "hallazgos" que resultaron ser
+falsos -- ya estaban resueltos, probablemente en una parte anterior
+de esta misma conversación (antes del resumen automático) que mi
+memoria no reflejaba con precisión:
+
+1. Creí que el vacío con huecos interiores (patios rodeados por
+   completo) se renderizaba mal en el visor -- FALSO. Ya existe
+   `polygon_to_shapes` en `shapely_utils.py` (agrupa exterior +
+   interiores correctamente) y el visor ya usa `<path fill-rule="evenodd">`
+   para recortar los huecos de verdad, con su propio test
+   (`test_vacio_shape_rendering_exists`).
+2. Creí que el puente Pyodide no exponía `retranqueo`/`--experimental-btree`
+   -- FALSO. `generar_edificio()` ya acepta ambos parámetros, el JS
+   ya los lee del DOM (`gen-retranqueo`, `gen-retranqueo-incremento`,
+   `gen-experimental-btree`) y los reenvía correctamente.
+
+Verificado con `git log` de cada archivo (no solo releído el código)
+antes de aceptar que estaba equivocado -- ambas piezas llevaban
+commits propios, ninguna era trabajo reciente sin terminar.
+
+### Hallazgo real, tras corregir el rumbo
+
+Al escribir un test nuevo que protegiera la conexión de
+`retranqueo`/`--experimental-btree` (que no tenía NINGÚN test
+específico, aunque la funcionalidad en sí estuviera bien
+implementada), un test PRE-EXISTENTE
+(`test_pyodide_bundle_is_not_stale_against_the_real_source`) detectó
+que **el bundle de Pyodide (`py_bundle.js`) estaba desactualizado**
+respecto al `bridge.py` real -- consecuencia de cambios de código
+posteriores a la última regeneración. Esto SÍ era un problema real:
+si el dashboard hubiera intentado usar `retranqueo`/`--experimental-btree`
+con el bundle desactualizado, habría fallado en el navegador.
+Corregido regenerando el bundle.
+
+### Nuevo test permanente
+
+`test_retranqueo_and_experimental_btree_controls_are_wired_end_to_end`:
+verifica los tres eslabones reales (HTML tiene los controles con el
+id exacto, JS los lee del DOM, JS los reenvía a Python) -- no solo
+que "algo con ese nombre existe en algún sitio".
+
+Suite final: 402 unitarios (1 nuevo), pyflakes limpio.

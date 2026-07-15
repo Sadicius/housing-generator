@@ -16,6 +16,7 @@ from housing_generator.infrastructure.algorithms.layout_generation.partition_tre
     place_tree,
     random_neighbor,
 )
+from housing_generator.infrastructure.geometry.shapely_utils import polygon_to_shapes
 from housing_generator.infrastructure.algorithms.layout_generation.footprint import (
     footprint_target_area,
     footprint_rectangle,
@@ -170,12 +171,5 @@ class SimulatedAnnealingLayoutGenerator(LayoutGeneratorPort):
         # Polygon y MultiPolygon si la resta produce varias piezas
         # separadas). Ver [ARCH:area-objetivo].
         vacio_polygon = buildable_polygon.difference(footprint_polygon)
-        layout.metadata["vacio_rings"] = self._polygon_to_rings(vacio_polygon)
+        layout.metadata["vacio_shapes"] = polygon_to_shapes(vacio_polygon)
         return layout
-
-    @staticmethod
-    def _polygon_to_rings(geom) -> List[List[List[float]]]:
-        if geom.is_empty:
-            return []
-        polygons = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
-        return [[list(coord) for coord in poly.exterior.coords] for poly in polygons]

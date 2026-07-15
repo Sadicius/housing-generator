@@ -15,6 +15,7 @@ from housing_generator.domain.entities.zone import Zone
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.exceptions import LayoutGenerationError
 from housing_generator.domain.value_objects.boundary import Boundary
+from housing_generator.infrastructure.geometry.shapely_utils import polygon_to_shapes
 from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
     BStarNode,
     build_random_tree,
@@ -133,7 +134,7 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         # particion (huella siempre maciza, solo existe vacio exterior).
         union_estancias = unary_union([r.boundary.polygon for r in placed_rooms])
         vacio_polygon = buildable_polygon.difference(union_estancias)
-        layout.metadata["vacio_rings"] = self._polygon_to_rings(vacio_polygon)
+        layout.metadata["vacio_shapes"] = polygon_to_shapes(vacio_polygon)
         return layout
 
     @staticmethod
@@ -177,20 +178,3 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         }
         locked = set(all_room_ids) - violating_ids
         return hard, soft, locked
-
-    @staticmethod
-    def _polygon_to_rings(geom) -> List[List[List[float]]]:
-        """Igual que `SimulatedAnnealingLayoutGenerator._polygon_to_rings`,
-        pero incluyendo TAMBIEN los anillos interiores (huecos DENTRO de
-        un polígono, p.ej. un patio rodeado por todos lados) -- el árbol
-        de partición nunca los produce (huella siempre maciza), así que
-        el original no los contemplaba. Ver [ARCH:btree-partition]."""
-        if geom.is_empty:
-            return []
-        polygons = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
-        anillos = []
-        for poly in polygons:
-            anillos.append([list(coord) for coord in poly.exterior.coords])
-            for interior in poly.interiors:
-                anillos.append([list(coord) for coord in interior.coords])
-        return anillos

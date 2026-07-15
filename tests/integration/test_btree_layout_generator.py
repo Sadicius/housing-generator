@@ -83,8 +83,10 @@ def test_btree_generator_computes_void_metadata():
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 14)))
     layout = _generar_con_reintento(program, lot)
 
-    assert "vacio_rings" in layout.metadata
-    assert len(layout.metadata["vacio_rings"]) > 0  # la parcela es mas grande que las estancias
+    assert "vacio_shapes" in layout.metadata
+    shapes = layout.metadata["vacio_shapes"]
+    assert len(shapes) > 0  # la parcela es mas grande que las estancias
+    assert "exterior" in shapes[0] and "interiors" in shapes[0]  # formato agrupado, no lista plana
 
 
 def test_btree_generator_is_deterministic_given_a_fixed_seed():

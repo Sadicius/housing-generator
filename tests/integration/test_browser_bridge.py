@@ -113,3 +113,61 @@ def test_vivienda_accesible_flag_is_honored():
             if room["type"] in {t.value for t in TIPOS_CON_CIRCULO_GIRO}:
                 x0, y0, x1, y1 = room["bounds"]
                 assert min(x1 - x0, y1 - y0) >= CIRCULO_GIRO_ACCESIBLE_M - 0.01
+
+
+def test_retranqueo_is_honored_from_the_dashboard():
+    # hallazgo real al revisar las conexiones entre Python y el
+    # dashboard: retranqueo_m ya estaba conectado al CLI
+    # (--retranqueo) pero no al puente del navegador -- el dashboard
+    # no tenia forma de usarlo. Payload simple (programa minimo, una
+    # sola planta) a proposito -- lo que este test verifica es que la
+    # CONEXION funciona (el parametro llega y se respeta), no que
+    # vuelva a demostrarse la geometria del retranqueo en un escenario
+    # dificil (eso ya se verifico con el CLI real, [ARCH:cli-retranqueo]).
+    payload = {
+        "version": 2,
+        "levels": {"PLANTA_BAJA": [
+            {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
+            {"type": "KITCHEN", "count": 1, "area_m2": 12},
+            {"type": "BATHROOM", "count": 1, "area_m2": 6},
+            {"type": "LAUNDRY", "count": 1, "area_m2": 6},
+            {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
+            {"type": "STORAGE", "count": 1, "area_m2": 4},
+        ]},
+    }
+    result = generar_edificio(
+        payload, lot_width_m=14, lot_height_m=14, seed=1, max_iterations=3000, retry_seeds=10,
+        retranqueo_m=2.0,
+    )
+    assert result["ok"] is True, result.get("error")
+    for floor in result["floors"].values():
+        for room in floor["rooms"]:
+            x0, y0, x1, y1 = room["bounds"]
+            assert x0 >= 2.0 - 0.05 and y0 >= 2.0 - 0.05
+            assert x1 <= 12.0 + 0.05 and y1 <= 12.0 + 0.05
+
+
+def test_experimental_btree_flag_reaches_the_dashboard():
+    # mismo hallazgo: --experimental-btree ya funcionaba en el CLI
+    # (confirmado que resuelve escenarios que el generador por defecto
+    # no puede, ver [ARCH:migracion-btree] Fase 5) pero el dashboard
+    # no tenia forma de activarlo. Payload simple a proposito, mismo
+    # motivo que test_retranqueo_is_honored_from_the_dashboard.
+    payload = {
+        "version": 2,
+        "levels": {"PLANTA_BAJA": [
+            {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
+            {"type": "KITCHEN", "count": 1, "area_m2": 12},
+            {"type": "BATHROOM", "count": 1, "area_m2": 6},
+            {"type": "LAUNDRY", "count": 1, "area_m2": 6},
+            {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
+            {"type": "STORAGE", "count": 1, "area_m2": 4},
+        ]},
+    }
+    result = generar_edificio(
+        payload, lot_width_m=14, lot_height_m=14, seed=1, max_iterations=3000, retry_seeds=10,
+        experimental_btree=True,
+    )
+    assert result["ok"] is True, result.get("error")
+    for floor in result["floors"].values():
+        assert "vacio_shapes" in floor["metadata"]  # formato del arbol B*, no vacio_rings
