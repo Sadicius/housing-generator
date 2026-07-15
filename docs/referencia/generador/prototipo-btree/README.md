@@ -112,15 +112,63 @@ vacio_interior = huella.area - union_estancias.area            # NUEVO
 Con el ejemplo de 5 estancias: 105m² de vacío exterior + 15.5m² de
 vacío interior, de 160m² de parcela total.
 
-## Pendiente (fases futuras)
-
-- **Fase 2** (en curso): traducir los 5 movimientos actuales
-  (`swap_leaves`, `flip_direction`, `swap_children`, `slide_wall`,
-  `reset_ratio`) a sus equivalentes B\*-tree, más el movimiento nuevo
-  que no tenemos hoy (mover una estancia a cualquier punto del
   árbol).
 - Fase 3: auditoría de validadores y visor.
 - Fase 4: implementación incremental, en paralelo al sistema actual,
   no en sustitución directa.
+- Fase 5: comparación empírica con nuestros escenarios ya conocidos,
+  decisión de corte.
+
+## Fase 2 -- movimientos del recocido (completada)
+
+### Mapa de movimientos
+
+| Movimiento actual | Equivalente B*-tree | Nota |
+|---|---|---|
+| `swap_leaves` | Op3: intercambiar dos estancias | Directo, mismo concepto |
+| `slide_wall` | Redimensionar "módulo blando" (área fija, proporción variable) | La literatura ya trata exactamente nuestro caso |
+| `reset_ratio` | Restablecer proporción a un valor natural | Misma función, adaptada |
+| `swap_children` | Intercambiar qué hijo va "a la derecha" vs "encima" | Se conserva como movimiento local |
+| `flip_direction` | **Desaparece** | B*-tree no tiene "dirección de corte" -- ya no aplica |
+| *(no existe hoy)* | **Op2: mover una estancia a cualquier punto del árbol** | La más valiosa -- reestructura de verdad |
+
+Verificado con código real (`docs/referencia/generador/prototipo-btree/btree.py`):
+mover `trastero` de colgar de `cocina` a colgar de `dormitorio` cambia su
+posición de (8,0) a (3,3) -- una reestructuración real, no un intercambio
+de identidad entre dos huecos ya existentes. Esto ataca directamente la
+limitación que diagnosticamos en el sistema actual: nuestros movimientos
+de hoy solo *reasignan* qué estancia ocupa un hueco existente, nunca
+*crean* huecos nuevos.
+
+### Hallazgo real e importante: el contorno compartido complica el bloqueo progresivo
+
+Verificado con código (no solo teoría): en B*-tree, cambiar el tamaño de
+UNA estancia puede desplazar la posición de OTRA que no se tocó
+directamente, si esta última se apoya en el contorno que deja la primera
+-- confirmado que `trastero` se desplazaba de y=4 a y=7 al cambiar solo
+la altura de `cocina`, sin tocar `trastero` para nada.
+
+Esto significa que el bloqueo progresivo actual ("no toques el nodo de
+una estancia ya resuelta") no se traslada tal cual -- no basta con
+proteger el propio nodo, porque un cambio en un antecesor puede
+desplazarla igualmente.
+
+**Decisión confirmada con el usuario**: comprobar el efecto REAL tras
+cada movimiento candidato (recalcular posiciones antes/después, rechazar
+si alguna estancia bloqueada cambió de posición como efecto colateral) --
+más costoso computacionalmente que proteger solo la cadena de
+antecesores, pero más flexible (permite más movimientos legítimos).
+Verificado con código: rechaza correctamente los desplazamientos reales
+(incluido uno no anticipado -- cambiar la altura de `salón` también
+cambiaba su ancho, al conservar el área, afectando a un descendiente
+suyo dos niveles por debajo), y acepta correctamente los cambios
+genuinamente independientes (una rama del árbol sin ningún antecesor en
+común con la estancia bloqueada).
+
+## Pendiente (fases futuras)
+
+- Fase 3: auditoría de validadores y visor.
+- Fase 4: implementación incremental, en paralelo al sistema actual, no
+  en sustitución directa.
 - Fase 5: comparación empírica con nuestros escenarios ya conocidos,
   decisión de corte.

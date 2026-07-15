@@ -2267,3 +2267,37 @@ existente) ya cubre exactamente ese objetivo real, sin necesitar un
 segundo número redundante para el conjunto.
 
 Continúa con la Fase 2 (movimientos del recocido) en la misma sesión.
+
+## [ARCH:migracion-btree] Fase 2 completada -- movimientos del recocido
+
+Continuación directa de la entrada anterior. Movimientos mapeados
+(tabla completa en `docs/referencia/generador/prototipo-btree/README.md`)
+-- el hallazgo más valioso es el movimiento nuevo que no existe hoy:
+**mover una estancia a cualquier punto del árbol**, verificado con
+código que reestructura de verdad (cambia dónde cuelga una estancia
+en el árbol, no solo qué estancia ocupa un hueco ya existente) --
+ataca directamente la limitación que diagnosticamos hace tiempo en el
+sistema actual (nuestros movimientos solo reasignan identidad, nunca
+crean huecos nuevos).
+
+**Hallazgo real e importante, verificado con código, no solo
+sospechado**: en B*-tree, el contorno es compartido -- cambiar el
+tamaño de una estancia puede desplazar la posición de OTRA que no se
+tocó directamente, si se apoya en su contorno. Confirmado con un caso
+concreto (cambiar la altura de una estancia desplazó a otra dos
+niveles por debajo en el árbol, sin tocarla). Esto significa que el
+bloqueo progresivo actual ("no toques el nodo de una estancia
+resuelta") no se traslada tal cual.
+
+Presentadas dos vías al usuario, confirmada la elegida: **comprobar
+el efecto real tras cada movimiento candidato** (recalcular
+posiciones antes/después, rechazar si alguna estancia bloqueada se
+desplazó como efecto colateral) -- más costoso que proteger solo la
+cadena de antecesores, pero más flexible. Verificado con código que
+el mecanismo rechaza correctamente los desplazamientos reales
+(incluido uno no anticipado durante la propia verificación) y acepta
+correctamente los cambios genuinamente independientes.
+
+Suite del proyecto sin cambios -- todo este trabajo sigue siendo plan
+verificado en `docs/referencia/`, no toca código de producción
+todavía.
