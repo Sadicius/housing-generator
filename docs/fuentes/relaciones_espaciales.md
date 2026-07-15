@@ -74,13 +74,13 @@ siguen en la columna "motivo" de cada par).
 | MASTER_BEDROOM | Preferencia (alejar) | Mismo motivo que BEDROOM |
 | BATHROOM | Preferencia (alejar) | Normativo de acceso (no directo sin distribuidor) |
 | TOILET | Preferencia (cerca) | Aseo de cortesía para visitas |
-| ENTRANCE_HALL | Obligatorio cerca | El recibidor es el distribuidor principal |
+| ENTRANCE_HALL | Preferencia (cerca) | Recibidor suele dar a un pasillo, no tocar pared directamente en vivienda real -- revisado explícitamente, relajado de "Obligatorio" |
 | STUDY | Preferencia (cerca) | Condicional según modelo de vida (teletrabajo) |
 | LAUNDRY | Preferencia (alejar) | Ruido/visual de zona de servicio |
 | DRYING_AREA | Preferencia (alejar) | Mismo motivo que LAUNDRY |
 | STORAGE | Preferencia (cerca) | "Tejido conectivo" del salón |
 | STORAGE_ROOM | Preferencia (alejar) | Trastos exiliados a zona menos noble |
-| GARAGE | Obligatorio lejos | Zona sucia/de riesgo, sin relación social |
+| GARAGE | Preferencia (alejar) | Garaje adosado tocando zona de estar es común en construcción real con aislamiento adecuado -- revisado explícitamente, relajado de "Obligatorio" |
 | TECHNICAL_ROOM | Preferencia (alejar) | Ruido de maquinaria |
 | CORRIDOR | Preferencia (cerca) | Destino natural de circulación |
 
@@ -195,7 +195,7 @@ GARAGE (alejar), TECHNICAL_ROOM (alejar), CORRIDOR (cerca).
 ### LAUNDRY
 | Con | Relación | Motivo |
 |---|---|---|
-| DRYING_AREA | Obligatorio cerca | Misma actividad funcional (lavar → tender) |
+| DRYING_AREA | Preferencia (cerca) | Misma actividad funcional (lavar → tender), pero el tendedero suele estar en terraza separada -- revisado explícitamente, relajado de "Obligatorio" |
 | STORAGE | Neutro | — |
 | STORAGE_ROOM | Neutro | — |
 | GARAGE | Neutro | — |

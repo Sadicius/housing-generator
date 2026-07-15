@@ -448,3 +448,49 @@ def test_docs_readme_links_point_to_real_files():
     for link in locales:
         resolved = (root / "docs" / link).resolve()
         assert resolved.exists(), f"docs/README.md enlaza a '{link}', que no existe"
+
+
+def test_js_pairs_hard_relationships_match_the_real_python_catalog():
+    # hallazgo real al revisar las conexiones del dashboard a peticion
+    # del usuario: cuando se relajaron 3 de las 5 relaciones
+    # obligatorias del catalogo Python ([ARCH:relaciones-obligatorias-revisadas]),
+    # el commit correspondiente nunca toco html/js/00-shared.js -- la
+    # Matriz, Fichas y Sinergias del dashboard seguian mostrando
+    # "Obligatorio" para 3 pares que el generador real ya trata como
+    # preferencia blanda. Corregido a mano; este test evita que la
+    # proxima vez que cambie el catalogo Python, el dashboard se quede
+    # desincronizado en silencio otra vez.
+    import sys
+    sys.path.insert(0, str(Path(__file__).parents[2] / "src"))
+    from housing_generator.domain.services.type_adjacency_catalog import DEFAULT_TYPE_ADJACENCY
+    from housing_generator.domain.enums import AdjacencyStrength
+
+    js = _read(JS_DIR / "00-shared.js")
+    match = re.search(r"const PAIRS = (\[.*\]);", js)
+    assert match, "no se pudo extraer PAIRS de 00-shared.js"
+    pairs = json.loads(match.group(1))
+    js_relation_by_pair = {frozenset((p["a"], p["b"])): p["relation"] for p in pairs}
+
+    discrepancias = []
+    todos_los_pares_relevantes = set()
+    for (type_a, type_b) in DEFAULT_TYPE_ADJACENCY.keys():
+        key = frozenset((type_a.value.upper(), type_b.value.upper()))
+        if key in js_relation_by_pair:
+            todos_los_pares_relevantes.add((type_a, type_b))
+
+    for (type_a, type_b) in todos_los_pares_relevantes:
+        strength = DEFAULT_TYPE_ADJACENCY[(type_a, type_b)]
+        key = frozenset((type_a.value.upper(), type_b.value.upper()))
+        js_relation = js_relation_by_pair.get(key, "")
+        js_dice_obligatorio = "obligatorio" in js_relation.lower()
+        es_lejos_en_js = js_dice_obligatorio and "lejo" in js_relation.lower()
+        es_cerca_en_js = js_dice_obligatorio and not es_lejos_en_js
+
+        if strength == AdjacencyStrength.MUST_BE_NEAR and not es_cerca_en_js:
+            discrepancias.append(f"{type_a.value}-{type_b.value}: Python=MUST_BE_NEAR, JS='{js_relation}'")
+        elif strength == AdjacencyStrength.MUST_BE_AWAY and not es_lejos_en_js:
+            discrepancias.append(f"{type_a.value}-{type_b.value}: Python=MUST_BE_AWAY, JS='{js_relation}'")
+        elif strength not in (AdjacencyStrength.MUST_BE_NEAR, AdjacencyStrength.MUST_BE_AWAY) and js_dice_obligatorio:
+            discrepancias.append(f"{type_a.value}-{type_b.value}: Python={strength.value} (NO obligatorio), pero JS='{js_relation}'")
+
+    assert not discrepancias, "PAIRS en 00-shared.js desincronizado del catalogo Python real:\n" + "\n".join(discrepancias)

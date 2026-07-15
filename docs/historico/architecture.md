@@ -2609,3 +2609,34 @@ id exacto, JS los lee del DOM, JS los reenvía a Python) -- no solo
 que "algo con ese nombre existe en algún sitio".
 
 Suite final: 402 unitarios (1 nuevo), pyflakes limpio.
+
+## [ARCH:relaciones-obligatorias-revisadas] Hallazgo real: el dashboard quedó desincronizado del catálogo relajado
+
+Al continuar la revisión del dashboard (esta vez con más cuidado tras
+dos errores propios), encontrado un hallazgo real y confirmado con
+`git log`/`git show --stat`: cuando se relajaron 3 de las 5 relaciones
+obligatorias del catálogo (`[ARCH:relaciones-obligatorias-revisadas]`
+original), ese commit tocó `type_adjacency_catalog.py` pero **nunca**
+`html/js/00-shared.js` -- confirmado que ese archivo no se tocaba
+desde la reorganización de `html/`, varios commits antes. La Matriz,
+Fichas y Sinergias del dashboard seguían mostrando "Obligatorio" para
+`living_room-entrance_hall`, `laundry-drying_area` y
+`living_room-garage`, cuando el generador real ya las trata como
+preferencia blanda desde hace tiempo.
+
+También `docs/fuentes/relaciones_espaciales.md` (el documento fuente)
+tenía la misma clasificación desactualizada.
+
+**Corregido en los tres sitios**: el documento fuente, `00-shared.js`
+(las 3 entradas exactas, mismo motivo documentado en el código
+Python), verificado con `jsdom` que la ficha de Salón ya no muestra
+Recibidor/Garaje como relaciones obligatorias.
+
+**Nuevo test permanente**
+(`test_js_pairs_hard_relationships_match_the_real_python_catalog`):
+compara `PAIRS` (JS) contra `DEFAULT_TYPE_ADJACENCY` (Python) en ambas
+direcciones -- verificado explícitamente que SÍ detecta la regresión
+(revertido un cambio a mano, confirmado que el test falla con el
+mensaje correcto, luego restaurado).
+
+Suite final: 403 unitarios (1 nuevo), pyflakes limpio.
