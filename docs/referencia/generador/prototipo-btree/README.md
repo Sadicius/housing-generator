@@ -345,3 +345,40 @@ promesa teórica. Queda como trabajo futuro: repetir esta comparación
 en más escenarios difíciles (no solo el que ya teníamos documentado
 como `xfail`), y decidir si esto justifica ampliar el flag
 experimental a más casos de uso, o mantenerlo como opción avanzada.
+
+## Optimización de rendimiento -- cache de compute_positions
+
+A petición del usuario ("¿tenemos las cosas optimizadas... sin
+perder calidad o información?"). Perfilado con `cProfile` (no
+optimización especulativa): `compute_positions` se llamaba 3626
+veces para solo 1360 evaluaciones (~2.7x) -- `random_neighbor` ya
+calcula las posiciones del candidato para comprobar el bloqueo
+progresivo (Fase 2), y `_materialize` las volvía a calcular desde
+cero para el MISMO árbol justo después.
+
+Corregido con el mismo patrón ya probado y documentado en
+`GeometryAdjacencyGraphBuilder` ([ARCH:geometry-adjacency-graph]):
+cache de una sola entrada, por REFERENCIA real (`is`), no por `id()`
+-- evita el mismo gotcha real de Python ya encontrado antes (Python
+reutiliza direcciones de memoria de objetos liberados).
+
+**Medido, no asumido**: la función recursiva interna de colocación
+(`place`) pasó de 47.138 a 27.235 llamadas (-42%), de 1.003s a 0.606s
+de tiempo acumulado (-40%) en el mismo escenario de prueba. El
+impacto en el tiempo total del `generate()` es más modesto (~3%)
+porque esta pieza es solo una parte del coste general -- los
+validadores y las operaciones de `shapely` para comprobarlos siguen
+siendo el grueso, y no se tocaron (optimizarlos entraría en conflicto
+con la exhaustividad de las comprobaciones normativas, que es lo que
+de verdad importa aquí).
+
+Sin pérdida de calidad ni información: los 19+6 tests existentes
+(incluido el de bloqueo, el más sensible a este cambio) siguen
+pasando exactamente igual, byte a byte -- la cache solo evita
+recalcular algo que ya se había calculado para el mismo árbol exacto,
+nunca devuelve un resultado obsoleto o de otro árbol.
+
+(Aparte, se confirmó que la optimización equivalente del árbol de
+partición -- cache del grafo de adyacencia en
+`GeometryAdjacencyGraphBuilder` -- ya estaba hecha desde una sesión
+anterior, con su propia medición documentada: 9.35s → 4.52s.)

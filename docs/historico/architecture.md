@@ -2406,3 +2406,34 @@ limpios en 85 archivos. Bundle Pyodide regenerado.
 5 fases tiene una respuesta real y positiva, en al menos un caso
 concreto y verificado -- no una promesa teórica. Detalle completo en
 `docs/referencia/generador/prototipo-btree/README.md`.
+
+## [ARCH:btree-partition-cache] Optimización medida: cache de compute_positions
+
+A petición del usuario, revisión de rendimiento tras la migración B*
+("¿tenemos las cosas optimizadas... sin perder calidad o
+información?"). Perfilado con `cProfile` (no especulación):
+`compute_positions` se llamaba 2.7 veces por cada evaluación --
+`random_neighbor` ya la calcula internamente para comprobar el
+bloqueo progresivo, y `_materialize` la recalculaba desde cero para
+el mismo árbol justo después.
+
+Confirmado primero, con la misma disciplina, que la optimización
+equivalente del sistema actual (cache del grafo de adyacencia en
+`GeometryAdjacencyGraphBuilder`) YA estaba hecha, de una sesión
+anterior, con su propia medición documentada (9.35s → 4.52s) -- no
+había nada que hacer ahí.
+
+Corregido para `compute_positions` con el mismo patrón ya probado:
+cache de una sola entrada, por referencia real, no por `id()` (mismo
+gotcha de Python ya documentado y evitado antes). Medido, no asumido:
+la función recursiva interna `place` pasó de 47.138 a 27.235 llamadas
+(-42%), de 1.003s a 0.606s de tiempo acumulado (-40%). Impacto en el
+tiempo total del `generate()` más modesto (~3%), porque esta pieza es
+solo parte del coste general -- los validadores no se tocaron,
+deliberadamente, para no comprometer la exhaustividad de las
+comprobaciones normativas a cambio de velocidad.
+
+Sin pérdida de calidad ni información: 401 unitarios + 6 integración,
+todos pasando exactamente igual, byte a byte. Bundle Pyodide
+regenerado. Detalle completo en
+`docs/referencia/generador/prototipo-btree/README.md`.

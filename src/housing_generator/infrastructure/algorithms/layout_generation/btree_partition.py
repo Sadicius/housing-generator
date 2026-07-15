@@ -79,6 +79,22 @@ def build_random_tree(room_ids: List[str], rng: random.Random) -> BStarNode:
     return root
 
 
+# Cache de una sola entrada, por REFERENCIA real (no por id()) -- mismo
+# patron ya probado en GeometryAdjacencyGraphBuilder
+# ([ARCH:geometry-adjacency-graph]): cachear por id() falla porque
+# Python reutiliza agresivamente direcciones de memoria de objetos
+# liberados. Motivo real, medido con cProfile, no optimizacion
+# especulativa: `random_neighbor` ya calcula las posiciones del
+# candidato para comprobar el bloqueo progresivo
+# (ver compute_positions en random_neighbor mas abajo) -- sin esta
+# cache, `_materialize` las recalculaba desde cero para el MISMO
+# arbol justo despues, 2748 llamadas para 1360 evaluaciones medidas
+# (~2x redundante). Ver [ARCH:btree-partition].
+_cache_root_ref: Optional[BStarNode] = None
+_cache_areas_ref: Optional[Dict[str, float]] = None
+_cache_positions: Optional[Dict[str, Polygon]] = None
+
+
 def compute_positions(root: BStarNode, areas: Dict[str, float]) -> Dict[str, Polygon]:
     """Calcula la posición real de cada estancia vía el algoritmo de
     contorno (Chang & Chang 2000) -- devuelve polígonos shapely, mismo
@@ -91,6 +107,11 @@ def compute_positions(root: BStarNode, areas: Dict[str, float]) -> Dict[str, Pol
     apoyarse en lo que ya hay ocupado en su rango de X (como en
     Tetris), no en una posición fija de antemano.
     """
+    global _cache_root_ref, _cache_areas_ref, _cache_positions
+    if root is _cache_root_ref and areas is _cache_areas_ref:
+        assert _cache_positions is not None
+        return _cache_positions
+
     positions: Dict[str, Polygon] = {}
     contour: List[Tuple[float, float, float]] = []
 
@@ -127,6 +148,7 @@ def compute_positions(root: BStarNode, areas: Dict[str, float]) -> Dict[str, Pol
         place(node.right, x)     # hijo derecho: misma X que el padre, encima
 
     place(root, 0.0)
+    _cache_root_ref, _cache_areas_ref, _cache_positions = root, areas, positions
     return positions
 
 
