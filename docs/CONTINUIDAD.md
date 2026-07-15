@@ -271,15 +271,20 @@ generación real de extremo a extremo repetidamente.
 
 ## Pendiente real, si se retoma
 
-**[NUEVO] Sospecha de no-determinismo entre ejecuciones con la misma
-semilla** ([ARCH:cli-programa-reducido]): `--auto-adjacency` con
-`--seed 1` produjo resultados DISTINTOS en ejecuciones separadas del
-mismo comando exacto -- convergió una vez, falló otra. Sospecha:
-iteración sobre algún `set()` en el generador o los validadores, sin
-`PYTHONHASHSEED` fijo (el orden de iteración de un `set` de strings
-puede variar entre procesos de Python). Sin investigar a fondo
-todavía -- si se confirma, sería un bug real que rompe la
-reproducibilidad de semillas en general, no solo para este escenario.
+**[CORREGIDO -- era una falsa alarma] "No-determinismo" descartado**
+([ARCH:no-determinismo-descartado]): la entrada anterior aquí
+sospechaba que el mismo comando con la misma semilla podía dar
+resultados distintos entre ejecuciones. Investigado a fondo:
+ejecutado el mismo comando exacto 6 veces (3 con semilla 1, 3 con
+semilla 7, un escenario que SÍ requiere búsqueda real, no
+convergencia inmediata) -- resultado **idéntico letra por letra en
+las 6**, incluidas las cifras decimales exactas de las violaciones.
+El generador SÍ es determinista de forma robusta. La sospecha
+original casi seguro venía de comparar ejecuciones con parámetros
+distintos entre sí (`--retry-seeds`/`--max-iterations` diferentes),
+no el mismo comando repetido -- documentado aquí como corrección, no
+borrado en silencio, para que quede claro que se investigó y se
+descartó con evidencia real.
 
 **Programa de ejemplo del CLI reducido de 11 a 6 estancias**
 ([ARCH:cli-programa-reducido]): a petición del usuario, para que la

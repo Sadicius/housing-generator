@@ -2196,3 +2196,38 @@ no es una solución universal a la dificultad de escenarios grandes.
 
 Suite final: 382 unitarios, pyflakes y mypy limpios. Bundle Pyodide
 regenerado.
+
+## [ARCH:no-determinismo-descartado] Retractación: el "no-determinismo" era una falsa alarma
+
+A petición del usuario, primer punto de la ronda priorizada de
+pendientes ("empezamos por el no-determinismo, me parece lo más
+urgente"): investigado a fondo, con evidencia real, no solo teoría.
+
+### Metodología
+
+Ejecutado el MISMO comando exacto 6 veces seguidas (subprocess reales,
+no llamadas Python directas): 3 con `--seed 1`, 3 con `--seed 7`,
+usando un escenario que requiere búsqueda real (no convergencia
+inmediata en la primera iteración) para dar oportunidad real a
+cualquier fuente de variación entre ejecuciones a manifestarse.
+
+### Resultado: determinismo confirmado, robusto
+
+Las 6 ejecuciones dieron un resultado **idéntico letra por letra**,
+incluidas las cifras decimales exactas de las violaciones (mismas
+áreas generadas, misma proporción, mismo porcentaje de desviación).
+No hay ningún indicio de no-determinismo real en el generador.
+
+### Conclusión honesta
+
+El hallazgo original (documentado la sesión anterior, sospechando
+iteración sobre un `set()` sin `PYTHONHASHSEED` fijo) era una falsa
+alarma -- casi seguro producto de haber comparado, en su momento, dos
+ejecuciones con parámetros REALMENTE distintos entre sí
+(`--retry-seeds`/`--max-iterations` diferentes), no el mismo comando
+repetido. Se retracta explícitamente en `CONTINUIDAD.md`, no se borra
+en silencio -- el propio proceso de verificar antes de asumir es lo
+que permitió detectar y corregir el error, en vez de dejar una
+sospecha sin fundamento archivada como si fuera un hallazgo real.
+
+No se toca ningún código -- no había nada que arreglar.
