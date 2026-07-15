@@ -25,6 +25,11 @@ def generar_edificio(
     retranqueo_m: Optional[float] = None,
     retranqueo_incremento_por_planta_m: Optional[float] = None,
     experimental_btree: bool = False,
+    coeficiente_edificabilidad: Optional[float] = None,
+    ocupacion_maxima_pct: Optional[float] = None,
+    altura_maxima_plantas: Optional[int] = None,
+    frente_minimo_m: Optional[float] = None,
+    street_side: str = "south",
 ) -> dict:
     """Genera un edificio real a partir de una selección del dashboard
     y una parcela rectangular. Reintenta semillas automáticamente
@@ -37,6 +42,16 @@ def generar_edificio(
     del usuario. `experimental_btree`: mismo flag que
     `--experimental-btree` del CLI, misma migración en curso -- ver
     `docs/referencia/generador/prototipo-btree/`.
+
+    `coeficiente_edificabilidad`/`ocupacion_maxima_pct`/`altura_maxima_plantas`/
+    `frente_minimo_m`: parámetros urbanísticos reales (Zona 0 del
+    dashboard, "Introducción de datos") -- mismos conceptos ya
+    conectados al CLI (`--edificabilidad`, `--ocupacion-maxima`,
+    `--altura-maxima-plantas`, `--frente-minimo`). Si el programa no
+    es viable, `GenerateBuildingUseCase` lo detecta ANTES de generar
+    nada (ver [ARCH:viabilidad-urbanistica]) -- el error llega aquí
+    igual que cualquier otro `LayoutGenerationError`, sin tratamiento
+    especial.
 
     Devuelve SIEMPRE un dict:
       {"ok": True, "semilla_usada": N, "reintentos": N,
@@ -60,6 +75,11 @@ def generar_edificio(
         medianera_sides=seleccion.medianera_sides,
         retranqueo_m=retranqueo_m,
         retranqueo_incremento_por_planta_m=retranqueo_incremento_por_planta_m,
+        coeficiente_edificabilidad=coeficiente_edificabilidad,
+        ocupacion_maxima_pct=ocupacion_maxima_pct,
+        altura_maxima_plantas=altura_maxima_plantas,
+        frente_minimo_m=frente_minimo_m,
+        street_side=street_side,
     )
 
     building = None

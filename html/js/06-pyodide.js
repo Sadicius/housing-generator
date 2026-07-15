@@ -52,7 +52,7 @@ async function ensurePyodideReady(onProgress){
   return PYODIDE_LOADING;
 }
 
-async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, experimentalBtree, onProgress){
+async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, experimentalBtree, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, onProgress){
   const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Buscando una distribucion valida (puede reintentar varias semillas)...');
 
@@ -64,6 +64,10 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   pyodide.globals.set('retry_js', retrySeeds);
   pyodide.globals.set('accesible_js', viviendaAccesible);
   pyodide.globals.set('experimental_btree_js', !!experimentalBtree);
+  // street_side es un string fijo (viene de un <select> con opciones
+  // controladas, no puede ser null/vacio) -- sin el riesgo de JsNull
+  // que afecta a los valores numericos opcionales, seguro via globals.set().
+  pyodide.globals.set('street_side_js', streetSide || 'south');
 
   // BUG REAL encontrado probando en un navegador real (Pyodide de
   // verdad, no accesible en este entorno de desarrollo -- CDN
@@ -73,14 +77,21 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   // `True`, asi que `float(JsNull_instance)` fallaba con
   // "TypeError: float() argument must be a string or a real number,
   // not 'JsNull'". Corregido evitando el paso por variable global
-  // para estos dos valores -- se construye el literal Python
-  // DIRECTAMENTE como texto (numero real o la palabra `None`), sin
-  // pasar nunca por la conversion null->None de pyodide.globals.set(),
-  // que resulto no ser fiable para este caso.
-  const retranqueoLiteral = (retranqueoM !== null && retranqueoM !== undefined && !isNaN(retranqueoM))
-    ? `float(${JSON.stringify(retranqueoM)})` : 'None';
-  const retranqueoIncrementoLiteral = (retranqueoIncremento !== null && retranqueoIncremento !== undefined && !isNaN(retranqueoIncremento))
-    ? `float(${JSON.stringify(retranqueoIncremento)})` : 'None';
+  // para estos valores -- se construye el literal Python DIRECTAMENTE
+  // como texto (numero real o la palabra `None`), sin pasar nunca por
+  // la conversion null->None de pyodide.globals.set(), que resulto no
+  // ser fiable para este caso. Mismo patron para los 4 parametros
+  // urbanisticos nuevos (Zona 0) -- misma clase de bug, mismo arreglo.
+  const literalOpcional = (valor, envoltorio) => {
+    const esNumeroValido = valor !== null && valor !== undefined && !isNaN(valor);
+    return esNumeroValido ? `${envoltorio}(${JSON.stringify(valor)})` : 'None';
+  };
+  const retranqueoLiteral = literalOpcional(retranqueoM, 'float');
+  const retranqueoIncrementoLiteral = literalOpcional(retranqueoIncremento, 'float');
+  const edificabilidadLiteral = literalOpcional(edificabilidad, 'float');
+  const ocupacionMaximaLiteral = literalOpcional(ocupacionMaxima, 'float');
+  const alturaMaximaLiteral = literalOpcional(alturaMaxima, 'int');
+  const frenteMinimoLiteral = literalOpcional(frenteMinimo, 'float');
 
   const pyCode = [
     'import json',
@@ -93,6 +104,11 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     `    retranqueo_m=${retranqueoLiteral},`,
     `    retranqueo_incremento_por_planta_m=${retranqueoIncrementoLiteral},`,
     '    experimental_btree=bool(experimental_btree_js),',
+    `    coeficiente_edificabilidad=${edificabilidadLiteral},`,
+    `    ocupacion_maxima_pct=${ocupacionMaximaLiteral},`,
+    `    altura_maxima_plantas=${alturaMaximaLiteral},`,
+    `    frente_minimo_m=${frenteMinimoLiteral},`,
+    '    street_side=str(street_side_js),',
     ')',
     'json.dumps(resultado)',
   ].join('\n');
@@ -119,6 +135,18 @@ async function handleGenerateNow(){
   const retranqueoIncremento = retranqueoIncEl && retranqueoIncEl.value !== '' ? parseFloat(retranqueoIncEl.value) : null;
   const experimentalBtreeEl = document.getElementById('gen-experimental-btree');
   const experimentalBtree = experimentalBtreeEl ? experimentalBtreeEl.checked : false;
+  // Zona 0: parametros urbanisticos reales -- mismo patron "vacio = sin
+  // restriccion" que retranqueo. Ver [ARCH:viabilidad-urbanistica].
+  const numOpcional = (id) => {
+    const el = document.getElementById(id);
+    return el && el.value !== '' ? parseFloat(el.value) : null;
+  };
+  const edificabilidad = numOpcional('gen-edificabilidad');
+  const ocupacionMaxima = numOpcional('gen-ocupacion-maxima');
+  const alturaMaxima = numOpcional('gen-altura-maxima');
+  const frenteMinimo = numOpcional('gen-frente-minimo');
+  const streetSideEl = document.getElementById('gen-street-side');
+  const streetSide = streetSideEl ? streetSideEl.value : 'south';
 
   btn.disabled = true;
   setGenerateStatus('Iniciando...', 'loading');
@@ -126,6 +154,7 @@ async function handleGenerateNow(){
     const result = await generarEdificioReal(
       payload, lotW, lotH, seed, maxIterations, 10, accesible,
       retranqueoM, retranqueoIncremento, experimentalBtree,
+      edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide,
       (msg) => setGenerateStatus(msg, 'loading'),
     );
     if(!result.ok){

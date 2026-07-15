@@ -26,7 +26,20 @@
 </div>
 </div>
 
-<button class="nota-indicador" data-nota="nota-relaciones">ⓘ nota de alcance</button><div class="zonas-bar"><button class="zona-btn active" data-zona="diseno"><span class="zona-num">ZONA 1</span>Diseño<span class="zona-desc">Configurar y generar tu vivienda</span></button><button class="zona-btn" data-zona="consulta"><span class="zona-num">ZONA 2</span>Consulta<span class="zona-desc">Referencia normativa y de materiales</span></button><button class="zona-btn" data-zona="planificacion"><span class="zona-num">ZONA 3</span>Planificación<span class="zona-desc">Cronograma de ejecución de obra</span></button></div><div class="zona-panel active" id="zona-diseno"><div class="flow-indicator"><button class="tab flow-step active" data-tab="section"><span class="step-num">1</span>Programa y generación</button><span class="flow-arrow">→</span><button class="tab flow-step" data-tab="plano"><span class="step-num">2</span>Resultado (visor de plano)</button></div><div class="panel active" id="panel-section">
+<button class="nota-indicador" data-nota="nota-relaciones">ⓘ nota de alcance</button><div class="zonas-bar"><button class="zona-btn active" data-zona="parcela"><span class="zona-num">ZONA 0</span>Parcela<span class="zona-desc">Datos de la parcela y viabilidad urbanística</span></button><button class="zona-btn" data-zona="diseno"><span class="zona-num">ZONA 1</span>Diseño<span class="zona-desc">Configurar y generar tu vivienda</span></button><button class="zona-btn" data-zona="consulta"><span class="zona-num">ZONA 2</span>Consulta<span class="zona-desc">Referencia normativa y de materiales</span></button><button class="zona-btn" data-zona="planificacion"><span class="zona-num">ZONA 3</span>Planificación<span class="zona-desc">Cronograma de ejecución de obra</span></button></div><div class="zona-panel active" id="zona-parcela"><div class="panel active" id="panel-parcela">
+<button class="nota-indicador" data-nota="nota-parcela">ⓘ nota de alcance</button>
+<div class="parcela-form">
+<label>Parcela (m) <input id="gen-lot-w" min="4" step="0.5" type="number" value="14"/> × <input id="gen-lot-h" min="4" step="0.5" type="number" value="16"/></label>
+<label>Lado de calle <select id="gen-street-side"><option value="south" selected="">Sur</option><option value="north">Norte</option><option value="east">Este</option><option value="west">Oeste</option></select></label>
+<label>Retranqueo (m) <input id="gen-retranqueo" min="0" step="0.5" type="number" placeholder="sin retranqueo"/></label>
+<label>Retranqueo por planta (m) <input id="gen-retranqueo-incremento" min="0" step="0.1" type="number" placeholder="mismo contorno"/></label>
+<label>Edificabilidad (m²t/m²s) <input id="gen-edificabilidad" min="0" step="0.05" type="number" placeholder="sin restricción"/></label>
+<label>Ocupación máxima (%) <input id="gen-ocupacion-maxima" min="0" max="100" step="1" type="number" placeholder="sin restricción"/></label>
+<label>Altura máxima (plantas) <input id="gen-altura-maxima" min="1" step="1" type="number" placeholder="sin restricción"/></label>
+<label>Frente mínimo (m) <input id="gen-frente-minimo" min="0" step="0.5" type="number" placeholder="sin restricción"/></label>
+</div>
+<div class="parcela-preview-wrap"><svg class="parcela-preview" id="parcela-preview" viewBox="0 0 300 300"></svg><div class="parcela-resumen" id="parcela-resumen"></div></div>
+</div></div><div class="zona-panel" id="zona-diseno"><div class="flow-indicator"><button class="tab flow-step active" data-tab="section"><span class="step-num">1</span>Programa y generación</button><span class="flow-arrow">→</span><button class="tab flow-step" data-tab="plano"><span class="step-num">2</span>Resultado (visor de plano)</button></div><div class="panel active" id="panel-section">
 <button class="nota-indicador" data-nota="nota-ancho-practico">ⓘ ancho libre práctico (1.20m)</button>
 <div class="auto-config-box">
 <h3>Generar selección automática</h3>
@@ -72,12 +85,9 @@
 <span class="net-hint">clic en una estancia para activarla/desactivarla en esa planta</span>
 </div>
 <div class="generate-config" id="generate-config">
-<label>Parcela (m) <input id="gen-lot-w" min="4" step="0.5" type="number" value="14"/> × <input id="gen-lot-h" min="4" step="0.5" type="number" value="16"/></label>
 <label>Semilla <input id="gen-seed" min="1" step="1" type="number" value="1"/></label>
 <label>Iteraciones <input id="gen-iterations" min="500" step="500" type="number" value="4000"/></label>
 <label class="areas-lock-toggle"><input id="gen-accesible" type="checkbox"/> Vivienda accesible (Ø1.50m)</label>
-<label>Retranqueo (m) <input id="gen-retranqueo" min="0" step="0.5" type="number" placeholder="sin retranqueo"/></label>
-<label>Retranqueo por planta (m) <input id="gen-retranqueo-incremento" min="0" step="0.1" type="number" placeholder="mismo contorno"/></label>
 <label class="areas-lock-toggle"><input id="gen-experimental-btree" type="checkbox"/> Árbol B* (experimental -- ver docs/referencia/generador/prototipo-btree/)</label>
 </div>
 <div class="generate-status" id="generate-status"></div>
@@ -179,6 +189,8 @@
 <b>⚠ nota de alcance</b> — esta pestaña NO estima duraciones por sí sola. No existe, que hayamos podido confirmar, una fuente pública con rendimientos de obra reales por fase (la <a href="https://www.observatoriodavivenda.gal/gl/utilidades/base-de-datos-da-construcion-de-galicia-bdc" rel="noopener" target="_blank">Base de datos da Construción de Galicia</a> es una herramienta oficial de precios/presupuestos, no de plazos). Introduce tú mismo las fases y su duración estimada -- esto solo las encadena y las dibuja.
     </div></div><div class="nota-bloque" id="nota-ancho-practico"><div class="nota-bloque-titulo">Ancho libre práctico (1.20m)</div><div class="caveat">
 <b>⚠ nota de alcance</b> — el generador exige un ancho libre mínimo de <b>1.20m</b> en varios tipos de estancia (comedor, despacho, aseo, lavadero, tendedero, almacenamiento, recibidor, garaje, cuarto técnico) para evitar formas técnicamente válidas por superficie pero inservibles en la práctica (p.ej. un almacén de 49cm de fondo). <b>No es un valor del Decreto 29/2010</b> -- el propio decreto no especifica ancho libre para estos tipos, así que es un criterio de ingeniería confirmado explícitamente, no una cita normativa. Si una generación falla mencionando esta restricción, ya sabes de dónde viene.
+    </div></div><div class="nota-bloque" id="nota-parcela"><div class="nota-bloque-titulo">Viabilidad urbanística (Zona 0)</div><div class="caveat">
+<b>⚠ nota de alcance</b> — la vista previa de huella es un cálculo geométrico simple (parcela menos retranqueo), no un estudio de encaje preciso: la ocupación y edificabilidad se comprueban como límites de <b>superficie</b>, no como formas exactas sobre el terreno. Los valores concretos (coeficiente de edificabilidad, % de ocupación, altura máxima, frente mínimo) los aportas tú, de tu ficha urbanística real (PGOU/PGOM municipal, consultable en <a href="https://siotuga.xunta.gal/" target="_blank" rel="noopener">SIOTUGA</a> si tu parcela está en Galicia) -- esta herramienta nunca inventa esos números. Si el programa declarado no cabe, te lo dice antes de intentar generar nada, no después de varios minutos de búsqueda.
     </div></div></div></div><div class="zona-panel" id="zona-planificacion"><div class="panel active" id="panel-cronograma"><button class="nota-indicador" data-nota="nota-cronograma">ⓘ nota de alcance</button>
 
 <div class="controls">
@@ -197,5 +209,5 @@
 <div class="plano-empty">Añade fases para ver el cronograma.</div>
 </div>
 </div></div>
-</div><script src="py_bundle.js"></script><script src="js/00-shared.js"></script><script src="js/01-matriz.js"></script><script src="js/02-seccion.js"></script><script src="js/03-fichas.js"></script><script src="js/04-sinergias.js"></script><script src="js/05-visor.js"></script><script src="js/06-pyodide.js"></script><script src="js/07-cronograma.js"></script><script src="js/08-catalogo.js"></script><script src="js/09-init.js"></script></body>
+</div><script src="py_bundle.js"></script><script src="js/00-shared.js"></script><script src="js/00b-parcela.js"></script><script src="js/01-matriz.js"></script><script src="js/02-seccion.js"></script><script src="js/03-fichas.js"></script><script src="js/04-sinergias.js"></script><script src="js/05-visor.js"></script><script src="js/06-pyodide.js"></script><script src="js/07-cronograma.js"></script><script src="js/08-catalogo.js"></script><script src="js/09-init.js"></script></body>
 </html>

@@ -1,4 +1,5 @@
 // ---------------- init + tabs ----------------
+initParcelaPreview();
 buildMatrix(); buildLegend(); buildSection(); buildCards(); buildSynergyLegend(); renderNetFilters();
 const SCORES = computeScores();
 buildNetwork(SCORES); buildScoreBars(SCORES); buildRankings();

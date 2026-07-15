@@ -2799,3 +2799,71 @@ regenerado.
 
 Zona 0 en el dashboard (UI para introducir estos parámetros) --
 todavía no conectada, este trabajo es solo el lado Python/CLI.
+
+## [ARCH:viabilidad-urbanistica] Zona 0: vista previa de huella, a petición del usuario
+
+Continuación directa del validador de viabilidad urbanística ya
+construido -- el usuario pidió específicamente: "estaría bien poder
+ver la huella resultante antes de ir al programa".
+
+### Decisión de estructura, confirmada explícitamente
+
+Propuesto inicialmente como un paso "0" dentro del flujo ya existente
+de Zona 1 Diseño (mismo patrón que "1. Programa → 2. Resultado") --
+el usuario prefirió una **zona nueva e independiente**, al mismo
+nivel que Diseño/Consulta/Planificación. Implementado así: "ZONA 0:
+Parcela" añadida antes de "ZONA 1: Diseño" en la barra de zonas,
+activa por defecto (primer paso natural del flujo).
+
+### Qué contiene
+
+Movidos desde el panel de generación de Zona 1 (donde vivían
+duplicados de facto): `gen-lot-w`, `gen-lot-h`, `gen-retranqueo`,
+`gen-retranqueo-incremento`. Añadidos: `gen-street-side` (nuevo --
+antes street_side no tenía ningún control, siempre "south" por
+defecto, lo que hacía inútil el chequeo de frente para otras
+orientaciones), `gen-edificabilidad`, `gen-ocupacion-maxima`,
+`gen-altura-maxima`, `gen-frente-minimo`.
+
+### La vista previa -- cálculo en JS puro, sin pasar por Pyodide
+
+Decisión deliberada: la huella tras retranqueo es geometría de
+rectángulos simple (misma fórmula que `Lot.buildable_area` en
+Python) -- calcularla en JS puro da respuesta INSTANTÁNEA mientras el
+usuario escribe, sin esperar una llamada a Pyodide para algo que no
+necesita el generador real. Mismo criterio para los resúmenes
+numéricos de edificabilidad/ocupación/frente (mismas fórmulas que
+`ViabilidadUrbanisticaValidator`, duplicadas intencionadamente en JS
+por la misma razón de latencia).
+
+Nuevo archivo `00b-parcela.js` (cargado tras `00-shared.js`):
+`leerParcelaForm`, `calcularHuella` (incluye el caso borde de
+retranqueo excesivo, colapsa a "sin área edificable" en vez de un
+rectángulo invertido), `renderParcelaPreview` (SVG + resumen
+reactivos), `initParcelaPreview` (listeners en los 8 campos).
+
+### Conexión real hasta la generación
+
+Extendido `bridge.py:generar_edificio()` con los 4 parámetros
+urbanísticos + `street_side` (que tampoco se pasaba antes, hallazgo
+real por el camino). Mismo patrón "literal Python directo, no
+`pyodide.globals.set()` con valores potencialmente `null`" ya probado
+y con su propio bug real documentado ([ARCH:btree-partition]) --
+extraído a un helper reutilizable (`literalOpcional`) para los 6
+valores numéricos opcionales, en vez de repetir la lógica seis veces.
+
+### Verificado de extremo a extremo
+
+`jsdom`: Zona 0 activa por defecto, vista previa reactiva a cambios
+(incluido el caso de retranqueo excesivo), valores persisten al
+cambiar de zona (mismos elementos DOM, sin duplicación). Código
+Python generado verificado con `ast.parse()` real, con los 6 valores
+opcionales combinados. 4 tests nuevos que protegen la estructura y
+las 3 conexiones reales (HTML→JS, JS→Python, patrón anti-JsNull).
+
+3 tests existentes actualizados (conteo de zonas 3→4, conteo de notas
+4→5, exclusión de "parcela" como panel sin tab propio -- mismo patrón
+que "cronograma").
+
+Suite final: 422 unitarios, mypy y pyflakes limpios en 87 archivos.
+Bundle Pyodide regenerado.

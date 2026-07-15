@@ -61,22 +61,23 @@ def test_room_and_door_stroke_width_is_in_meters_not_pixels():
 
 def test_zones_structure_matches_tabs_and_panels():
     # sustituye al antiguo "7 pestanas planas" tras la reestructuracion
-    # por zonas (Diseno/Consulta/Planificacion) -- confirma: 3 zonas
-    # reales, cada boton de tab/subtab/flow-step con su panel real
+    # por zonas (Parcela/Diseno/Consulta/Planificacion) -- confirma: 4
+    # zonas reales (Zona 0 "Parcela" anadida despues, mismo patron),
+    # cada boton de tab/subtab/flow-step con su panel real
     # correspondiente (una discrepancia aqui es una pestana rota o un
     # panel inaccesible), y que cada zona-panel contiene al menos un
     # panel real.
     html = _read(HTML_PATH)
     zonas = re.findall(r'<button class="zona-btn[^"]*" data-zona="(\w+)">', html)
     zona_panels = re.findall(r'<div class="zona-panel[^"]*" id="zona-(\w+)"', html)
-    assert len(zonas) == 3
+    assert len(zonas) == 4
     assert set(zonas) == set(zona_panels)
 
     tabs = re.findall(r'class="tab[^"]*" data-tab="(\w+)"', html)
     panels = re.findall(r'<div class="panel[^"]*" id="panel-(\w+)"', html)
-    # cronograma no tiene tab propio a proposito: es el unico panel de
-    # su zona, sin sub-navegacion necesaria.
-    panels_con_tab_esperado = set(panels) - {"cronograma"}
+    # cronograma y parcela no tienen tab propio a proposito: son el
+    # unico panel de su zona, sin sub-navegacion necesaria.
+    panels_con_tab_esperado = set(panels) - {"cronograma", "parcela"}
     assert set(tabs) == panels_con_tab_esperado, (
         f"tabs sin panel o paneles sin tab: {set(tabs) ^ panels_con_tab_esperado}"
     )
@@ -415,20 +416,20 @@ def test_scope_notes_moved_to_dedicated_panel_not_always_visible():
     # demanda desde un pequeno indicador en cada pestana afectada.
     html = _read(HTML_PATH)
 
-    # el panel dedicado existe, con las 4 notas reales dentro (movidas,
-    # no perdidas ni duplicadas) -- nota-ancho-practico anadida despues,
-    # mismo patron.
+    # el panel dedicado existe, con las 5 notas reales dentro (movidas,
+    # no perdidas ni duplicadas) -- nota-ancho-practico y nota-parcela
+    # anadidas despues, mismo patron.
     assert 'id="panel-notas"' in html
     assert 'data-tab="notas"' in html
-    anclas = ["nota-relaciones", "nota-catalogo", "nota-cronograma", "nota-ancho-practico"]
+    anclas = ["nota-relaciones", "nota-catalogo", "nota-cronograma", "nota-ancho-practico", "nota-parcela"]
     for ancla in anclas:
         assert f'id="{ancla}"' in html
 
-    # exactamente 4 notas de alcance en todo el documento (no 8 -- si
+    # exactamente 5 notas de alcance en todo el documento (no 8 -- si
     # aparecieran duplicadas, esto lo detectaria)
     assert html.count('class="caveat"') == len(anclas)
 
-    # las 4 viven DENTRO de panel-notas, no sueltas en otro sitio --
+    # las 5 viven DENTRO de panel-notas, no sueltas en otro sitio --
     # comprobado indirectamente: cada indicador enlaza a su ancla
     for ancla in anclas:
         assert f'data-nota="{ancla}"' in html, f"falta el indicador para {ancla}"
@@ -517,3 +518,57 @@ def test_js_pairs_hard_relationships_match_the_real_python_catalog():
             discrepancias.append(f"{type_a.value}-{type_b.value}: Python={strength.value} (NO obligatorio), pero JS='{js_relation}'")
 
     assert not discrepancias, "PAIRS en 00-shared.js desincronizado del catalogo Python real:\n" + "\n".join(discrepancias)
+
+
+def test_zona_parcela_controls_exist_with_correct_ids():
+    # Zona 0, a peticion del usuario: "estaria bien poder ver la
+    # huella resultante antes de ir al programa". Verifica que los 8
+    # controles de parcela existen con el id exacto que 00b-parcela.js
+    # y 06-pyodide.js esperan.
+    html = _read(HTML_PATH)
+    assert 'id="zona-parcela"' in html
+    assert 'data-zona="parcela"' in html
+    for control_id in (
+        "gen-lot-w", "gen-lot-h", "gen-street-side", "gen-retranqueo",
+        "gen-retranqueo-incremento", "gen-edificabilidad", "gen-ocupacion-maxima",
+        "gen-altura-maxima", "gen-frente-minimo",
+    ):
+        assert f'id="{control_id}"' in html, f"falta el control {control_id}"
+    assert 'id="parcela-preview"' in html
+    assert 'id="parcela-resumen"' in html
+
+
+def test_zona_parcela_preview_js_is_loaded_and_wired_to_generation():
+    # eslabon 1: el script existe y se carga
+    html = _read(HTML_PATH)
+    assert 'src="js/00b-parcela.js"' in html
+    js_parcela = _read(JS_DIR / "00b-parcela.js")
+    assert "function renderParcelaPreview" in js_parcela
+    assert "function initParcelaPreview" in js_parcela
+
+    # eslabon 2: 09-init.js llama a la inicializacion de verdad
+    js_init = _read(JS_DIR / "09-init.js")
+    assert "initParcelaPreview()" in js_init
+
+    # eslabon 3: los 4 parametros urbanisticos + street_side llegan
+    # hasta la llamada real a Python, no solo se leen y descartan
+    js_pyodide = _read(JS_DIR / "06-pyodide.js")
+    assert "numOpcional('gen-edificabilidad')" in js_pyodide
+    assert "coeficiente_edificabilidad=" in js_pyodide
+    assert "ocupacion_maxima_pct=" in js_pyodide
+    assert "altura_maxima_plantas=" in js_pyodide
+    assert "frente_minimo_m=" in js_pyodide
+    assert "street_side=str(street_side_js)" in js_pyodide
+
+
+def test_zona_parcela_preview_uses_the_same_null_safe_pattern_as_retranqueo():
+    # mismo patron ya probado (evita el bug real de JsNull) aplicado a
+    # los 4 parametros nuevos -- no deben pasar por pyodide.globals.set()
+    # como valores potencialmente null.
+    js = _read(JS_DIR / "06-pyodide.js")
+    assert "edificabilidad_js" not in js  # no se paso por variable global
+    assert "literalOpcional" in js
+    assert "edificabilidadLiteral" in js
+    assert "ocupacionMaximaLiteral" in js
+    assert "alturaMaximaLiteral" in js
+    assert "frenteMinimoLiteral" in js
