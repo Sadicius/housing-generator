@@ -2331,3 +2331,43 @@ Fase 1). Modo espejo + vacío: limitación ya conocida, sin cambios.
 Detalle completo en `docs/referencia/generador/prototipo-btree/README.md`.
 Continúa con la Fase 4 (implementación incremental) pendiente para
 otra sesión, dado el volumen ya cubierto hoy.
+
+## [ARCH:migracion-btree] Fase 4 -- generador completo, funcionando de extremo a extremo
+
+Continuación de la Fase 4 (primera pieza, `btree_partition.py`),
+misma sesión. Construido `btree_layout_generator.py`:
+`BTreeLayoutGenerator`, pieza intercambiable vía `LayoutGeneratorPort`,
+mismo bucle de recocido y misma función objetivo (comparación léxica
+duro/blando) que `SimulatedAnnealingLayoutGenerator` -- lo que cambia
+es la representación geométrica.
+
+Piezas nuevas resueltas: anclaje post-hoc (la huella es el resultado
+del empaquetado, se ancla después al lado de entrada, mismo patrón
+que `footprint.footprint_rectangle` aplicado por traslación en vez de
+construcción); vacío en una sola resta geométrica que cubre exterior
+E interior a la vez; `_polygon_to_rings` extendido para incluir
+anillos interiores (`polygon.interiors`), necesario para patios
+rodeados por todos lados, que el árbol de partición nunca produce.
+
+**Verificado de extremo a extremo, con validadores reales del
+proyecto** (no un script suelto): programa mínimo real, parcela real,
+`build_per_floor_validators` + `ViviendaMinimaValidator` -- generación
+exitosa, 0 solapes, 0 violaciones, y confirmado que la silueta
+resultante NO es un rectángulo simple (19 vértices, un rectángulo
+tiene 4). 4 tests de integración nuevos, incluido determinismo dado
+un seed fijo (verificado explícitamente tras la investigación de la
+sesión anterior).
+
+Hallazgo real: `BTreeLayoutGenerator` no conectado a `container.py`
+(a propósito, en paralelo) -- `vulture` lo marcó correctamente como
+"sin usar" en `src/` (sus tests viven en `tests/integration/`, fuera
+del alcance de la fitness function). Añadido a `vulture_whitelist.py`,
+mismo patrón ya establecido para `GraphBasedLayoutGenerator`.
+
+Suite completa: 401 unitarios + 4 integración nuevos (405 total),
+mypy y pyflakes limpios en 85 archivos. Bundle Pyodide regenerado.
+
+Pendiente real: comparación empírica sistemática con los escenarios
+ya conocidos (9-11 estancias) -- la pregunta que de verdad justifica
+o no esta migración. Detalle completo en
+`docs/referencia/generador/prototipo-btree/README.md`.

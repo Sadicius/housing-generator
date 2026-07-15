@@ -200,22 +200,15 @@ generación.
 - **Modo espejo + vacío**: limitación ya conocida y documentada,
   sigue pendiente igual, no la agrava ni la resuelve esta migración.
 
-## Pendiente (fases futuras)
-
-- Fase 4: implementación incremental, en paralelo al sistema actual,
-  no en sustitución directa.
-- Fase 5: comparación empírica con nuestros escenarios ya conocidos,
-  decisión de corte.
-
 ## Fase 4 -- implementación real, en curso
 
 A diferencia de las Fases 0-3 (prototipo aislado en `docs/referencia/`),
 esto SÍ es código de producción real, con tests reales, en
-`src/housing_generator/infrastructure/algorithms/layout_generation/btree_partition.py`
+`src/housing_generator/infrastructure/algorithms/layout_generation/`
 -- en paralelo al sistema actual (`partition_tree.py`), no en
 sustitución todavía.
 
-### Completado
+### `btree_partition.py` -- estructura y movimientos
 
 - `BStarNode`, `build_random_tree`, `compute_positions` -- migrados
   del prototipo aislado a código de producción real, mismos
@@ -228,19 +221,70 @@ sustitución todavía.
   una estancia bloqueada se desplazó como efecto colateral) --
   confirmado con test que reproduce el mismo escenario verificado en
   el prototipo.
-- **19 tests nuevos**, todos pasando, incluida la propiedad general
-  "nunca se pierde ni duplica una estancia" probada contra 30-100
-  semillas distintas, no un solo caso.
-- Suite completa del proyecto: 401 tests (19 nuevos), mypy y pyflakes
-  limpios en 84 archivos.
+- **19 tests nuevos**, incluida la propiedad general "nunca se pierde
+  ni duplica una estancia" probada contra 30-100 semillas distintas.
 
-### Pendiente dentro de la Fase 4
+### `btree_layout_generator.py` -- generador completo, funcionando de extremo a extremo
 
-- Nuevo generador (`LayoutGeneratorPort`) que use esta representación
-  en el bucle de recocido simulado completo, con calibración de
-  temperatura y comparación léxica igual que el generador actual.
-- Traducir `footprint.py` (huella como resultado, no como punto de
-  partida -- ya decidido en la Fase 1) y `ExteriorContactValidator`
-  (ya identificado en la Fase 3).
-- Wiring mínimo para poder generar un `Layout` real de extremo a
-  extremo con esta representación.
+`btree_layout_generator.py`: `BTreeLayoutGenerator`, pieza
+intercambiable vía `LayoutGeneratorPort`, mismo bucle de recocido y
+misma función objetivo (comparación léxica duro/blando) que
+`SimulatedAnnealingLayoutGenerator` -- lo que cambia es la
+representación geométrica.
+
+Piezas nuevas resueltas en esta parte:
+- **Anclaje**: la huella ya no se decide de antemano (a diferencia del
+  árbol de partición) -- se calcula primero el empaquetado (parte
+  siempre de (0,0)), y se ancla después al lado de entrada de la
+  parcela, mismo patrón que `footprint.footprint_rectangle` mendo
+  aplicado post-hoc por traslación, no por construcción.
+- **Vacío**: una sola resta geométrica (`buildable - union(estancias)`)
+  cubre exterior E interior a la vez -- a diferencia del árbol de
+  partición, que solo puede tener vacío exterior (huella siempre
+  maciza).
+- **`_polygon_to_rings` extendido**: ahora incluye también los anillos
+  interiores (`polygon.interiors`) de cada polígono, no solo el
+  exterior -- necesario para que un patio rodeado por todos lados (un
+  hueco DENTRO de la silueta, no una pieza separada) se renderice
+  correctamente. El de `SimulatedAnnealingLayoutGenerator` no lo
+  necesitaba, porque su huella nunca tiene agujeros.
+
+### Verificado de extremo a extremo, con validadores reales del proyecto
+
+Programa mínimo real (6 estancias), parcela real, validadores reales
+(`build_per_floor_validators` + `ViviendaMinimaValidator`, los mismos
+que usa el sistema actual) -- generación exitosa: **0 solapes** (área
+de la unión = suma exacta), **0 violaciones** de los validadores
+reales, y confirmado que la silueta resultante **NO es un rectángulo
+simple** (19 vértices en el contorno, un rectángulo tiene 4).
+
+4 tests de integración nuevos (`tests/integration/test_btree_layout_generator.py`):
+sin solapes, respeta todas las restricciones duras reales, calcula el
+vacío correctamente, y es determinista dado un seed fijo (verificado
+explícitamente, tras la investigación de la sesión anterior sobre
+determinismo).
+
+### Hallazgo real: la fitness function de código muerto
+
+`BTreeLayoutGenerator` no está conectado a `container.py` todavía (a
+propósito, en paralelo al sistema actual) -- `vulture` lo marcó
+correctamente como "sin usar" dentro de `src/` (sus tests viven en
+`tests/integration/`, fuera del alcance que escanea la fitness
+function). Añadido a `vulture_whitelist.py`, mismo patrón ya
+establecido para `GraphBasedLayoutGenerator` (otra arquitectura
+alternativa deliberada, no conectada, con tests propios).
+
+Suite completa: 401 unitarios + 4 integración nuevos, mypy y pyflakes
+limpios en 85 archivos. Bundle Pyodide regenerado.
+
+## Pendiente (fases futuras)
+
+- Comparación empírica sistemática con los escenarios ya conocidos
+  (9-11 estancias) -- ¿converge mejor que el árbol de partición para
+  los casos difíciles? Es la pregunta que de verdad justifica (o no)
+  esta migración.
+- Wiring real en `container.py` como opción activable (p.ej.
+  `--experimental-btree` en el CLI), no solo código de producción sin
+  conectar.
+- Decisión de corte: sustituir, convivir como opción, o descartar,
+  según los resultados de la comparación empírica.
