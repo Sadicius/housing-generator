@@ -69,6 +69,9 @@ from housing_generator.infrastructure.algorithms.constraints.cocina_integrada_va
 from housing_generator.infrastructure.algorithms.constraints.vivienda_minima_validator import (
     ViviendaMinimaValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.viabilidad_urbanistica_validator import (
+    ViabilidadUrbanisticaValidator,
+)
 from housing_generator.infrastructure.algorithms.constraints.espacio_acceso_validator import (
     EspacioAccesoValidator,
 )
@@ -227,5 +230,6 @@ def build_generate_building_use_case(
         zoning_strategy=TreemapZoningStrategy(),
         programa_minimo_validator=ViviendaMinimaValidator(),
         bano_acceso_validator=BanoAccesoGeneralValidator(graph_builder),
+        viabilidad_urbanistica_validator=ViabilidadUrbanisticaValidator(),
         adjacency_requirements=adjacency_requirements,
     )

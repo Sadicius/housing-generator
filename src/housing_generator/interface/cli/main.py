@@ -143,6 +143,27 @@ def main():
              "con --import-seleccion (multi-planta); el camino por defecto sigue "
              "usando el generador actual.",
     )
+    parser.add_argument(
+        "--edificabilidad", type=float, default=None,
+        help="Coeficiente de edificabilidad (m2techo/m2suelo) de la ficha urbanistica "
+             "real -- comprobacion de viabilidad ANTES de generar, no un valor inventado "
+             "aqui. Por defecto, sin restriccion de edificabilidad.",
+    )
+    parser.add_argument(
+        "--ocupacion-maxima", type=float, default=None,
+        help="Porcentaje maximo de ocupacion de parcela (0-100) de la ficha urbanistica "
+             "real. Por defecto, sin restriccion de ocupacion.",
+    )
+    parser.add_argument(
+        "--altura-maxima-plantas", type=int, default=None,
+        help="Numero maximo de plantas permitido por la ficha urbanistica real. Por "
+             "defecto, sin restriccion de altura.",
+    )
+    parser.add_argument(
+        "--frente-minimo", type=float, default=None,
+        help="Ancho minimo de fachada al vial (metros), en el lado sur de la parcela "
+             "(por defecto, street_side='south'). Por defecto, sin restriccion de frente.",
+    )
     args = parser.parse_args()
 
     if args.retranqueo_incremento is not None and args.retranqueo is None:
@@ -158,6 +179,10 @@ def main():
                 medianera_sides=seleccion.medianera_sides,
                 retranqueo_m=args.retranqueo,
                 retranqueo_incremento_por_planta_m=args.retranqueo_incremento,
+                coeficiente_edificabilidad=args.edificabilidad,
+                ocupacion_maxima_pct=args.ocupacion_maxima,
+                altura_maxima_plantas=args.altura_maxima_plantas,
+                frente_minimo_m=args.frente_minimo,
             )
         else:
             base_lot = build_sample_lot()
@@ -166,6 +191,10 @@ def main():
                 medianera_sides=seleccion.medianera_sides,
                 retranqueo_m=args.retranqueo,
                 retranqueo_incremento_por_planta_m=args.retranqueo_incremento,
+                coeficiente_edificabilidad=args.edificabilidad,
+                ocupacion_maxima_pct=args.ocupacion_maxima,
+                altura_maxima_plantas=args.altura_maxima_plantas,
+                frente_minimo_m=args.frente_minimo,
             )
         if seleccion.medianera_sides:
             print(f"(tipo_vivienda del JSON -> medianera en: {', '.join(sorted(seleccion.medianera_sides))})")
@@ -207,12 +236,17 @@ def main():
 
     program = build_sample_program(auto_adjacency=args.auto_adjacency)
     lot = build_sample_lot()
-    if args.retranqueo is not None or args.retranqueo_incremento is not None:
+    if any([args.retranqueo, args.retranqueo_incremento, args.edificabilidad,
+            args.ocupacion_maxima, args.altura_maxima_plantas, args.frente_minimo]):
         lot = Lot(
             boundary=lot.boundary,
             entrance_side=lot.entrance_side,
             retranqueo_m=args.retranqueo,
             retranqueo_incremento_por_planta_m=args.retranqueo_incremento,
+            coeficiente_edificabilidad=args.edificabilidad,
+            ocupacion_maxima_pct=args.ocupacion_maxima,
+            altura_maxima_plantas=args.altura_maxima_plantas,
+            frente_minimo_m=args.frente_minimo,
         )
 
     layout = None

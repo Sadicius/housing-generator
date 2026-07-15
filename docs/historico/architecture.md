@@ -2738,3 +2738,64 @@ relajó).
 
 Suite final: 408 unitarios, pyflakes y mypy limpios. Bundle Pyodide
 regenerado.
+
+## [ARCH:viabilidad-urbanistica] Fase 0/1: parámetros urbanísticos reales en Lot + validador de viabilidad
+
+A petición del usuario, planificado a fondo (como la migración B*) e
+investigado contra fuentes reales antes de implementar: SIOTUGA
+confirmado como el portal oficial gallego de planeamiento (encaja con
+Decreto 29/2010), y los parámetros de la hoja de ruta compartida
+(edificabilidad, ocupación, retranqueos, altura, frente de fachada)
+confirmados como el conjunto estándar real de una ficha urbanística
+(contrastado contra varios PGOU municipales: Málaga, Zamora,
+Antequera, Vélez-Málaga, Palencia). Confirmado también contra el
+framework académico REGEN (2026) que edificabilidad y ocupación son
+restricciones SEPARADAS (techo total vs. huella en planta), validando
+el diseño. Y contra herramientas reales (Finch: "como un corrector
+ortográfico para plantas", avisa al instante) que un chequeo de
+viabilidad INSTANTÁNEO, antes de generar, es un patrón real usado en
+producción, no una idea sin precedente.
+
+### Cambios reales
+
+- **`Lot`**: 4 campos nuevos, opcionales (mismo convenio que
+  `retranqueo_m`, `None` = sin restricción): `coeficiente_edificabilidad`,
+  `ocupacion_maxima_pct`, `altura_maxima_plantas`, `frente_minimo_m`.
+  Nueva propiedad `frente_actual_m` (ancho real de la parcela en el
+  lado de calle, según `street_side`).
+- **`ViabilidadUrbanisticaValidatorPort`** (nuevo puerto en
+  `application/`, firma distinta a `ConstraintValidatorPort`: recibe
+  `Program`+`Lot`+`num_plantas`, no un `Layout` ya colocado -- se
+  ejecuta ANTES de generar nada, no necesita geometría real) +
+  **`ViabilidadUrbanisticaValidator`** (implementación en
+  `infrastructure/`).
+- **`GenerateBuildingUseCase`**: comprobación de viabilidad al
+  principio de `execute()`, antes de generar ninguna planta -- si
+  falla, error inmediato y claro, no minutos de búsqueda perdida.
+- **CLI**: 4 flags nuevos (`--edificabilidad`, `--ocupacion-maxima`,
+  `--altura-maxima-plantas`, `--frente-minimo`).
+
+### Un matiz real, ya corregido en el diseño
+
+Para el chequeo de ocupación, se usa la superficie de la planta con
+MÁS área declarada de todas -- no siempre la planta baja (podría
+haber voladizos con una planta superior más grande). Verificado con
+test específico (`test_ocupacion_uses_the_largest_floor_not_always_ground_floor`).
+
+### Verificado de extremo a extremo con el CLI real
+
+Caso inviable (edificabilidad 0.1 sobre un programa que necesita
+48m²): rechazo inmediato, 0.87s, mensaje claro con las cifras reales.
+Caso viable (edificabilidad 0.5, mismo programa): genera correctamente,
+ambas plantas completas -- confirma que el chequeo no bloquea
+configuraciones genuinamente viables.
+
+11 tests nuevos en `test_viabilidad_urbanistica_validator.py` + 1 test
+de integración con subprocess real. Suite final: 419 unitarios +
+integración, mypy y pyflakes limpios en 87 archivos. Bundle Pyodide
+regenerado.
+
+### Pendiente (siguiente fase)
+
+Zona 0 en el dashboard (UI para introducir estos parámetros) --
+todavía no conectada, este trabajo es solo el lado Python/CLI.

@@ -3,6 +3,9 @@ from shapely.geometry.base import BaseGeometry
 from housing_generator.application.ports.zoning_strategy_port import ZoningStrategyPort
 from housing_generator.application.ports.layout_generator_port import LayoutGeneratorPort
 from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.viabilidad_urbanistica_validator_port import (
+    ViabilidadUrbanisticaValidatorPort,
+)
 from housing_generator.domain.entities.building import Building
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.lot import Lot
@@ -37,6 +40,7 @@ class GenerateBuildingUseCase:
         zoning_strategy: ZoningStrategyPort,
         programa_minimo_validator: ConstraintValidatorPort,
         bano_acceso_validator: ConstraintValidatorPort,
+        viabilidad_urbanistica_validator: Optional[ViabilidadUrbanisticaValidatorPort] = None,
         adjacency_requirements: Optional[List[AdjacencyRequirement]] = None,
     ):
         self._per_floor_validators_factory = per_floor_validators_factory
@@ -44,11 +48,26 @@ class GenerateBuildingUseCase:
         self._zoning_strategy = zoning_strategy
         self._programa_minimo_validator = programa_minimo_validator
         self._bano_acceso_validator = bano_acceso_validator
+        self._viabilidad_urbanistica_validator = viabilidad_urbanistica_validator
         self._adjacency_requirements = adjacency_requirements or []
 
     def execute(self, program: Program, lot: Lot) -> Building:
         rooms_by_level = self._group_by_level(program.rooms)
         levels = [lvl for lvl in NIVEL_PLANTA_ORDEN if lvl in rooms_by_level]
+
+        # comprobacion de viabilidad urbanistica ANTES de generar nada
+        # -- mismo espiritu que un informe de viabilidad real (Fase 4
+        # de la hoja de ruta investigada con el usuario): si el
+        # programa no es urbanisticamente viable, decirlo al instante,
+        # no despues de minutos de busqueda que nunca podia tener
+        # exito. Ver [ARCH:viabilidad-urbanistica].
+        if self._viabilidad_urbanistica_validator is not None:
+            viabilidad = self._viabilidad_urbanistica_validator.validate(program, lot, len(levels))
+            if not viabilidad.is_valid:
+                raise LayoutGenerationError(
+                    f"Programa no viable urbanisticamente: {viabilidad.violations}"
+                )
+
         total_num_estancias = sum(1 for r in program.rooms if r.space_category == SpaceCategory.ESTANCIA)
         global_rank = self._compute_global_rank(program.rooms)
 

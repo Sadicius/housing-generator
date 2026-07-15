@@ -360,3 +360,38 @@ def test_cli_vivienda_accesible_flag_as_a_real_subprocess(tmp_path):
             x0, y0, x1, y1 = room["bounds"]
             min_side = min(x1 - x0, y1 - y0)
             assert min_side >= 1.49, f"{room['name']}: lado minimo {min_side:.2f}m no admite el circulo de 1.50m"
+
+
+def test_cli_viabilidad_urbanistica_rejects_insufficient_edificabilidad_instantly(tmp_path):
+    # hallazgo real, investigado con el usuario contra fuentes reales
+    # (varios PGOU municipales, framework academico REGEN 2026) antes
+    # de implementar -- confirma que --edificabilidad insuficiente
+    # rechaza la generacion INMEDIATAMENTE (mensaje claro, sin agotar
+    # minutos de busqueda que nunca podia tener exito), via subprocess
+    # real. Ver [ARCH:viabilidad-urbanistica].
+    seleccion_path = tmp_path / "seleccion_plantas.json"
+    seleccion_path.write_text(json.dumps({
+        "version": 2,
+        "levels": {"PLANTA_BAJA": [
+            {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
+            {"type": "KITCHEN", "count": 1, "area_m2": 10},
+            {"type": "BATHROOM", "count": 1, "area_m2": 5},
+            {"type": "LAUNDRY", "count": 1, "area_m2": 3},
+            {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
+            {"type": "STORAGE", "count": 1, "area_m2": 3},
+        ]},
+    }), encoding="utf-8")
+    output_path = tmp_path / "edificio.json"
+
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "housing_generator.interface.cli.main",
+            "--import-seleccion", str(seleccion_path), "--output", str(output_path),
+            "--lot-size", "14x16", "--edificabilidad", "0.1",  # 224m2 parcela x 0.1 = 22.4m2 max, programa declara 48m2
+        ],
+        capture_output=True, text=True, timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "no viable urbanisticamente" in result.stderr
+    assert "Edificabilidad superada" in result.stderr

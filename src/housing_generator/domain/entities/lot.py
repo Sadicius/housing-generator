@@ -16,6 +16,23 @@ class Lot:
     con pared compartida (sin retranqueo, sin contacto exterior ahí);
     vacío = vivienda aislada.
 
+    Parámetros urbanísticos (Zona 0, "Introducción de datos") -- todos
+    opcionales, mismo convenio que `retranqueo_m`: `None` = sin esa
+    restricción concreta. Investigados contra fuentes reales (varios
+    PGOU municipales, no solo teoría) antes de añadirlos -- son el
+    conjunto estándar de una ficha urbanística real, confirmado
+    también contra el framework académico REGEN (2026): edificabilidad
+    y ocupación son restricciones SEPARADAS (una sobre el techo total,
+    otra sobre la huella en planta), no una sola cosa.
+
+    `coeficiente_edificabilidad`: m² de techo permitidos por m² de
+    parcela (m²t/m²s) -- limita la SUMA de superficies de todas las
+    plantas.
+    `ocupacion_maxima_pct`: % de la parcela que puede cubrir la huella
+    en planta (0-100).
+    `altura_maxima_plantas`: número máximo de plantas sobre rasante.
+    `frente_minimo_m`: ancho mínimo de fachada al vial (`street_side`).
+
     Ver [ARCH:lot].
     """
     boundary: Boundary
@@ -24,6 +41,21 @@ class Lot:
     retranqueo_m: Optional[float] = None
     retranqueo_incremento_por_planta_m: Optional[float] = None
     medianera_sides: FrozenSet[str] = frozenset()
+    coeficiente_edificabilidad: Optional[float] = None
+    ocupacion_maxima_pct: Optional[float] = None
+    altura_maxima_plantas: Optional[int] = None
+    frente_minimo_m: Optional[float] = None
+
+    @property
+    def frente_actual_m(self) -> float:
+        """Ancho real de la parcela en el lado que da a la calle
+        (`street_side`) -- para parcela rectangular simple, el lado
+        norte/sur mide lo mismo que el ancho en X; el lado este/oeste,
+        lo mismo que el fondo en Y. Ver [ARCH:lot]."""
+        minx, miny, maxx, maxy = self.boundary.polygon.bounds
+        if self.street_side in ("north", "south"):
+            return maxx - minx
+        return maxy - miny
 
     @property
     def buildable_area(self) -> Boundary:
