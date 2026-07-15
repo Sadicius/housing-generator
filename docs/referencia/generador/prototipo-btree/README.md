@@ -288,3 +288,60 @@ limpios en 85 archivos. Bundle Pyodide regenerado.
   conectar.
 - Decisión de corte: sustituir, convivir como opción, o descartar,
   según los resultados de la comparación empírica.
+
+## Fase 5 -- comparación empírica: resultado real y decisivo
+
+A petición del usuario, tras no conseguir reproducir un escenario
+genuinamente difícil para el sistema actual con reconstrucciones
+manuales (probado hasta 16 estancias con 2% de margen -- todas
+convergieron, confirma que el bloqueo progresivo y el resto de
+arreglos de esta sesión hicieron el sistema mucho más robusto de lo
+que era). Se decidió probar con el **CLI real** (subprocess), no una
+reconstrucción, contra el escenario `xfail` conocido y ya documentado
+(`test_cli_lot_size_option_changes_the_actual_parcel_dimensions`,
+parcela 12x11 muy ajustada).
+
+Conectado `BTreeLayoutGenerator` como opción real y seleccionable
+(`--experimental-btree` en el CLI, parámetro en
+`build_generate_building_use_case`) -- no solo código de producción
+sin conectar, ahora es una alternativa activable de verdad.
+
+### Resultado
+
+Mismo comando exacto, mismo escenario, mismos parámetros:
+
+- **Sistema actual**: falla tras 15 semillas (0 lados de contacto
+  exterior para `entrance_hall`).
+- **`--experimental-btree`**: **converge en la semilla 4, tras 4
+  intentos.**
+
+Verificado con rigor (no solo "el CLI dijo que sí"): 0 solapes entre
+estancias (área de la unión = suma exacta), todas las estancias
+dentro de la parcela real (con tolerancia de 5cm para ruido de punto
+flotante de las raíces cuadradas del cálculo de proporción).
+
+Nuevo test de integración
+(`test_experimental_btree_cli_flag_solves_the_known_xfail_scenario`)
+que protege este hallazgo permanentemente -- ejecuta el CLI real, no
+una reconstrucción.
+
+### Limpieza tras conectar de verdad
+
+`BTreeLayoutGenerator` ya no necesita estar en
+`vulture_whitelist.py` -- confirmado que `vulture` ya no lo marca
+como código muerto, ahora que se usa de verdad desde
+`container.py`. Entrada eliminada, whitelist se mantiene exacto.
+
+Suite completa: 401 unitarios + 6 integración (test_btree_partition +
+test_btree_layout_generator), mypy y pyflakes limpios en 85 archivos.
+Bundle Pyodide regenerado.
+
+## Conclusión de la migración, por ahora
+
+La pregunta que motivó las 5 fases ("¿converge mejor el árbol B* que
+el sistema actual en los casos difíciles?") tiene una respuesta real
+y positiva, en al menos un caso concreto y verificado -- no una
+promesa teórica. Queda como trabajo futuro: repetir esta comparación
+en más escenarios difíciles (no solo el que ya teníamos documentado
+como `xfail`), y decidir si esto justifica ampliar el flag
+experimental a más casos de uso, o mantenerlo como opción avanzada.

@@ -135,6 +135,14 @@ def main():
              "incrementar un retranqueo que no existe). Por defecto, mismo contorno para "
              "todas las plantas, igual que antes de anadir este flag.",
     )
+    parser.add_argument(
+        "--experimental-btree", action="store_true",
+        help="Usa BTreeLayoutGenerator (arbol B*, Chang & Chang 2000) en vez del "
+             "generador por defecto -- migracion en curso (Fase 4/5, comparacion "
+             "empirica), ver docs/referencia/generador/prototipo-btree/. Solo aplica "
+             "con --import-seleccion (multi-planta); el camino por defecto sigue "
+             "usando el generador actual.",
+    )
     args = parser.parse_args()
 
     if args.retranqueo_incremento is not None and args.retranqueo is None:
@@ -171,6 +179,7 @@ def main():
                 seed=seed,
                 max_iterations=args.max_iterations,
                 vivienda_accesible=args.vivienda_accesible,
+                experimental_btree=args.experimental_btree,
             )
             try:
                 building = use_case.execute(program, lot)

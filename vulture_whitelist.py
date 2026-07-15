@@ -22,7 +22,6 @@ ValidateLayoutUseCase  # unused class (src/housing_generator/application/use_cas
 build_program_with_auto_adjacency  # unused function (src/housing_generator/domain/services/type_adjacency_catalog.py:138)
 build_day_night_zoning_validators  # unused function (src/housing_generator/infrastructure/algorithms/constraints/day_night_zoning_validator.py:42)
 GraphBasedLayoutGenerator  # unused class (src/housing_generator/infrastructure/algorithms/layout_generation/graph_based_generator.py:17)
-BTreeLayoutGenerator  # unused class (src/housing_generator/infrastructure/algorithms/layout_generation/btree_layout_generator.py:29) -- migracion en curso, Fase 4, no conectada a container.py todavia, tests propios en tests/integration/test_btree_layout_generator.py
 
 # Metodos/propiedades de entidades de dominio, usados en tests/ (vulture
 # solo escanea src/) -- API publica real, no codigo muerto.

@@ -10,6 +10,9 @@ from housing_generator.infrastructure.algorithms.zoning.treemap_zoning import Tr
 from housing_generator.infrastructure.algorithms.layout_generation.simulated_annealing_generator import (
     SimulatedAnnealingLayoutGenerator,
 )
+from housing_generator.infrastructure.algorithms.layout_generation.btree_layout_generator import (
+    BTreeLayoutGenerator,
+)
 from housing_generator.infrastructure.algorithms.constraints.adjacency_validator import (
     AdjacencyConstraintValidator,
 )
@@ -176,11 +179,15 @@ def build_generate_building_use_case(
     max_iterations: int = 2000,
     seed: Optional[int] = None,
     vivienda_accesible: bool = False,
+    experimental_btree: bool = False,
 ) -> GenerateBuildingUseCase:
     """Fábrica de `GenerateBuildingUseCase` con las fábricas concretas
     ya resueltas -- único punto que conecta el caso de uso multi-planta
     con infraestructura real. `vivienda_accesible` opt-in, aplicado
-    igual en todas las plantas. Ver [ARCH:container].
+    igual en todas las plantas. `experimental_btree`: usa
+    `BTreeLayoutGenerator` en vez de `SimulatedAnnealingLayoutGenerator`
+    -- migración en curso (Fase 4/5, comparación empírica), ver
+    `docs/referencia/generador/prototipo-btree/`. Ver [ARCH:container].
     """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
@@ -200,6 +207,13 @@ def build_generate_building_use_case(
 
     def layout_generator_factory(composite, level_adjacency):
         soft_scorer = SoftConstraintScorer(level_adjacency, graph_builder)
+        if experimental_btree:
+            return BTreeLayoutGenerator(
+                constraint_validator=composite,
+                max_iterations=max_iterations,
+                seed=seed,
+                soft_constraint_scorer=soft_scorer,
+            )
         return SimulatedAnnealingLayoutGenerator(
             constraint_validator=composite,
             max_iterations=max_iterations,

@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import pytest
 from shapely.geometry import box
 from shapely.ops import unary_union
@@ -99,3 +101,47 @@ def test_btree_generator_is_deterministic_given_a_fixed_seed():
     bounds1 = sorted((r.id, r.boundary.polygon.bounds) for r in layout1.rooms)
     bounds2 = sorted((r.id, r.boundary.polygon.bounds) for r in layout2.rooms)
     assert bounds1 == bounds2
+
+
+def test_experimental_btree_cli_flag_solves_the_known_xfail_scenario(tmp_path):
+    # HALLAZGO REAL Y DECISIVO (Fase 5 de la migracion, comparacion
+    # empirica): el mismo escenario exacto que
+    # test_cli_lot_size_option_changes_the_actual_parcel_dimensions
+    # (xfail con el generador actual, parcela 12x11 muy ajustada) SI
+    # converge con --experimental-btree -- confirmado con el CLI real
+    # (subprocess), no una reconstruccion manual. Semilla 1 no
+    # converge, semilla 4 si, tras 4 intentos -- mismo comportamiento
+    # de reintento que el sistema actual. Ver [ARCH:btree-partition].
+    import json as json_module
+
+    seleccion_path = tmp_path / "seleccion_plantas.json"
+    seleccion_path.write_text(json_module.dumps({
+        "version": 2,
+        "levels": {"PLANTA_BAJA": [
+            {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
+            {"type": "KITCHEN", "count": 1, "area_m2": 10},
+            {"type": "BATHROOM", "count": 1, "area_m2": 5},
+            {"type": "ENTRANCE_HALL", "count": 1, "area_m2": 4.5},
+            {"type": "LAUNDRY", "count": 1, "area_m2": 3},
+            {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
+            {"type": "STORAGE", "count": 1, "area_m2": 3},
+        ]},
+    }), encoding="utf-8")
+    output_path = tmp_path / "edificio.json"
+
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "housing_generator.interface.cli.main",
+            "--import-seleccion", str(seleccion_path), "--output", str(output_path),
+            "--lot-size", "12x11", "--max-iterations", "3000", "--seed", "1",
+            "--retry-seeds", "15", "--experimental-btree",
+        ],
+        capture_output=True, text=True, timeout=280,
+    )
+
+    assert result.returncode == 0, f"--experimental-btree fallo: {result.stderr}\n{result.stdout}"
+
+    data = json_module.loads((tmp_path / "edificio_planta_baja.json").read_text(encoding="utf-8"))
+    rects = [box(*r["bounds"]) for r in data["rooms"]]
+    union = unary_union(rects)
+    assert union.area == pytest.approx(sum(r.area for r in rects))  # sin solapes

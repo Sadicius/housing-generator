@@ -2371,3 +2371,38 @@ Pendiente real: comparación empírica sistemática con los escenarios
 ya conocidos (9-11 estancias) -- la pregunta que de verdad justifica
 o no esta migración. Detalle completo en
 `docs/referencia/generador/prototipo-btree/README.md`.
+
+## [ARCH:migracion-btree] Fase 5 -- comparación empírica: resultado real y decisivo
+
+A petición del usuario. Búsqueda exhaustiva de un escenario
+genuinamente difícil para el sistema actual falló repetidamente
+(probado hasta 16 estancias con 2% de margen sobre lo declarado,
+todas convergieron) -- hallazgo honesto en sí mismo: el bloqueo
+progresivo y el resto de arreglos acumulados esta sesión hicieron el
+sistema mucho más robusto de lo que era cuando empezamos a investigar
+por qué no convergía.
+
+Decidido probar con el CLI real (subprocess) contra el escenario
+`xfail` ya documentado (parcela 12x11 muy ajustada), en vez de seguir
+reconstruyendo manualmente. Conectado `BTreeLayoutGenerator` como
+opción real y seleccionable (`--experimental-btree`), no solo código
+sin conectar.
+
+**Resultado real**: mismo comando exacto -- el sistema actual falla
+tras 15 semillas (entrance_hall sin contacto exterior); con
+`--experimental-btree`, converge en la semilla 4, tras 4 intentos.
+Verificado con rigor: 0 solapes, todas las estancias dentro de la
+parcela real. Nuevo test de integración que protege este hallazgo
+permanentemente, ejecutando el CLI real, no una reconstrucción.
+
+Limpieza: `BTreeLayoutGenerator` ya no necesita estar en
+`vulture_whitelist.py`, confirmado que vulture ya no lo marca ahora
+que está conectado de verdad.
+
+Suite completa: 401 unitarios + 6 integración, mypy y pyflakes
+limpios en 85 archivos. Bundle Pyodide regenerado.
+
+**Conclusión de la migración, por ahora**: la pregunta que motivó las
+5 fases tiene una respuesta real y positiva, en al menos un caso
+concreto y verificado -- no una promesa teórica. Detalle completo en
+`docs/referencia/generador/prototipo-btree/README.md`.
