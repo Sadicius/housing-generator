@@ -2437,3 +2437,51 @@ Sin pérdida de calidad ni información: 401 unitarios + 6 integración,
 todos pasando exactamente igual, byte a byte. Bundle Pyodide
 regenerado. Detalle completo en
 `docs/referencia/generador/prototipo-btree/README.md`.
+
+## [ARCH:adjacency-validator] [ARCH:shapely-utils] Segunda ronda de optimización: dos bugs de rendimiento reales más
+
+A petición del usuario ("¿podríamos revisar de nuevo las llamadas y
+funciones... verificar que tenemos la depuración hecha?"), tras la
+optimización de `compute_positions` de la ronda anterior. Perfilado
+con `cProfile`, ordenado por tiempo propio (no acumulado) esta vez,
+para ver el coste real función a función.
+
+### Bug 1: `.buffer()` recalculado por estancia, no por validación
+
+`AdjacencyConstraintValidator.validate()` llamaba
+`layout.lot.boundary.polygon.buffer(self._tolerance)` DENTRO del
+bucle `for room in layout.rooms` -- el límite de la parcela nunca
+cambia entre estancias de un mismo layout, así que se recalculaba
+una vez por estancia sin necesidad. Corregido: calculado una vez al
+principio de `validate()`. Medido: 2748 → 458 llamadas a `.buffer()`
+(exactamente 6x, coincide con el número de estancias del escenario de
+prueba).
+
+### Bug 2: `minimum_rotated_rectangle` calculado dos veces sobre el mismo polígono
+
+`count_exterior_sides`, `can_fit_rectangle` y `meets_minimum_width`
+llamaban SIEMPRE en pareja `_is_axis_or_rotated_rectangle(polygon)`
+(que ya calcula `minimum_rotated_rectangle` internamente para
+comprobar si es un rectángulo) seguido de `rectangle_side_lengths(polygon)`
+(que lo volvía a calcular desde cero para sacar los lados) -- la
+misma operación cara de `shapely`, dos veces, sobre el mismo polígono,
+en las tres funciones. Consolidado en un solo helper
+(`_rectangle_mrr_if_valid`) que calcula el rectángulo mínimo UNA vez y
+lo reutiliza tanto para la comprobación como para la extracción de
+lados. Las dos funciones antiguas (`_is_axis_or_rotated_rectangle`,
+`rectangle_side_lengths`) quedaron genuinamente sin uso tras el
+refactor -- eliminadas, no descuidadas: confirmado que ningún test
+las llamaba por nombre directamente, solo a través de las funciones
+públicas que las envolvían.
+
+### Medido en conjunto (ambos arreglos)
+
+Mismo escenario de prueba, seeds y validadores exactos: tiempo total
+1.826s → 1.563s (~14% más rápido). `.buffer()`: 2748 → 458 llamadas.
+`minimum_rotated_rectangle`: 9160 → 4580 llamadas (exactamente la
+mitad).
+
+Sin pérdida de calidad ni información: 401 unitarios, incluidos los
+19 tests que ejercitan estas funciones directamente (con formas
+degeneradas, rotadas, no rectangulares), todos pasando exactamente
+igual. pyflakes, mypy y vulture limpios.

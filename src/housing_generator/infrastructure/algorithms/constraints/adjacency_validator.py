@@ -26,11 +26,18 @@ class AdjacencyConstraintValidator(ConstraintValidatorPort):
     def validate(self, layout: Layout) -> ValidationResult:
         violations: List[str] = []
 
+        # layout.lot no cambia entre iteraciones del recocido -- calcular
+        # el buffer UNA vez por validacion, no una vez POR ESTANCIA (bug
+        # de rendimiento real, encontrado con cProfile: 2748 llamadas a
+        # .buffer() para 458 evaluaciones en una prueba de 6 estancias,
+        # exactamente 6x mas de lo necesario). Ver [ARCH:adjacency-validator].
+        lot_boundary_buffered = layout.lot.boundary.polygon.buffer(self._tolerance)
+
         for room in layout.rooms:
             if not room.is_placed:
                 violations.append(f"La estancia '{room.id}' no fue colocada")
                 continue
-            if not layout.lot.boundary.polygon.buffer(self._tolerance).contains(room.boundary.polygon):
+            if not lot_boundary_buffered.contains(room.boundary.polygon):
                 violations.append(f"La estancia '{room.id}' queda fuera del limite del solar")
 
         rooms_by_id = {r.id: r for r in layout.rooms if r.is_placed}

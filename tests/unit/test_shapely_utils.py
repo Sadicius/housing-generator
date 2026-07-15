@@ -52,7 +52,7 @@ def test_rectangle_does_not_fit_when_both_orientations_fail():
 
 def test_degenerate_zero_area_polygon_is_never_a_rectangle():
     # linea (area 0), no un poligono real -- rama defensiva de
-    # _is_axis_or_rotated_rectangle (mrr_area <= 0), sin cubrir hasta
+    # _rectangle_mrr_if_valid (mrr_area <= 0), sin cubrir hasta
     # ahora. Al no ser un rectangulo real, el resultado correcto es
     # None ("no verificable"), no False -- mismo patron de tres estados
     # que usa el resto del proyecto para formas no rectangulares.

@@ -9,21 +9,25 @@ from typing import List, Optional, Tuple
 from shapely.geometry import Polygon, LineString
 
 
-def _is_axis_or_rotated_rectangle(polygon: Polygon, relative_tolerance: float = 0.01) -> bool:
-    """Comprueba que `polygon` es (aproximadamente) un rectangulo, con
-    cualquier rotacion -- no solo alineado a ejes. Compara el area real
-    contra la del rectangulo minimo que lo envuelve (`minimum_rotated_rectangle`):
-    si coinciden, el poligono ES ese rectangulo."""
-    mrr_area = polygon.minimum_rotated_rectangle.area
-    if mrr_area <= 0:
-        return False
-    return abs(polygon.area - mrr_area) <= relative_tolerance * mrr_area
-
-
-def rectangle_side_lengths(polygon: Polygon) -> Tuple[float, float]:
-    """Longitudes de los dos lados adyacentes del rectangulo minimo que
-    envuelve `polygon` (valido tanto si esta alineado a ejes como rotado)."""
+def _rectangle_mrr_if_valid(polygon: Polygon, relative_tolerance: float = 0.01) -> Optional[Polygon]:
+    """Calcula `minimum_rotated_rectangle` UNA sola vez y comprueba si
+    `polygon` es (aproximadamente) ese rectangulo -- devuelve el propio
+    mrr si es valido, o None si no. Consolidado tras un hallazgo real
+    de cProfile (no optimizacion especulativa): `_is_axis_or_rotated_rectangle`
+    y `rectangle_side_lengths` se llamaban SIEMPRE juntas, cada una
+    calculando `minimum_rotated_rectangle` por separado sobre el MISMO
+    poligono -- 9160 llamadas medidas en una prueba real, el doble de
+    las necesarias. Ver [ARCH:shapely-utils]."""
     mrr = polygon.minimum_rotated_rectangle
+    mrr_area = mrr.area
+    if mrr_area <= 0:
+        return None
+    if abs(polygon.area - mrr_area) > relative_tolerance * mrr_area:
+        return None
+    return mrr
+
+
+def _mrr_side_lengths(mrr: Polygon) -> Tuple[float, float]:
     coords = list(mrr.exterior.coords)  # 5 puntos, el ultimo repite el primero
     side_a = math.hypot(coords[1][0] - coords[0][0], coords[1][1] - coords[0][1])
     side_b = math.hypot(coords[2][0] - coords[1][0], coords[2][1] - coords[1][1])
@@ -38,9 +42,10 @@ def can_fit_rectangle(polygon: Polygon, side_a_m: float, side_b_m: float) -> Opt
     es la generalizacion): True / False / None ("no verificable", nunca
     confundido con "aprobado").
     """
-    if not _is_axis_or_rotated_rectangle(polygon):
+    mrr = _rectangle_mrr_if_valid(polygon)
+    if mrr is None:
         return None
-    width, height = rectangle_side_lengths(polygon)
+    width, height = _mrr_side_lengths(mrr)
     return (width >= side_a_m and height >= side_b_m) or (width >= side_b_m and height >= side_a_m)
 
 
@@ -55,9 +60,10 @@ def meets_minimum_width(polygon: Polygon, min_width_m: float) -> Optional[bool]:
     lado MAS CORTO del rectangulo debe ser >= min_width_m. A diferencia
     de `can_fit_rectangle`, aqui el lado corto de LA PROPIA estancia es
     el que se mide directamente, no si cabe otra forma dentro."""
-    if not _is_axis_or_rotated_rectangle(polygon):
+    mrr = _rectangle_mrr_if_valid(polygon)
+    if mrr is None:
         return None
-    width, height = rectangle_side_lengths(polygon)
+    width, height = _mrr_side_lengths(mrr)
     return min(width, height) >= min_width_m
 
 
@@ -71,10 +77,10 @@ def count_exterior_sides(
     real con el límite de `lot_polygon` (`min_contact_m` de borde
     compartido). `excluded_segments`: lados de medianera, no cuentan
     como exterior real. Ver [ARCH:shapely-utils]."""
-    if not _is_axis_or_rotated_rectangle(room_polygon):
+    mrr = _rectangle_mrr_if_valid(room_polygon)
+    if mrr is None:
         return None
 
-    mrr = room_polygon.minimum_rotated_rectangle
     coords = list(mrr.exterior.coords)  # 5 puntos, el ultimo repite el primero
     lot_boundary = lot_polygon.boundary
     if excluded_segments:
