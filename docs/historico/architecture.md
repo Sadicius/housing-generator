@@ -2686,3 +2686,55 @@ que protege explícitamente contra que se reintroduzca el patrón que
 causó el bug (`retranqueo_js` ya no debe aparecer en el archivo).
 
 Suite final: 404 unitarios (2 nuevos), pyflakes limpio.
+
+## [ARCH:ancho-libre-practico] Segundo bug real del usuario: tensión entre mínimo legal y ancho práctico
+
+Tras el arreglo del `JsNull`, el usuario probó de nuevo y reportó dos
+fallos de generación reales (con y sin `--experimental-btree`) en su
+caso concreto: generador automático, 2 plantas, 3 dormitorios, parcela
+14x16 (todo por defecto).
+
+### Diagnóstico, reproducido con el CLI real letra por letra
+
+Reconstruido el cálculo exacto del generador automático
+(`recalculateAutoAreas()`): con 3 dormitorios, Tabla 2 da 1.5m² para
+lavadero, tendedero y aseo -- área LEGAL correcta, pero a 1.20m de
+ancho libre práctico (nuestro propio criterio, no normativo) eso deja
+solo 1.25m de fondo, una tira casi imposible de colocar junto con el
+resto de restricciones. Reproducido con el CLI: mismo error, letra
+por letra, que el reportado por el usuario.
+
+### Decisiones confirmadas explícitamente con el usuario, dos preguntas
+
+1. **Relajar el umbral de ancho práctico para aseo y tendedero** (no
+   lavadero) de 1.20m a 0.90m -- un aseo real (solo WC+lavabo) o un
+   tendedero pueden ser legítimamente más estrechos que un lavadero
+   (necesita hueco para lavadora). A 1.5m² y 0.90m de ancho: 1.67m de
+   fondo, margen cómodo.
+2. **Dar margen de área al lavadero en el generador automático**
+   (2.0m² mínimo, no el 1.5m² legal exacto) -- ya que su umbral SÍ se
+   mantiene en 1.20m, necesita algo más de área para tener margen
+   real.
+
+### Resultado, verificado con el CLI real de nuevo
+
+Con ambos arreglos: de 4 violaciones (aseo, tendedero, lavadero,
+recibidor) a 1 sola (tendedero sin contacto exterior, un problema de
+búsqueda normal, no estructural) -- y con algo más de margen de
+reintento (10 semillas), converge de verdad, ambas plantas completas.
+
+**Hallazgo adicional**: el caso real necesitó 9 intentos para
+converger, pero el dashboard tenía el número de reintentos fijo en 5
+(`--retry-seeds` del CLI es configurable, pero el dashboard no lo
+exponía como tal, lo llevaba fijo). Subido a 10 -- mismo espíritu que
+el resto de umbrales de este proyecto, un número razonable, no
+mágico.
+
+4 tests nuevos en `test_ancho_libre_practico_validator.py`: aseo y
+tendedero pasan al mínimo legal con el umbral relajado, lavadero
+mantiene el umbral estricto explícitamente, y el umbral relajado
+sigue rechazando formas genuinamente inservibles (no se eliminó, se
+relajó).
+
+Suite final: 408 unitarios, pyflakes y mypy limpios. Bundle Pyodide
+regenerado.

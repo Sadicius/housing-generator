@@ -124,7 +124,7 @@ async function handleGenerateNow(){
   setGenerateStatus('Iniciando...', 'loading');
   try{
     const result = await generarEdificioReal(
-      payload, lotW, lotH, seed, maxIterations, 5, accesible,
+      payload, lotW, lotH, seed, maxIterations, 10, accesible,
       retranqueoM, retranqueoIncremento, experimentalBtree,
       (msg) => setGenerateStatus(msg, 'loading'),
     );

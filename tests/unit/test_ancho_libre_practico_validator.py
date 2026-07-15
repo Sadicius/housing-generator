@@ -93,3 +93,44 @@ def test_unplaced_room_is_skipped_not_crashed():
     layout = Layout(lot=_dummy_lot(), rooms=[room], zones=[])
     result = AnchoLibrePracticoValidator().validate(layout)
     assert result.violations == []
+
+
+def test_toilet_at_legal_minimum_1_5m2_now_fits_with_reduced_threshold():
+    # HALLAZGO REAL: caso exacto reportado por el usuario probando en
+    # un navegador real -- el generador automatico del dashboard crea
+    # aseo/tendedero al minimo legal exacto de Tabla 2 (1.5m2, 3+
+    # dormitorios), que con el umbral antiguo (1.20m) dejaba solo
+    # 1.25m de fondo, casi imposible de colocar. Confirmado con el
+    # usuario: relajar SOLO aseo y tendedero (no lavadero, que
+    # necesita hueco para lavadora) a 0.90m. A 1.5m2 y 0.90m de ancho,
+    # 1.67m de fondo -- mucho mas comodo. Ver [ARCH:ancho-libre-practico].
+    aseo = _placed("aseo", RoomType.TOILET, box(0, 0, 1.5, 1.0))  # 1.0m < 1.20m antiguo, > 0.90m nuevo
+    layout = Layout(lot=_dummy_lot(), rooms=[aseo], zones=[])
+    result = AnchoLibrePracticoValidator().validate(layout)
+    assert result.violations == []
+
+
+def test_drying_area_at_legal_minimum_1_5m2_now_fits_with_reduced_threshold():
+    tendedero = _placed("tendedero", RoomType.DRYING_AREA, box(0, 0, 1.5, 1.0))
+    layout = Layout(lot=_dummy_lot(), rooms=[tendedero], zones=[])
+    result = AnchoLibrePracticoValidator().validate(layout)
+    assert result.violations == []
+
+
+def test_toilet_still_fails_below_the_reduced_threshold():
+    # el umbral se relaja, no se elimina -- 0.85m sigue siendo
+    # inservible, debe seguir fallando.
+    aseo = _placed("aseo", RoomType.TOILET, box(0, 0, 1.76, 0.85))
+    layout = Layout(lot=_dummy_lot(), rooms=[aseo], zones=[])
+    result = AnchoLibrePracticoValidator().validate(layout)
+    assert len(result.violations) == 1
+
+
+def test_laundry_keeps_the_original_stricter_threshold():
+    # confirma explicitamente que LAUNDRY NO se relajo (necesita hueco
+    # real para lavadora) -- 1.0m de ancho debe seguir fallando para
+    # lavadero, aunque ya pase para aseo/tendedero con el mismo ancho.
+    lavadero = _placed("lavadero", RoomType.LAUNDRY, box(0, 0, 1.5, 1.0))
+    layout = Layout(lot=_dummy_lot(), rooms=[lavadero], zones=[])
+    result = AnchoLibrePracticoValidator().validate(layout)
+    assert len(result.violations) == 1

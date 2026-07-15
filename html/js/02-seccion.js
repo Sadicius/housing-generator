@@ -213,10 +213,23 @@ function recalculateAutoAreas(){
     e.v.area = minimo;
   });
 
+  // NO NORMATIVO -- margen minimo para LAUNDRY, confirmado
+  // explicitamente con el usuario tras un caso real: el minimo legal
+  // de Tabla 2 (1.5m2, 3+ dormitorios) deja solo 1.25m de fondo con
+  // el ancho libre practico que SI se mantiene estricto para lavadero
+  // (1.20m, necesita hueco real para lavadora -- a diferencia de
+  // aseo/tendedero, donde se relajo el propio umbral en su lugar, ver
+  // AnchoLibrePracticoValidator [ARCH:ancho-libre-practico]). 2.0m2 a
+  // 1.20m de ancho deja 1.67m de fondo, mismo margen comodo que se
+  // uso para relajar aseo/tendedero.
+  const MARGEN_MINIMO_LAVADERO_M2 = 2.0;
+
   const tabla2Fila = tablaServiciosPara(totalEstancias);
   allEntries.filter(e => PROPS[e.type] && PROPS[e.type].category === 'servicio').forEach(e => {
     const subtype = PROPS[e.type].subtype;
-    e.v.area = (subtype && tabla2Fila[subtype]) || DEFAULT_AREA_M2[e.type] || 10;
+    let area = (subtype && tabla2Fila[subtype]) || DEFAULT_AREA_M2[e.type] || 10;
+    if(e.type === 'LAUNDRY') area = Math.max(area, MARGEN_MINIMO_LAVADERO_M2);
+    e.v.area = area;
   });
 
   // circulacion (ENTRANCE_HALL, CORRIDOR) -- sin fila de Tabla 1/2 propia
