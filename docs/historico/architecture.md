@@ -3264,3 +3264,50 @@ estaba disponible en este turno.
 Pendiente: extender la marca "lámina completada" (`.zona-btn.done`,
 ya en CSS) con la lógica JS que la activa; revisar visualmente en un
 navegador real cuando el usuario pueda confirmar.
+
+## [ARCH:dashboard-rediseno-limpio] Tercer rediseño: corrección de rumbo real
+
+El segundo rediseño (papel vegetal + nube de revisión + líneas de
+acotación dibujadas a mano) tampoco convenció -- "acabo de verlo y no
+me convence tampoco la verdad". El usuario compartió 4 referencias
+reales que sí le gustan (dimensions.com, cadmapper.com,
+architextures.org, competitions.archi) más Anthropic y Google.
+
+Investigadas las 4 con `web_fetch` real (no supuestas): las cuatro
+comparten fondo claro/blanco (`theme-color` confirmado en 2 de
+ellas: `#ffffff`, `#eaece8`), cero artificio decorativo, cero
+skeuomorfismo de "plano antiguo dibujado a mano". Son herramientas
+precisas y modernas que dan la casualidad de ser para arquitectura,
+no herramientas disfrazadas de plano -- confirma que el "cosplay de
+delineante" del segundo intento estaba mal orientado, no solo mal
+ejecutado.
+
+### Decisión
+
+Precisión limpia moderna (Anthropic/Google), no tema decorativo.
+Fondo casi blanco (`#FAFAF7`), bordes en gris muy claro, radios de
+esquina suaves (6-10px, ausentes en los dos intentos anteriores),
+tipografía Space Grotesk/Archivo/Space Mono sin tratamiento
+industrial sobredimensionado. Acento terracota mantenido (decisión
+propia, el usuario no tenía preferencia) pero con contención real --
+una sola cosa remarcada a la vez, no saturando bordes/fondos.
+
+El único sitio donde el lenguaje arquitectónico real se mantiene es
+el visor del plano generado (norte, escala gráfica) -- decisión
+explícita del usuario: eso es contenido real, no envoltorio
+decorativo.
+
+### Verificación sin inspección visual directa disponible
+
+La herramienta de visualización de imágenes no devolvió contenido
+visible en este turno (limitación de la sesión, no del código).
+Verificado por dos vías independientes en su lugar: valores CSS
+computados vía `jsdom` (coinciden exactamente con los hex de diseño)
+y muestreo de píxeles reales sobre la captura raster con PIL
+(`(250,250,247)` medido vs `#FAFAF7` = `RGB(250,250,247)` diseñado --
+coincidencia exacta). Pendiente de confirmación visual real por parte
+del usuario, que es quien puede verlo de verdad.
+
+Suite: 417 unitarios, pyflakes limpio. Mismos nombres de variables
+CSS preservados por tercera vez consecutiva -- el JS nunca se ha
+tocado en ninguno de los tres rediseños.
