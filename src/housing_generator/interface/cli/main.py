@@ -136,12 +136,14 @@ def main():
              "todas las plantas, igual que antes de anadir este flag.",
     )
     parser.add_argument(
-        "--experimental-btree", action="store_true",
-        help="Usa BTreeLayoutGenerator (arbol B*, Chang & Chang 2000) en vez del "
-             "generador por defecto -- migracion en curso (Fase 4/5, comparacion "
-             "empirica), ver docs/referencia/generador/prototipo-btree/. Solo aplica "
-             "con --import-seleccion (multi-planta); el camino por defecto sigue "
-             "usando el generador actual.",
+        "--generador-clasico", action="store_true",
+        help="Usa SimulatedAnnealingLayoutGenerator (arbol de particion, guillotina) en "
+             "vez del generador por defecto -- desde la Fase 5 de la migracion "
+             "(comparacion empirica, confirmada con el usuario), el arbol B* "
+             "(Chang & Chang 2000) es el generador POR DEFECTO: convergia en menos "
+             "intentos en todos los casos dificiles probados. Ver "
+             "docs/referencia/generador/prototipo-btree/. Solo aplica con "
+             "--import-seleccion (multi-planta).",
     )
     parser.add_argument(
         "--edificabilidad", type=float, default=None,
@@ -208,7 +210,7 @@ def main():
                 seed=seed,
                 max_iterations=args.max_iterations,
                 vivienda_accesible=args.vivienda_accesible,
-                experimental_btree=args.experimental_btree,
+                usar_generador_clasico=args.generador_clasico,
             )
             try:
                 building = use_case.execute(program, lot)

@@ -89,7 +89,7 @@ def generar_edificio(
     vivienda_accesible: bool = False,
     retranqueo_m: Optional[float] = None,
     retranqueo_incremento_por_planta_m: Optional[float] = None,
-    experimental_btree: bool = False,
+    usar_generador_clasico: bool = False,
     coeficiente_edificabilidad: Optional[float] = None,
     ocupacion_maxima_pct: Optional[float] = None,
     altura_maxima_plantas: Optional[int] = None,
@@ -105,8 +105,11 @@ def generar_edificio(
     conceptos ya conectados al CLI (`--retranqueo`/`--retranqueo-incremento`)
     -- sin forma de usarlos desde el dashboard hasta ahora, encontrado
     al revisar las conexiones entre Python y el dashboard a petición
-    del usuario. `experimental_btree`: mismo flag que
-    `--experimental-btree` del CLI, misma migración en curso -- ver
+    del usuario. `usar_generador_clasico`: mismo flag que
+    `--generador-clasico` del CLI -- el árbol B* es el generador POR
+    DEFECTO desde la Fase 5 de la migración (comparación empírica
+    confirmada con el usuario: convergía en menos intentos en todos
+    los casos difíciles probados), ver
     `docs/referencia/generador/prototipo-btree/`.
 
     `coeficiente_edificabilidad`/`ocupacion_maxima_pct`/`altura_maxima_plantas`/
@@ -175,7 +178,7 @@ def generar_edificio(
             seed=used_seed,
             max_iterations=max_iterations,
             vivienda_accesible=vivienda_accesible,
-            experimental_btree=experimental_btree,
+            usar_generador_clasico=usar_generador_clasico,
         )
         try:
             building = use_case.execute(program, lot)

@@ -316,6 +316,20 @@ queda (parcela 12x10, 9 estancias con `DINING_ROOM`-`KITCHEN`
 obligatorio) se resiste con ambos generadores -- probado hasta 10
 semillas con el árbol B*, sigue sin converger.
 
+**[ACTUALIZADO -- decisión de fondo] El árbol B* es ahora el
+generador POR DEFECTO** ([ARCH:btree-generador-por-defecto]): tras un
+tercer caso real (2 dormitorios, 6 estancias pequeñas) que necesitaba
+21 intentos con el generador clásico y solo 7 con el árbol B*, el
+usuario confirmó explícitamente invertir la decisión -- ya no hace
+falta ningún flag para usar el árbol B*, es el camino por defecto en
+`container.py`, CLI y dashboard. El generador clásico se mantiene
+disponible como opt-in (`--generador-clasico`, casilla "Usar
+generador clásico"), no eliminado. También a petición del usuario:
+`gen-seed`/`gen-iterations` eliminados como campos manuales del
+dashboard -- la semilla siempre es 1 (el reintento automático ya
+explora desde ahí) y las iteraciones se escalan según el número real
+de estancias del programa (`max(1500, num_estancias * 300)`).
+
 **[ACTUALIZADO -- resuelto por otra vía] Escenario complejo (9-11
 estancias) del programa de ejemplo del CLI**
 ([ARCH:locking-progresivo]): investigación profunda con técnicas

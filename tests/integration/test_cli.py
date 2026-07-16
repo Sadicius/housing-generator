@@ -155,12 +155,13 @@ def test_cli_with_import_seleccion_as_a_real_subprocess(tmp_path):
     # JSON (exportacion del dashboard) -> Program real, conectado tambien
     # como opcion real del CLI, no solo una funcion Python suelta.
     #
-    # --experimental-btree: este escenario multi-planta NO convergia con
-    # el generador por defecto (xfail documentado hasta ahora,
-    # [ARCH:locking-progresivo]) -- confirmado que SI converge con el
-    # arbol B* (semilla 8, 8 intentos), mismo hallazgo que
-    # [ARCH:migracion-btree] Fase 5. Xfail retirado, no oculto -- el
-    # escenario esta genuinamente resuelto con esta alternativa.
+    # este escenario multi-planta NO convergia con el generador clasico
+    # (xfail documentado en su momento, [ARCH:locking-progresivo]) --
+    # confirmado que SI converge con el arbol B* (semilla 8, 8 intentos),
+    # mismo hallazgo que [ARCH:migracion-btree] Fase 5. El arbol B* es
+    # el generador POR DEFECTO desde entonces (confirmado con el
+    # usuario tras la comparacion empirica) -- ya no hace falta ningun
+    # flag para activarlo, se prueba sin --generador-clasico.
     import json as json_module
 
     seleccion_path = tmp_path / "seleccion_plantas.json"
@@ -177,7 +178,6 @@ def test_cli_with_import_seleccion_as_a_real_subprocess(tmp_path):
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
             "--max-iterations", "4000", "--seed", "1", "--retry-seeds", "15",
-            "--experimental-btree",
         ],
         capture_output=True, text=True, timeout=280,
     )
@@ -195,15 +195,15 @@ def test_cli_with_import_seleccion_as_a_real_subprocess(tmp_path):
 
 
 @pytest.mark.xfail(
-    reason="BUG PRE-EXISTENTE encontrado al trabajar en otra tarea (reduccion de "
-           "build_sample_program): este test ya fallaba ANTES de esos cambios "
-           "(confirmado con git stash) -- consecuencia del mismo problema de fondo ya "
-           "documentado ([ARCH:locking-progresivo]): cambios posteriores al recocido "
-           "simulado invalidaron el supuesto original (semilla 1 falla, semilla 3 "
-           "converge) para este escenario ajustado a proposito (parcela 12x10, 9 "
-           "estancias). Ni 5 semillas de reintento real bastan ahora. No es el "
-           "escenario que se pidio arreglar en esta tarea (ese era build_sample_program, "
-           "ya reducido a 6 estancias fiables) -- documentado aqui, no oculto.",
+    reason="[ACTUALIZADO] Sigue sin converger con el arbol B* (generador por defecto "
+           "desde que se confirmo con el usuario tras la Fase 5, ver "
+           "[ARCH:btree-generador-por-defecto]) y solo 5 semillas (el valor por "
+           "defecto del CLI, sin --retry-seeds explicito) -- mismo escenario ajustado "
+           "a proposito (parcela 12x10, 9 estancias con DINING_ROOM-KITCHEN "
+           "obligatorio) que ya se investigo a fondo con ambos generadores: probado "
+           "hasta 10 semillas con el arbol B* en la Fase 5, seguia sin converger. No "
+           "es el escenario que se pidio arreglar (ese era build_sample_program, ya "
+           "reducido a 6 estancias fiables) -- documentado aqui, no oculto.",
     strict=False,
 )
 def test_cli_retries_seeds_automatically_when_the_first_one_does_not_converge(tmp_path):
@@ -289,12 +289,12 @@ def test_cli_lot_size_option_changes_the_actual_parcel_dimensions(tmp_path):
     # verdad en el area edificable resultante (no solo que el flag se
     # acepta sin fallar).
     #
-    # --experimental-btree: este escenario (parcela 12x11 muy ajustada)
-    # NO convergia con el generador por defecto (xfail documentado
-    # hasta ahora, [ARCH:locking-progresivo]) -- confirmado que SI
-    # converge con el arbol B* (semilla 4, 4 intentos), mismo hallazgo
-    # que [ARCH:migracion-btree] Fase 5. Xfail retirado, no oculto --
-    # el escenario esta genuinamente resuelto con esta alternativa.
+    # este escenario (parcela 12x11 muy ajustada) NO convergia con el
+    # generador clasico (xfail documentado en su momento,
+    # [ARCH:locking-progresivo]) -- confirmado que SI converge con el
+    # arbol B* (semilla 4, 4 intentos), mismo hallazgo que
+    # [ARCH:migracion-btree] Fase 5. El arbol B* es el generador POR
+    # DEFECTO desde entonces -- ya no hace falta ningun flag.
     import json as json_module
 
     seleccion_path = tmp_path / "seleccion_plantas.json"
@@ -317,7 +317,6 @@ def test_cli_lot_size_option_changes_the_actual_parcel_dimensions(tmp_path):
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
             "--lot-size", "12x11", "--max-iterations", "3000", "--seed", "1", "--retry-seeds", "15",
-            "--experimental-btree",
         ],
         capture_output=True, text=True, timeout=280,
     )

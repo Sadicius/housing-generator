@@ -186,15 +186,24 @@ def build_generate_building_use_case(
     max_iterations: int = 2000,
     seed: Optional[int] = None,
     vivienda_accesible: bool = False,
-    experimental_btree: bool = False,
+    usar_generador_clasico: bool = False,
 ) -> GenerateBuildingUseCase:
     """Fábrica de `GenerateBuildingUseCase` con las fábricas concretas
     ya resueltas -- único punto que conecta el caso de uso multi-planta
     con infraestructura real. `vivienda_accesible` opt-in, aplicado
-    igual en todas las plantas. `experimental_btree`: usa
-    `BTreeLayoutGenerator` en vez de `SimulatedAnnealingLayoutGenerator`
-    -- migración en curso (Fase 4/5, comparación empírica), ver
-    `docs/referencia/generador/prototipo-btree/`. Ver [ARCH:container].
+    igual en todas las plantas.
+
+    `usar_generador_clasico`: si es `True`, usa
+    `SimulatedAnnealingLayoutGenerator` (árbol de partición,
+    guillotina) en vez de `BTreeLayoutGenerator` (árbol B*, por
+    defecto desde aquí) -- decisión confirmada explícitamente con el
+    usuario tras la Fase 5 de la migración (comparación empírica,
+    ver `docs/referencia/generador/prototipo-btree/`): el árbol B*
+    convergía en menos intentos en TODOS los casos difíciles
+    probados a lo largo de la sesión, no solo el original. El
+    generador clásico se mantiene disponible (no eliminado) por si
+    algún caso concreto lo necesitara. Ver [ARCH:container],
+    [ARCH:btree-generador-por-defecto].
     """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
@@ -214,14 +223,14 @@ def build_generate_building_use_case(
 
     def layout_generator_factory(composite, level_adjacency):
         soft_scorer = SoftConstraintScorer(level_adjacency, graph_builder)
-        if experimental_btree:
-            return BTreeLayoutGenerator(
+        if usar_generador_clasico:
+            return SimulatedAnnealingLayoutGenerator(
                 constraint_validator=composite,
                 max_iterations=max_iterations,
                 seed=seed,
                 soft_constraint_scorer=soft_scorer,
             )
-        return SimulatedAnnealingLayoutGenerator(
+        return BTreeLayoutGenerator(
             constraint_validator=composite,
             max_iterations=max_iterations,
             seed=seed,

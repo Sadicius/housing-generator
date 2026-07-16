@@ -52,7 +52,7 @@ async function ensurePyodideReady(onProgress){
   return PYODIDE_LOADING;
 }
 
-async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, experimentalBtree, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, onProgress){
+async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, usarGeneradorClasico, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, onProgress){
   const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Buscando una distribucion valida (puede reintentar varias semillas)...');
 
@@ -63,7 +63,7 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   pyodide.globals.set('max_it_js', maxIterations);
   pyodide.globals.set('retry_js', retrySeeds);
   pyodide.globals.set('accesible_js', viviendaAccesible);
-  pyodide.globals.set('experimental_btree_js', !!experimentalBtree);
+  pyodide.globals.set('usar_generador_clasico_js', !!usarGeneradorClasico);
   // street_side es un string fijo (viene de un <select> con opciones
   // controladas, no puede ser null/vacio) -- sin el riesgo de JsNull
   // que afecta a los valores numericos opcionales, seguro via globals.set().
@@ -110,7 +110,7 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     '    retry_seeds=int(retry_js), vivienda_accesible=bool(accesible_js),',
     `    retranqueo_m=${retranqueoLiteral},`,
     `    retranqueo_incremento_por_planta_m=${retranqueoIncrementoLiteral},`,
-    '    experimental_btree=bool(experimental_btree_js),',
+    '    usar_generador_clasico=bool(usar_generador_clasico_js),',
     `    coeficiente_edificabilidad=${edificabilidadLiteral},`,
     `    ocupacion_maxima_pct=${ocupacionMaximaLiteral},`,
     `    altura_maxima_plantas=${alturaMaximaLiteral},`,
@@ -158,15 +158,26 @@ async function handleGenerateNow(){
 
   const lotW = parseFloat(document.getElementById('gen-lot-w').value) || 14;
   const lotH = parseFloat(document.getElementById('gen-lot-h').value) || 16;
-  const seed = parseInt(document.getElementById('gen-seed').value, 10) || 1;
-  const maxIterations = parseInt(document.getElementById('gen-iterations').value, 10) || 4000;
+  // semilla e iteraciones ya NO son campos manuales -- a peticion del
+  // usuario ("sigo viendo raro cuando es algo que deberia ser
+  // automatico"): la semilla de partida siempre es 1 (el propio
+  // reintento automatico ya explora 1, 2, 3... no hace falta elegirla
+  // a mano), y las iteraciones se escalan segun el numero real de
+  // estancias del programa -- mismos ordenes de magnitud usados a lo
+  // largo de esta sesion (6 estancias ~1500-3000, 10-13 ~3000-4000).
+  // Ver [ARCH:btree-generador-por-defecto].
+  const seed = 1;
+  const totalRooms = Object.values(payload.levels)
+    .flat()
+    .reduce((sum, entry) => sum + (entry.count || 1), 0);
+  const maxIterations = Math.max(1500, totalRooms * 300);
   const accesible = document.getElementById('gen-accesible').checked;
   const retranqueoEl = document.getElementById('gen-retranqueo');
   const retranqueoM = retranqueoEl && retranqueoEl.value !== '' ? parseFloat(retranqueoEl.value) : null;
   const retranqueoIncEl = document.getElementById('gen-retranqueo-incremento');
   const retranqueoIncremento = retranqueoIncEl && retranqueoIncEl.value !== '' ? parseFloat(retranqueoIncEl.value) : null;
-  const experimentalBtreeEl = document.getElementById('gen-experimental-btree');
-  const experimentalBtree = experimentalBtreeEl ? experimentalBtreeEl.checked : false;
+  const generadorClasicoEl = document.getElementById('gen-generador-clasico');
+  const usarGeneradorClasico = generadorClasicoEl ? generadorClasicoEl.checked : false;
   // Zona 0: parametros urbanisticos reales -- mismo patron "vacio = sin
   // restriccion" que retranqueo. Ver [ARCH:viabilidad-urbanistica].
   const numOpcional = (id) => {
@@ -194,7 +205,7 @@ async function handleGenerateNow(){
   try{
     const result = await generarEdificioReal(
       payload, lotW, lotH, seed, maxIterations, 10, accesible,
-      retranqueoM, retranqueoIncremento, experimentalBtree,
+      retranqueoM, retranqueoIncremento, usarGeneradorClasico,
       edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide,
       poligonoRealCoords,
       (msg) => setGenerateStatus(msg, 'loading'),

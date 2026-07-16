@@ -105,15 +105,17 @@ def test_btree_generator_is_deterministic_given_a_fixed_seed():
     assert bounds1 == bounds2
 
 
-def test_experimental_btree_cli_flag_solves_the_known_xfail_scenario(tmp_path):
+def test_btree_default_generator_solves_the_known_hard_scenario_without_any_flag(tmp_path):
     # HALLAZGO REAL Y DECISIVO (Fase 5 de la migracion, comparacion
     # empirica): el mismo escenario exacto que
     # test_cli_lot_size_option_changes_the_actual_parcel_dimensions
-    # (xfail con el generador actual, parcela 12x11 muy ajustada) SI
-    # converge con --experimental-btree -- confirmado con el CLI real
+    # (xfail con el generador clasico, parcela 12x11 muy ajustada) SI
+    # converge con el arbol B* -- confirmado con el CLI real
     # (subprocess), no una reconstruccion manual. Semilla 1 no
-    # converge, semilla 4 si, tras 4 intentos -- mismo comportamiento
-    # de reintento que el sistema actual. Ver [ARCH:btree-partition].
+    # converge, semilla 4 si, tras 4 intentos. El arbol B* es el
+    # generador POR DEFECTO desde que se confirmo con el usuario tras
+    # esta misma Fase 5 -- ya no hace falta ningun flag para activarlo.
+    # Ver [ARCH:btree-partition], [ARCH:btree-generador-por-defecto].
     import json as json_module
 
     seleccion_path = tmp_path / "seleccion_plantas.json"
@@ -136,12 +138,12 @@ def test_experimental_btree_cli_flag_solves_the_known_xfail_scenario(tmp_path):
             sys.executable, "-m", "housing_generator.interface.cli.main",
             "--import-seleccion", str(seleccion_path), "--output", str(output_path),
             "--lot-size", "12x11", "--max-iterations", "3000", "--seed", "1",
-            "--retry-seeds", "15", "--experimental-btree",
+            "--retry-seeds", "15",
         ],
         capture_output=True, text=True, timeout=280,
     )
 
-    assert result.returncode == 0, f"--experimental-btree fallo: {result.stderr}\n{result.stdout}"
+    assert result.returncode == 0, f"la generacion fallo: {result.stderr}\n{result.stdout}"
 
     data = json_module.loads((tmp_path / "edificio_planta_baja.json").read_text(encoding="utf-8"))
     rects = [box(*r["bounds"]) for r in data["rooms"]]

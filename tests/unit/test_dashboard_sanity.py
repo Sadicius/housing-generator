@@ -229,9 +229,9 @@ def test_generate_now_button_and_status_area_exist():
     assert 'id="generate-config"' in html
 
 
-def test_retranqueo_and_experimental_btree_controls_are_wired_end_to_end():
+def test_retranqueo_and_generador_clasico_controls_are_wired_end_to_end():
     # hallazgo real al revisar las conexiones del dashboard a peticion
-    # del usuario: la funcionalidad de retranqueo/--experimental-btree
+    # del usuario: la funcionalidad de retranqueo/generador-clasico
     # ya estaba correctamente implementada de extremo a extremo (HTML ->
     # JS -> Python), pero sin NINGUN test que la protegiera -- si alguien
     # tocaba uno de los tres eslabones sin querer, nada lo habria
@@ -242,21 +242,21 @@ def test_retranqueo_and_experimental_btree_controls_are_wired_end_to_end():
 
     # eslabon 1: los tres controles existen en el HTML con el id exacto
     # que el JS espera
-    for control_id in ("gen-retranqueo", "gen-retranqueo-incremento", "gen-experimental-btree"):
+    for control_id in ("gen-retranqueo", "gen-retranqueo-incremento", "gen-generador-clasico"):
         assert f'id="{control_id}"' in html, f"falta el control {control_id} en el HTML"
 
     # eslabon 2: handleGenerateNow los lee del DOM y los pasa a
     # generarEdificioReal (no silenciosamente ignorados)
     assert "getElementById('gen-retranqueo')" in js
     assert "getElementById('gen-retranqueo-incremento')" in js
-    assert "getElementById('gen-experimental-btree')" in js
-    assert "retranqueoM, retranqueoIncremento, experimentalBtree" in js
+    assert "getElementById('gen-generador-clasico')" in js
+    assert "retranqueoM, retranqueoIncremento, usarGeneradorClasico" in js
 
     # eslabon 3: generarEdificioReal los reenvia de verdad al Python real
     # (no solo los recibe y los descarta)
     assert "retranqueo_m=" in js
     assert "retranqueo_incremento_por_planta_m=" in js
-    assert "experimental_btree=bool(experimental_btree_js)" in js
+    assert "usar_generador_clasico=bool(usar_generador_clasico_js)" in js
 
 
 def test_retranqueo_none_case_does_not_rely_on_pyodide_null_conversion():
@@ -640,3 +640,34 @@ def test_real_polygon_reaches_generation_not_just_the_preview():
     # eslabon 3: se pasa el poligono EN BRUTO (no zona_afeccion) --
     # confirma que no se aplica el retranqueo dos veces
     assert "PARCELA_IMPORTADA.zona_afeccion" not in js_pyodide.split("handleGenerateNow")[1].split("async function")[0]
+
+
+def test_seed_and_iterations_are_automatic_not_manual_fields():
+    # a peticion del usuario ("sigo viendo raro cuando es algo que
+    # deberia ser automatico"): gen-seed/gen-iterations eliminados del
+    # HTML, la semilla de partida siempre es 1 (el reintento automatico
+    # ya explora desde ahi) y las iteraciones se escalan segun el
+    # numero real de estancias del programa, no un numero fijo elegido
+    # a mano. Ver [ARCH:btree-generador-por-defecto].
+    html = _read(HTML_PATH)
+    assert 'id="gen-seed"' not in html
+    assert 'id="gen-iterations"' not in html
+
+    js = _read(JS_DIR / "06-pyodide.js")
+    assert "const seed = 1" in js
+    assert "totalRooms" in js
+    assert "Math.max(1500, totalRooms * 300)" in js
+
+
+def test_btree_default_generator_end_to_end_flag_naming_is_consistent():
+    # confirma que la casilla invertida ("generador clasico", no
+    # "arbol B*") llega hasta Python con el nombre correcto en los
+    # tres eslabones -- mismo patron de proteccion ya usado para
+    # retranqueo/poligono_real.
+    html = _read(HTML_PATH)
+    js = _read(JS_DIR / "06-pyodide.js")
+    assert 'id="gen-generador-clasico"' in html
+    assert "getElementById('gen-generador-clasico')" in js
+    assert "usar_generador_clasico=bool(usar_generador_clasico_js)" in js
+    assert "gen-experimental-btree" not in html
+    assert "experimental_btree" not in js

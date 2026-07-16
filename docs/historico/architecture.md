@@ -3092,3 +3092,51 @@ archivos. Bundle Pyodide regenerado.
 Con esto, la solución completa (Fase A + generación dentro del
 polígono real) está funcionalmente terminada -- pendiente solo de
 confirmación del usuario probando en un navegador real.
+
+## [ARCH:btree-generador-por-defecto] El árbol B* pasa a ser el generador por defecto
+
+A petición explícita del usuario, tras un tercer caso real: "2
+dormitorios y 2 plantas y" (6 estancias pequeñas: salón 18m², cocina
+7m²) necesitaba 21 intentos con el generador clásico, solo 7 con el
+árbol B*. Dado el patrón acumulado a lo largo de toda la sesión
+(TODOS los casos difíciles probados convergían mejor con el árbol
+B*), el usuario decidió invertir la decisión de fondo: el árbol B*
+pasa a ser el generador por defecto, no una opción experimental.
+
+### Cambio de semántica, no solo de valor por defecto
+
+`experimental_btree: bool = False` (activar B*) →
+`usar_generador_clasico: bool = False` (activar el clásico) --
+renombrado en los 3 niveles (`container.py`, `bridge.py`, CLI), con
+el mismo cuidado que cualquier cambio de contrato: tests actualizados
+para reflejar el nuevo comportamiento por defecto (no solo renombrados
+mecánicamente), 3 tests xfail/comentarios corregidos para no decir
+"escenario conocido con --experimental-btree" cuando ya no hace falta
+ningún flag. Dashboard: casilla invertida ("Usar generador clásico",
+desmarcada por defecto = árbol B*).
+
+### Segunda decisión: semilla e iteraciones automáticas
+
+El usuario también señaló: "sigo viendo raro cuando es algo que
+debería ser automático" -- `gen-seed`/`gen-iterations` eliminados
+como campos manuales. La semilla de partida siempre es 1 (el propio
+reintento automático ya explora 1, 2, 3... no hace falta elegirla a
+mano); las iteraciones se escalan según el número real de estancias
+del programa (`Math.max(1500, totalRooms * 300)`), mismos órdenes de
+magnitud usados a lo largo de toda la sesión para escenarios de
+distinto tamaño.
+
+### Verificado con el caso real exacto que motivó el cambio
+
+Mismo escenario reportado por el usuario (2 dormitorios, 2 plantas),
+ahora SIN ningún flag: converge en la semilla 7, mismo resultado que
+antes con `--experimental-btree` explícito -- confirma que el cambio
+de default funciona de verdad, no solo a nivel de código.
+
+Suite: 455 unitarios, mypy y pyflakes limpios. Bundle Pyodide
+regenerado.
+
+Pendiente (mismo turno, aún sin implementar): retranqueo por lado
+(distinguir el lado de calle), línea de fondo edificable en la vista
+previa, botón de confirmación entre Zona 0 y Zona 1, exportar datos
+de parcela -- las otras 3 peticiones del mismo mensaje del usuario.

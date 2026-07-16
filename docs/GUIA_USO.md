@@ -478,12 +478,15 @@ ajustadas de tamaño. Con `--import-seleccion` esto ya se maneja solo
 -- confirmado con un caso real donde la semilla 1 no convergía y la 4
 sí, sin que hiciera falta buscarla a mano.
 
-Si sigue sin converger con parcelas muy ajustadas, `--experimental-btree`
-(con `--import-seleccion`) usa una representación geométrica distinta
-(árbol B*, no guillotina) -- confirmado con un caso real donde el
-generador por defecto fallaba tras 15 semillas y este lo resolvió en
-la 4ª. Sigue siendo experimental (menos probado que el generador por
-defecto), pero es una alternativa real si un caso concreto no converge.
+[ACTUALIZADO] El árbol B* (Chang & Chang 2000, representación
+geométrica distinta a la guillotina) es el generador POR DEFECTO
+desde que se confirmó con el usuario tras la Fase 5 de la migración
+(comparación empírica): convergía en menos intentos en todos los
+casos difíciles probados a lo largo de la sesión, no solo el
+original. El generador clásico (árbol de partición) se mantiene
+disponible como opción (`--generador-clasico` en el CLI, casilla
+"Usar generador clásico" en el dashboard) por si algún caso concreto
+lo necesitara -- ya no hace falta activar nada para usar el árbol B*.
 
 **Cambié algo del generador (movimientos, restricciones) y una
 semilla que antes funcionaba ya no converge**
