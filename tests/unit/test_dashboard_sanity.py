@@ -853,3 +853,16 @@ def test_fondo_edificacion_field_and_preview_line_exist():
     assert "fondo_edificacion_m=${fondoEdificacionLiteral}" in js_pyodide
     assert "function _lineaFondoEdificacion" in js_parcela
     assert "'gen-fondo-edificacion'" in js_parcela  # dispara el redibujado
+
+
+def test_polygon_edges_are_clickable_to_mark_street_side():
+    # a peticion del usuario: "solo podemos seleccionar dentro del
+    # tipo basico de orientacion (N,S,E,O) pero una parcela podria
+    # tener una vinculacion diferente o incluso necesitar que la
+    # marque". Cada lado del poligono real se puede pulsar para
+    # clasificar su direccion cardinal y marcarlo como lado de calle.
+    js = _read(JS_DIR / "00b-parcela.js")
+    assert "function _clasificarLadoCardinal" in js
+    assert "function _ladosClicables" in js
+    assert "parcela-lado-clicable" in js
+    assert "streetSideEl.value = el.dataset.direccion" in js

@@ -90,6 +90,63 @@ function renderParcelaPreview(){
   resumen.innerHTML = _resumenHtml(datos, superficieParcela, superficieHuella, huella.colapsada, 'manual');
 }
 
+function _clasificarLadoCardinal(p1, p2, centroide){
+  // misma logica que retranqueo_variable_por_lado (Python, lot.py):
+  // clasifica un lado por la direccion cardinal mas cercana a su
+  // normal saliente (la que apunta lejos del centroide), no asume
+  // que el poligono ya este alineado a ejes. Version JS para
+  // respuesta instantanea al pulsar un lado en la vista previa, sin
+  // ida y vuelta a Pyodide para algo que es geometria simple.
+  const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+  const normalA = [-dy, dx];
+  const puntoMedio = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
+  const haciaCentroide = [centroide[0] - puntoMedio[0], centroide[1] - puntoMedio[1]];
+  const normalSaliente = (normalA[0] * haciaCentroide[0] + normalA[1] * haciaCentroide[1]) < 0
+    ? normalA : [-normalA[0], -normalA[1]];
+  let anguloDeg = Math.atan2(normalSaliente[1], normalSaliente[0]) * 180 / Math.PI;
+  if(anguloDeg < 0) anguloDeg += 360;
+  if(anguloDeg >= 45 && anguloDeg < 135) return 'north';
+  if(anguloDeg >= 135 && anguloDeg < 225) return 'west';
+  if(anguloDeg >= 225 && anguloDeg < 315) return 'south';
+  return 'east';
+}
+
+function _centroidePoligono(coords){
+  let area = 0, cx = 0, cy = 0;
+  for(let i = 0; i < coords.length - 1; i++){
+    const cruz = coords[i][0] * coords[i+1][1] - coords[i+1][0] * coords[i][1];
+    area += cruz;
+    cx += (coords[i][0] + coords[i+1][0]) * cruz;
+    cy += (coords[i][1] + coords[i+1][1]) * cruz;
+  }
+  area = area / 2;
+  if(Math.abs(area) < 1e-9) return coords[0];
+  return [cx / (6 * area), cy / (6 * area)];
+}
+
+function _ladosClicables(poligono, px, py){
+  // cada lado del poligono real como un <line> pulsable -- a peticion
+  // del usuario: "una parcela podria tener una vinculacion diferente
+  // o incluso necesitar que la marque". Pulsar un lado clasifica su
+  // direccion cardinal y selecciona esa opcion en "Lado de calle",
+  // en vez de limitarse a elegir a ciegas entre N/S/E/O sin ver la
+  // parcela real. Ver [ARCH:selector-calle-poligono-real].
+  const centroide = _centroidePoligono(poligono);
+  const streetSideEl = document.getElementById('gen-street-side');
+  const actual = streetSideEl ? streetSideEl.value : null;
+  let svgLados = '';
+  for(let i = 0; i < poligono.length - 1; i++){
+    const p1 = poligono[i], p2 = poligono[i + 1];
+    const direccion = _clasificarLadoCardinal(p1, p2, centroide);
+    const esActual = direccion === actual;
+    svgLados += `<line class="parcela-lado-clicable" data-direccion="${direccion}"
+        x1="${px(p1[0])}" y1="${py(p1[1])}" x2="${px(p2[0])}" y2="${py(p2[1])}"
+        stroke="${esActual ? 'var(--cyan)' : 'transparent'}" stroke-width="${esActual ? 5 : 10}"
+        stroke-linecap="round" style="cursor:pointer;"><title>Marcar como lado de calle (${direccion})</title></line>`;
+  }
+  return svgLados;
+}
+
 function renderParcelaImportada(datos, svg, resumen){
   // ---- caso IMPORTADO: poligono real + OBB + zona de afeccion ----
   // Se dibuja la version en ORIENTACION REAL (sin la rotacion que
@@ -129,7 +186,17 @@ function renderParcelaImportada(datos, svg, resumen){
 
   svgContent += _lineaFrente(datos, px, py);
   svgContent += _lineaFondoEdificacion(datos, px, py);
+  svgContent += _ladosClicables(poligono, px, py);
   svg.innerHTML = svgContent;
+  svg.querySelectorAll('.parcela-lado-clicable').forEach(el => {
+    el.addEventListener('click', () => {
+      const streetSideEl = document.getElementById('gen-street-side');
+      if(streetSideEl){
+        streetSideEl.value = el.dataset.direccion;
+        streetSideEl.dispatchEvent(new Event('input', {bubbles: true}));
+      }
+    });
+  });
 
   const superficieAfeccion = (zonaAfeccion && zonaAfeccion.length > 0)
     ? _areaPoligono(zonaAfeccion)

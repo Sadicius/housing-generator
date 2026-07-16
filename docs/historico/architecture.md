@@ -3565,3 +3565,45 @@ pieza por terminada.
 
 9 tests nuevos. Suite: 448 unitarios, pyflakes limpio. Bundle Pyodide
 regenerado.
+
+## [ARCH:selector-calle-poligono-real] Selector de calle sobre el polígono real, cuarto y último ítem del lote
+
+A petición del usuario: "solo podemos seleccionar dentro del tipo
+básico de orientación (N,S,E,O) pero una parcela podría tener una
+vinculación diferente o incluso necesitar que la marque".
+
+### Alcance decidido conscientemente
+
+Una edición completa por arrastre (mover el lindero de calle a
+cualquier posición arbitraria, no solo entre lados existentes)
+hubiera exigido rediseñar `street_side` en todo el backend (ahora
+mismo SIEMPRE es N/S/E/O, algo de lo que dependen `frente_actual_m`,
+`_clip_fondo_edificacion`, `retranqueo_variable_por_lado` y el
+generador). En vez de esa reescritura de mayor alcance, implementado
+lo que resuelve la necesidad real sin romper nada aguas abajo: cada
+LADO del polígono real es pulsable en la vista previa, se clasifica
+por su dirección cardinal más cercana (misma lógica que
+`retranqueo_variable_por_lado`, reimplementada en JS puro para
+respuesta instantánea, sin ida y vuelta a Pyodide) y selecciona esa
+opción en "Lado de calle" -- ya no hay que adivinar a ciegas entre
+N/S/E/O sin ver la parcela real.
+
+Bug real encontrado y corregido antes de dar la pieza por terminada:
+al insertar las funciones nuevas, la línea
+`function renderParcelaImportada(...)` se perdió sin querer,
+partiendo el archivo en dos con una llave de más -- detectado por
+`node --check` antes de intentar verificar nada más, no en producción.
+
+Verificado con `jsdom`: 4 lados de un rectángulo real clasificados
+correctamente (south/east/north/west), y pulsar el lado clasificado
+como "east" cambia el desplegable de verdad, no solo visualmente.
+
+1 test nuevo. Suite: 449 unitarios, pyflakes limpio.
+
+### Lote de 4 ítems completo
+
+Con esto se completan los 4 ítems pendientes del feedback: tipos de
+suelo, retranqueo por lindero, fondo de edificación, selector de
+calle sobre el polígono real -- además de la orientación real de la
+vista previa y el layout de dos columnas resueltos en turnos
+anteriores del mismo lote.
