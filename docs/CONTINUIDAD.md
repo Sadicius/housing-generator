@@ -24,8 +24,8 @@ Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
 multi-planta con escalera y contorno progresivo, vivienda aislada y
 pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 401/401 tests unitarios,
-más los de integración (106 commits).
+**Estado en el momento de escribir esto**: 422/422 tests unitarios,
+más los de integración (117 commits).
 Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
 coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
 comando, no en este número.
@@ -200,6 +200,14 @@ EscaleraAlineacion (huella ≥90% de solape), NucleoHumedoVertical (bajantes).
 interfaz -- no es una regla normativa en sí, es el combinador (17+2+2=21
 reglas). Detalle completo con tabla resumen en `docs/COMO_FUNCIONA.md`.
 
+**`ViabilidadUrbanisticaValidator`** (añadido después, Zona 0): distinto
+de los 21 anteriores -- implementa `ViabilidadUrbanisticaValidatorPort`,
+no `ConstraintValidatorPort` (recibe `Program`+`Lot`+`num_plantas`
+declarados, no un `Layout` ya colocado). Se ejecuta ANTES de generar
+nada, no después -- comprueba edificabilidad, ocupación, altura y
+frente de fachada contra los parámetros urbanísticos reales que aporta
+el usuario. Ver [ARCH:viabilidad-urbanistica].
+
 ## Multi-planta — cómo funciona
 
 `GenerateBuildingUseCase.execute(program, lot)`: agrupa `program.rooms` por
@@ -308,26 +316,24 @@ queda (parcela 12x10, 9 estancias con `DINING_ROOM`-`KITCHEN`
 obligatorio) se resiste con ambos generadores -- probado hasta 10
 semillas con el árbol B*, sigue sin converger.
 
-**Escenario complejo (9-11 estancias) sigue sin converger del todo**
+**[ACTUALIZADO -- resuelto por otra vía] Escenario complejo (9-11
+estancias) del programa de ejemplo del CLI**
 ([ARCH:locking-progresivo]): investigación profunda con técnicas
 reales (min-conflicts, calibración de temperatura, bloqueo
 progresivo) redujo las violaciones simultáneas de 5-7 a típicamente
-2, pero no llegó a cero en esta sesión, ni con más iteraciones. El
-usuario confirmó que mi diagnóstico anterior ("contacto exterior
-simultáneo es geométricamente difícil") estaba mal planteado -- una
-topología en tira con dirección consistente lo resuelve trivialmente;
-el problema real es que ni la construcción inicial del árbol ni la
-búsqueda protegen esa propiedad una vez conseguida. Pendiente real:
-seguir puliendo el bloqueo progresivo (quizás sesgar
-`build_random_tree` hacia formas más planas de partida), o aceptar
-que este escenario concreto necesita más presupuesto de cómputo del
-disponible en una sesión. **Consecuencia real de esto**:
-`tests/integration/test_cli.py::test_sample_program_generates_a_valid_layout_with_fixed_seed`
-está marcado `xfail` (con el motivo completo documentado en el propio
-test) -- confirmado que ya fallaba antes de encontrarlo (no es una
-regresión puntual), ni 15 semillas nuevas con reintento real lo
-resuelven. Si se retoma este escenario, quitar el `xfail` es la señal
-de que se ha resuelto de verdad.
+2, pero no llegó a cero en su momento. El usuario confirmó que el
+diagnóstico anterior ("contacto exterior simultáneo es
+geométricamente difícil") estaba mal planteado -- una topología en
+tira con dirección consistente lo resuelve trivialmente; el problema
+real era que ni la construcción inicial del árbol ni la búsqueda
+protegían esa propiedad una vez conseguida. Este escenario concreto
+del CLI se resolvió después por otra vía, más simple: reducir el
+programa de ejemplo de 11 a 6 estancias (ver más arriba,
+`[ARCH:cli-programa-reducido]`) -- `test_sample_program_generates_a_valid_layout_with_fixed_seed`
+ya NO está en `xfail`, pasa de verdad. El aprendizaje sobre el
+bloqueo progresivo y sus límites sigue siendo válido y se aplicó
+después en la migración al árbol B* -- se mantiene documentado aquí
+por eso, no porque el escenario original siga sin resolver.
 
 **Modo espejo no transforma todavía el VACÍO** ([ARCH:area-objetivo]):
 el visor omite dibujar la zona de vacío si el plano está transformado
@@ -351,20 +357,23 @@ daría tamaño cero. Solución conocida (inicializar solo al abrir la
 pestaña la primera vez, + `cy.resize()`+`cy.fit()` al mostrarla) pero
 es trabajo real de integración, no "añadir una librería y ya".
 
-**El más urgente**: **probar el generador real en el navegador
-(Pyodide) en un navegador de verdad, con internet normal.** Se
-construyó respondiendo a que el usuario cuestionara si el dashboard
-era realmente una forma de trabajar -- verificado todo lo posible
-dentro de este entorno (el núcleo de Pyodide se instaló y ejecutó de
-verdad vía npm/Node, `shapely`/`geos` confirmados como paquetes Pyodide
-oficiales con fecha, el flujo completo del botón llega correctamente
-hasta la llamada a `loadPyodide()` sin errores previos), pero el CDN
-real (`cdn.jsdelivr.net`) está bloqueado en este entorno de trabajo, así
-que la carga real de `shapely` dentro del navegador NUNCA se probó de
-extremo a extremo. Alta confianza en que funcione (documentación
-oficial con fecha, no una suposición), pero sigue siendo, técnicamente,
-sin confirmar en el escenario real. Ver `docs/historico/architecture.md`, sección
-"Generador real en el navegador (Pyodide)".
+**[RESUELTO] Probar el generador real en el navegador (Pyodide) en un
+navegador de verdad, con internet normal**: el usuario lo hizo de
+verdad esta sesión (no en este entorno de desarrollo, donde el CDN
+sigue bloqueado) -- confirmó que funciona, y por el camino aparecieron
+dos bugs reales que ESTE entorno nunca podía haber detectado por sí
+solo: (1) `pyodide.globals.set('x', null)` no se convierte a `None`
+de Python de forma fiable (llega como objeto `JsNull`), causaba
+`TypeError: float() argument... not 'JsNull'` al generar sin
+retranqueo -- corregido construyendo el literal Python directamente
+como texto en vez de pasar por la conversión automática, ver
+`[ARCH:btree-partition]`. (2) el generador automático creaba
+lavadero/tendedero/aseo al mínimo legal exacto (1.5m², Tabla 2), que
+con el ancho libre práctico (1.20m) dejaba casi imposible de colocar
+-- corregido relajando el umbral para aseo/tendedero y dando margen
+de área al lavadero, ambas decisiones confirmadas explícitamente con
+el usuario, ver `[ARCH:ancho-libre-practico]`. Ambos confirmados
+resueltos por el usuario probando de nuevo tras cada arreglo.
 
 **[INVESTIGADO, no es un hueco genuino] Zona de desembarco de
 escalera**: señalado en una crítica externa que el usuario compartió.
@@ -400,6 +409,30 @@ el dashboard** -- ver `[ARCH:cli-retranqueo]` y
   documentado como limitación en su momento, pero fácil de olvidar.
 - **`CocinaIntegrada` (cocina abierta al salón) no tiene ninguna forma
   de activarse ni explicarse desde el dashboard.**
+- **Importación de parcela real desde Catastro (GML/DXF/XML), Fase A --
+  investigada a fondo, confirmada, NO implementada todavía**: el
+  usuario aportó 2 parcelas reales (una sin edificar, una con
+  edificación) en las tres versiones que ofrece la Sede Electrónica
+  del Catastro. Confirmado con datos reales: ambas parcelas ocupan
+  solo ~53% de su rectángulo alineado a ejes (genuinamente
+  irregulares) pero 88-94% de su rectángulo ORIENTADO
+  (`minimum_rotated_rectangle`, ya en `shapely`, sin dependencias
+  nuevas) -- confirma la vía correcta para el "rectángulo de trabajo"
+  que el generador actual necesita. Tres librerías de "rectángulo
+  inscrito óptimo" investigadas y descartadas con evidencia real, no
+  solo por peso: `largestinteriorrectangle` (77s, 37.7% aprovechamiento,
+  peor que el OBB), `maxrect` de Planet Labs (rota con sus propias
+  dependencias modernas, sin mantener desde 2015), `ExtractRect`
+  (mismo enfoque de rejilla, código sin actualizar). GDAL/OGR
+  descartado también -- el GML es XML simple, ya parseado a mano con
+  éxito, `xml.etree.ElementTree` de la librería estándar basta.
+  Diseño confirmado con el usuario: polígono real (relleno) + OBB
+  (línea discontinua) + zona de afección (retranqueo aplicado al
+  polígono real, no al rectángulo) + etiqueta "Manual" vs "Importado
+  (Catastro)" + alertas de viabilidad visuales, no solo texto. Si se
+  retoma, empezar por el parser GML (`xml.etree.ElementTree`,
+  extraer `cp:areaValue` + `gml:posList`, recalcular área siempre
+  del polígono en vez de confiar ciegamente en el valor del archivo).
 
 **Proyecto Lua anterior del usuario, evaluado (10 archivos: nhv.lua ya
 conocido + main.lua, accesibilidad.lua, termica.lua, acustica.lua,
@@ -541,7 +574,7 @@ externa si se retoma -- decisión de alcance, no un hueco.
 
 ```bash
 cd housing_generator
-python -m pytest -q                                          # deberia dar 342 passed (o mas) -- tarda varios minutos, los tests de --import-seleccion/reintento son lentos (subprocess real)
+python -m pytest -q                                          # deberia dar 422 passed (o mas) -- tarda varios minutos, los tests de --import-seleccion/reintento son lentos (subprocess real)
 python -m pytest --cov=housing_generator --cov-report=term-missing -q  # 85%+ (o mas)
 python -m housing_generator.interface.cli.main --output /tmp/x.json    # CLI real
 git log --oneline | head -5                                   # historial reciente
