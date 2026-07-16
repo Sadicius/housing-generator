@@ -700,3 +700,53 @@ def test_redesign_preserves_every_css_variable_name_the_js_references():
     nombres_referenciados = set(re.findall(r"--[a-z][a-z-]*[a-z]\b", js_all))
     for nombre in nombres_referenciados:
         assert f"{nombre}:" in css, f"variable {nombre} referenciada desde JS mais ya no definida en el CSS"
+
+
+def test_header_content_reflects_the_whole_tool_not_just_the_original_matrix():
+    # hallazgo real de contenido, senalado por el usuario: la cabecera
+    # seguia describiendo solo la matriz de relaciones ("16 tipos, 120
+    # pares"), resto de cuando la pagina entera era solo eso -- ahora
+    # es una herramienta de 4 zonas (parcela, diseno, consulta,
+    # planificacion). Las cifras citadas deben ser reales, no
+    # supuestas -- verificadas contra el enum y los archivos de
+    # validadores reales antes de escribirlas.
+    html = _read(HTML_PATH)
+    assert "housing_generator</h1>" in html
+    assert "Matriz de relaciones espaciales</h1>" not in html
+    assert "árbol B*" in html or "arbol B*" in html
+    # cifras citadas en el bloque meta deben coincidir con la realidad
+    from housing_generator.domain.enums import RoomType
+    assert f"<div><span>tipos de estancia</span>{len(list(RoomType))}</div>" in html
+
+
+def test_nota_indicador_button_lives_inside_its_own_panel_not_orphaned():
+    # hallazgo real: el boton de nota de "Relaciones entre tipos" vivia
+    # huerfano a nivel superior de la pagina (antes de elegir ninguna
+    # zona), resto de cuando la pagina entera era la matriz. Movido
+    # dentro de #panel-relaciones, mismo patron que Parcela/Cronograma.
+    html = _read(HTML_PATH)
+    assert 'id="panel-relaciones"><button class="nota-indicador" data-nota="nota-relaciones"' in html
+
+
+def test_stale_tab_name_seccion_vertical_does_not_appear_anywhere():
+    # hallazgo real: "pestaña Sección vertical" ya no existe (ahora es
+    # el paso "Programa y generación" dentro de Zona 1 Diseño) pero se
+    # seguia mencionando en la nota de alcance Y en un mensaje de error
+    # real que ve el usuario al cargar un archivo equivocado.
+    html = _read(HTML_PATH)
+    js = _read(JS_DIR / "09-init.js")
+    assert "Sección vertical" not in html
+    assert "Sección vertical" not in js
+    assert "Programa y generación" in js
+
+
+def test_zona_done_marker_activates_after_real_success_not_just_css():
+    # refinamiento visual pedido por el usuario ("aun podria refinarse
+    # mas"): el CSS .zona-btn.done ya existia pero sin logica JS que lo
+    # activara -- confirma que Zona 0 se marca tras importar una parcela
+    # real, y Zona 1 tras generar un plano real, no solo que la clase
+    # CSS exista sin usarse en ningun sitio.
+    js_parcela = _read(JS_DIR / "00b-parcela.js")
+    js_pyodide = _read(JS_DIR / "06-pyodide.js")
+    assert "zonaParcela.classList.add('done')" in js_parcela
+    assert "zonaDiseno.classList.add('done')" in js_pyodide

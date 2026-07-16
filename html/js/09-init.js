@@ -108,8 +108,8 @@ document.getElementById('plano-file-input').addEventListener('change', async (ev
   }
 
   // BUG REAL encontrado por el usuario probando de verdad: cargar
-  // "seleccion_plantas.json" (la exportacion de la pestaña Sección
-  // vertical -- tipos y cantidades, SIN geometria resuelta) en vez de
+  // "seleccion_plantas.json" (la exportacion del paso "Programa y
+  // generacion" -- tipos y cantidades, SIN geometria resuelta) en vez de
   // un plano ya generado por el CLI (con "rooms"/"bounds") rompia con
   // un TypeError sin capturar a medio camino -- el archivo se veia
   // "seleccionado" pero no pasaba nada mas, sin ningun mensaje. Son dos
@@ -123,7 +123,7 @@ document.getElementById('plano-file-input').addEventListener('change', async (ev
     content.innerHTML = `<div class="plano-empty plano-error">
       <b>${escapeXml(names)}</b> no tiene el formato de un plano generado (falta "rooms").<br>
       ${looksLikeSeleccion
-        ? 'Este parece ser un archivo de "selección de plantas" (de la pestaña Sección vertical) -- primero hay que generarlo de verdad: <code>python -m housing_generator.interface.cli.main --import-seleccion ' + escapeXml(invalid[0].file.name) + ' --output edificio.json</code>, y cargar aquí el <code>edificio_planta_*.json</code> resultante, no este archivo.'
+        ? 'Este parece ser un archivo de "selección de plantas" (del paso "Programa y generación") -- usa el botón "Generar plano ahora" en ese paso, o genéralo por el CLI: <code>python -m housing_generator.interface.cli.main --import-seleccion ' + escapeXml(invalid[0].file.name) + ' --output edificio.json</code>, y carga aquí el <code>edificio_planta_*.json</code> resultante, no este archivo.'
         : 'Carga el JSON que produce el CLI (<code>--output layout.json</code>, o los <code>edificio_planta_*.json</code> de <code>--import-seleccion</code>).'}
     </div>`;
     return;

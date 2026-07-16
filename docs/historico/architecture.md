@@ -3311,3 +3311,41 @@ del usuario, que es quien puede verlo de verdad.
 Suite: 417 unitarios, pyflakes limpio. Mismos nombres de variables
 CSS preservados por tercera vez consecutiva -- el JS nunca se ha
 tocado en ninguno de los tres rediseños.
+
+## Revisión de contenido del dashboard, a petición del usuario
+
+Tras el tercer rediseño visual, el usuario pidió revisar "todo el
+contenido, ya que la cabecera y otros elementos creo que deberían ser
+actualizados también". Encontrados varios restos de contenido
+desactualizado, de cuando la página entera era solo la matriz de
+relaciones (antes de la reestructuración en 4 Zonas):
+
+- **Cabecera completa**: eyebrow/h1/sub/meta describían solo "Matriz
+  de relaciones espaciales" (16 tipos, 120 pares) -- reescrita para
+  describir la herramienta completa (parcela real, generación con
+  árbol B*, normativa gallega). Cifras verificadas contra el código
+  real antes de citarlas: 23 validadores (contados directamente, no
+  supuestos), 17 tipos de estancia (el enum real -- el antiguo "16"
+  ya estaba desactualizado incluso antes de este rediseño).
+- **Botón de nota huérfano**: el indicador "ⓘ nota de alcance" a
+  nivel superior de la página (antes de elegir ninguna zona) apuntaba
+  a la nota de "Relaciones entre tipos" -- resto de cuando ESA nota
+  era la única. Movido dentro de `#panel-relaciones`, mismo patrón ya
+  usado en Parcela y Cronograma.
+- **Texto del visor de plano**: decía "carga el JSON generado por el
+  CLI" como si esa fuera la única vía, sin mencionar que "Generar
+  plano ahora" (el camino principal) rellena el visor automáticamente.
+- **"Pestaña Sección vertical"**: nombre de una pestaña que ya no
+  existe (ahora es el paso "Programa y generación" dentro de Zona 1)
+  -- aparecía en la nota de alcance Y en un mensaje de error real que
+  ve el usuario al cargar un archivo equivocado.
+
+### Refinamiento visual: marca de progreso activada
+
+El CSS `.zona-btn.done` existía desde el rediseño anterior pero sin
+ninguna lógica JS que lo activara. Conectado: Zona 0 se marca tras
+importar una parcela real con éxito, Zona 1 tras generar un plano
+real con éxito -- verificado con `jsdom`, incluido el caso donde no
+hay estancias seleccionadas (no debe marcarse, y no se marca).
+
+4 tests nuevos de protección. Suite: 421 unitarios, pyflakes limpio.

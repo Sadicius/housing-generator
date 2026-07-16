@@ -215,6 +215,11 @@ async function handleGenerateNow(){
     }));
     ACTIVE_PLAN = 0;
     PLANO_TRANSFORM = {mirrorH: false, mirrorV: false, rotation: 0};
+    // marca de progreso: Zona 1 "completada" tras la primera generacion
+    // real con exito -- refinamiento visual pedido por el usuario, mismo
+    // patron .zona-btn.done ya presente en el CSS.
+    const zonaDiseno = document.querySelector('[data-zona="diseno"]');
+    if(zonaDiseno) zonaDiseno.classList.add('done');
     const semillaMsg = result.reintentos > 0
       ? ' (semilla ' + seed + ' no convergio, funciono la ' + result.semilla_usada + ' tras ' + (result.reintentos+1) + ' intentos)'
       : ' (semilla ' + result.semilla_usada + ')';

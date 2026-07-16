@@ -214,6 +214,11 @@ async function manejarArchivoCatastro(file){
     document.getElementById('gen-lot-w').value = resultado.ancho_m;
     document.getElementById('gen-lot-h').value = resultado.fondo_m;
 
+    // marca de progreso: Zona 0 "completada" tras importar una parcela
+    // real con exito -- mismo patron que Zona 1 tras generar un plano.
+    const zonaParcela = document.querySelector('[data-zona="parcela"]');
+    if(zonaParcela) zonaParcela.classList.add('done');
+
     statusEl.className = 'parcela-import-status ok';
     statusEl.textContent = `✓ Parcela ${resultado.referencia_catastral} importada (${resultado.area_calculada_m2}m²)`;
     renderParcelaPreview();
