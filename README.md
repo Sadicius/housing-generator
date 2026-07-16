@@ -1,8 +1,7 @@
 # Housing Generator
 
-Generador de plantas de vivienda unifamiliar, validado contra el **Decreto
-29/2010 de Galicia** (normas de habitabilidad, modificado por Decreto
-128/2023). A partir de un programa de estancias y una parcela -- real,
+Generador de plantas de vivienda unifamiliar. 
+A partir de un programa de estancias y una parcela -- real,
 importada desde el **Catastro** (GML), o declarada a mano -- genera la
 distribución mediante un **árbol B*** (Chang & Chang 2000) optimizado por
 recocido simulado, y comprueba automáticamente más de 20 reglas normativas:
