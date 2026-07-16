@@ -3,6 +3,18 @@ from typing import FrozenSet, List, Optional
 from shapely.geometry import box, LineString, Polygon
 from housing_generator.domain.value_objects.boundary import Boundary
 
+# Categorias reales de la Ley 2/2016 del suelo de Galicia (articulos
+# 16-30), verificadas contra el texto real antes de codificarlas.
+CLASIFICACIONES_SUELO_VALIDAS = frozenset({
+    "urbano_consolidado",
+    "urbano_no_consolidado",
+    "nucleo_rural_tradicional",
+    "nucleo_rural_comun",
+    "urbanizable",
+    "rustico_ordinario",
+    "rustico_especial_proteccion",
+})
+
 
 @dataclass(frozen=True)
 class Lot:
@@ -43,6 +55,22 @@ class Lot:
     dentro del rectángulo sin más podría colocar estancias fuera del
     linde legal real. Ver [ARCH:parcela-real].
 
+    `clasificacion_suelo`: subconjunto de las categorías reales de la
+    Ley 2/2016 del suelo de Galicia (artículos 16-30, verificadas
+    contra el texto real antes de codificarlas, no inventadas):
+    `"urbano_consolidado"`, `"urbano_no_consolidado"`,
+    `"nucleo_rural_tradicional"`, `"nucleo_rural_comun"`,
+    `"urbanizable"`, `"rustico_ordinario"`,
+    `"rustico_especial_proteccion"`. Vacío = sin clasificar. Una
+    parcela puede tener más de una categoría si linda con distintas
+    zonas del planeamiento -- hallazgo real del usuario ("generalmente
+    tiene 1 tipo pero podría tener varios"). Campo puramente
+    INFORMATIVO por ahora -- ningún validador aplica reglas distintas
+    según la clasificación todavía (no hay una fuente investigada que
+    codifique reglas automáticas por categoría), se guarda para
+    referencia del arquitecto, no para cálculo. Ver
+    [ARCH:clasificacion-suelo].
+
     Ver [ARCH:lot].
     """
     boundary: Boundary
@@ -56,6 +84,7 @@ class Lot:
     altura_maxima_plantas: Optional[int] = None
     frente_minimo_m: Optional[float] = None
     poligono_real: Optional[Polygon] = None
+    clasificacion_suelo: FrozenSet[str] = frozenset()
 
     @property
     def area_edificable_real(self) -> Boundary:

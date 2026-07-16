@@ -3458,3 +3458,28 @@ queda pendiente su confirmación visual real, como con los rediseños
 anteriores.
 
 1 test nuevo. Suite: 427 unitarios, pyflakes limpio.
+
+## [ARCH:clasificacion-suelo] Tipos de suelo (Ley 2/2016), primer ítem del lote grande
+
+A petición del usuario: "no podemos seleccionar los tipos de suelo
+que tiene la parcela... generalmente tiene 1 tipo pero podría tener
+varios". Categorías verificadas con `web_search` contra el texto real
+de la Ley 2/2016 del suelo de Galicia (artículos 16-30) antes de
+codificarlas -- 4 tipos principales con subcategorías: urbano
+(consolidado/no consolidado), núcleo rural (tradicional/común),
+urbanizable, rústico (ordinario/especial protección).
+
+`Lot.clasificacion_suelo: FrozenSet[str]` (vacío por defecto) +
+`CLASIFICACIONES_SUELO_VALIDAS` como constante reutilizable.
+Deliberadamente puramente INFORMATIVO -- ningún validador aplica
+reglas distintas según la clasificación todavía (no hay una fuente
+investigada que codifique reglas automáticas por categoría real,
+solo el marco general). Conectado de extremo a extremo: casillas en
+Zona 0 (multi-selección, ya que una parcela puede lindar con varias
+zonas del planeamiento) → `bridge.py` (validado contra
+`CLASIFICACIONES_SUELO_VALIDAS`, descarta silenciosamente valores no
+reconocidos) → `Lot`. Verificado con `ast.parse()` + ejecución real
+que el código Python generado desde JS es válido.
+
+4 tests nuevos. Suite: 430 unitarios, mypy/pyflakes/vulture limpios.
+Bundle Pyodide regenerado.

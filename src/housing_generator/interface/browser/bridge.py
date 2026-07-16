@@ -8,7 +8,7 @@ from typing import Optional
 from shapely.geometry import box, Polygon
 
 from housing_generator.config.container import build_generate_building_use_case
-from housing_generator.domain.entities.lot import Lot
+from housing_generator.domain.entities.lot import Lot, CLASIFICACIONES_SUELO_VALIDAS
 from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.exceptions import LayoutGenerationError
 from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
@@ -119,6 +119,7 @@ def generar_edificio(
     altura_maxima_plantas: Optional[int] = None,
     frente_minimo_m: Optional[float] = None,
     street_side: str = "south",
+    clasificacion_suelo: Optional[list] = None,
 ) -> dict:
     """Genera un edificio real a partir de una selección del dashboard
     y una parcela rectangular. Reintenta semillas automáticamente
@@ -175,6 +176,7 @@ def generar_edificio(
         return {"ok": False, "error": "La selección no tiene ninguna estancia -- añade al menos el programa mínimo.", "semillas_probadas": 0}
 
     poligono_real = Polygon(poligono_real_coords) if poligono_real_coords else None
+    clasificacion_valida = frozenset(clasificacion_suelo or []) & CLASIFICACIONES_SUELO_VALIDAS
     lot = Lot(
         boundary=Boundary(polygon=box(0, 0, lot_width_m, lot_height_m)),
         medianera_sides=seleccion.medianera_sides,
@@ -186,6 +188,7 @@ def generar_edificio(
         frente_minimo_m=frente_minimo_m,
         street_side=street_side,
         poligono_real=poligono_real,
+        clasificacion_suelo=clasificacion_valida,
     )
 
     building = None

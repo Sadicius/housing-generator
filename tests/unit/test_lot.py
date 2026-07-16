@@ -137,3 +137,16 @@ def test_area_edificable_real_stays_within_the_true_legal_boundary():
 
     interseccion = lot.area_edificable_real.polygon.intersection(poligono_real)
     assert interseccion.area == pytest.approx(lot.area_edificable_real.polygon.area, abs=1e-6)
+
+
+def test_clasificacion_suelo_defaults_to_empty_and_accepts_real_categories():
+    from housing_generator.domain.entities.lot import CLASIFICACIONES_SUELO_VALIDAS
+    lot_sin_clasificar = Lot(boundary=Boundary(polygon=box(0, 0, 14, 16)))
+    assert lot_sin_clasificar.clasificacion_suelo == frozenset()
+
+    lot_con_dos = Lot(
+        boundary=Boundary(polygon=box(0, 0, 14, 16)),
+        clasificacion_suelo=frozenset({"urbano_consolidado", "urbanizable"}),
+    )
+    assert lot_con_dos.clasificacion_suelo == {"urbano_consolidado", "urbanizable"}
+    assert lot_con_dos.clasificacion_suelo <= CLASIFICACIONES_SUELO_VALIDAS

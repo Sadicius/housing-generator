@@ -803,3 +803,23 @@ def test_zona_parcela_uses_a_two_column_layout_plano_and_form():
     assert idx_col_plano < idx_svg < idx_col_form, "el svg deberia estar en col-plano"
     assert idx_col_form < idx_resumen, "el resumen deberia estar en col-form, junto al formulario"
     assert ".parcela-layout{display:grid" in css
+
+
+def test_clasificacion_suelo_checkboxes_exist_with_verified_categories():
+    # a peticion del usuario: "no podemos seleccionar los tipos de
+    # suelo... podria haber varios". Categorias verificadas contra el
+    # texto real de la Ley 2/2016 del suelo de Galicia (articulos
+    # 16-30), no inventadas.
+    html = _read(HTML_PATH)
+    for valor in (
+        "urbano_consolidado", "urbano_no_consolidado",
+        "nucleo_rural_tradicional", "nucleo_rural_comun",
+        "urbanizable", "rustico_ordinario", "rustico_especial_proteccion",
+    ):
+        assert f'value="{valor}"' in html, f"falta la categoria {valor}"
+
+
+def test_clasificacion_suelo_reaches_generation_not_just_the_form():
+    js = _read(JS_DIR / "06-pyodide.js")
+    assert "clasificacion-suelo-check:checked" in js
+    assert "clasificacion_suelo=${clasificacionSueloLiteral}" in js
