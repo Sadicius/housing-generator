@@ -201,7 +201,36 @@ function renderPlano(){
       </text>`;
   });
 
-  const svg = `<svg viewBox="${vbX} ${vbY} ${vbW} ${vbH}" xmlns="http://www.w3.org/2000/svg">${svgBody}${labelsBody}</svg>`;
+  // ---- norte + escala grafica: elemento de firma del visor, en el
+  // MISMO sistema de coordenadas en metros que el resto del plano --
+  // asi escalan solas con el dibujo, sin calcular pixeles/metro por
+  // separado (a diferencia de una superposicion HTML aparte). El
+  // tamano del simbolo de norte es fijo en metros (0.55m), igual que
+  // en un plano real -- no es una pieza a escala, es una convencion
+  // de dibujo con su propio tamano habitual. Ver [ARCH:visor-firma].
+  const norteX = vbX + vbW - 0.75, norteY = vbY + 0.75;
+  const norteSvg = `
+    <g transform="translate(${norteX},${norteY})">
+      <circle r="0.42" fill="none" stroke="var(--ink-faint)" stroke-width="0.02"/>
+      <path d="M0,-0.32 L0.11,0.14 L0,0.03 L-0.11,0.14 Z" fill="var(--tinta-papel)"/>
+      <text x="0" y="0.34" font-size="0.13" font-family="Space Mono" text-anchor="middle" fill="var(--ink-faint)">N</text>
+    </g>`;
+
+  // escala grafica: barra real en metros, redondeada a un multiplo
+  // razonable de la anchura del plano -- no un numero arbitrario.
+  const escalaBaseM = vbW > 30 ? 5 : vbW > 12 ? 2 : 1;
+  const escalaX = vbX + 0.5, escalaY = vbY + vbH - 0.5;
+  const escalaSvg = `
+    <g transform="translate(${escalaX},${escalaY})">
+      <line x1="0" y1="0" x2="${escalaBaseM}" y2="0" stroke="var(--tinta-papel)" stroke-width="0.05"/>
+      <line x1="0" y1="-0.08" x2="0" y2="0.08" stroke="var(--tinta-papel)" stroke-width="0.03"/>
+      <line x1="${escalaBaseM/2}" y1="-0.05" x2="${escalaBaseM/2}" y2="0.05" stroke="var(--tinta-papel)" stroke-width="0.03"/>
+      <line x1="${escalaBaseM}" y1="-0.08" x2="${escalaBaseM}" y2="0.08" stroke="var(--tinta-papel)" stroke-width="0.03"/>
+      <text x="0" y="0.28" font-size="0.15" font-family="Space Mono" text-anchor="start" fill="var(--ink-faint)">0</text>
+      <text x="${escalaBaseM}" y="0.28" font-size="0.15" font-family="Space Mono" text-anchor="end" fill="var(--ink-faint)">${escalaBaseM}m</text>
+    </g>`;
+
+  const svg = `<svg viewBox="${vbX} ${vbY} ${vbW} ${vbH}" xmlns="http://www.w3.org/2000/svg">${svgBody}${labelsBody}${norteSvg}${escalaSvg}</svg>`;
 
   const md = floor.data.metadata || {};
   const hv = md.hard_violations ?? 0;

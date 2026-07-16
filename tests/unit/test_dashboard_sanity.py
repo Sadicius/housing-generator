@@ -668,3 +668,35 @@ def test_no_classic_generator_option_remains_anywhere_in_the_dashboard():
     assert "usar_generador_clasico" not in js
     assert "gen-experimental-btree" not in html
     assert "experimental_btree" not in js
+
+
+def test_plano_viewer_includes_north_arrow_and_scale_bar():
+    # rediseno visual a peticion del usuario (revision de arquitecto:
+    # "el visor de plano viewer es probablemente el punto de mayor
+    # oportunidad perdida"). Norte + escala grafica dentro del propio
+    # SVG (mismo sistema de coordenadas en metros que las estancias),
+    # no una superposicion HTML aparte -- escalan solas con el dibujo.
+    js = _read(JS_DIR / "05-visor.js")
+    assert "norteSvg" in js
+    assert "escalaSvg" in js
+    assert "text-anchor=\"middle\" fill=\"var(--ink-faint)\">N</text>" in js
+    # la escala se redondea a un multiplo razonable segun el ancho del
+    # plano, no un numero arbitrario fijo
+    assert "escalaBaseM = vbW > 30 ? 5 : vbW > 12 ? 2 : 1" in js
+
+
+def test_redesign_preserves_every_css_variable_name_the_js_references():
+    # el rediseno cambio los VALORES hexadecimales, nunca los NOMBRES
+    # de las variables -- el JS ya las referencia directamente (SVG
+    # inline, getPropertyValue) y no se toco ninguna linea de esa
+    # logica. Si un nombre desapareciera del CSS, esas referencias
+    # quedarian silenciosamente rotas (var() sin definir no falla,
+    # simplemente no pinta nada).
+    css = _read(CSS_PATH)
+    js_all = "".join(_read(JS_DIR / f) for f in [
+        "00-shared.js", "01-matriz.js", "04-sinergias.js", "05-visor.js", "07-cronograma.js",
+    ])
+    import re
+    nombres_referenciados = set(re.findall(r"--[a-z][a-z-]*[a-z]\b", js_all))
+    for nombre in nombres_referenciados:
+        assert f"{nombre}:" in css, f"variable {nombre} referenciada desde JS mais ya no definida en el CSS"

@@ -3206,3 +3206,61 @@ depender de que el anclaje a un solo lado baste.
 Suite: 415 unitarios, mypy, pyflakes y vulture limpios en 86 archivos
 (3 menos que antes, los eliminados). Bundle Pyodide regenerado (85
 archivos, antes 88).
+
+## [ARCH:dashboard-rediseno-papel] Segundo rediseño visual: papel vegetal + azul de plano como acento
+
+A petición del usuario, invocando `/engineering:architecture` para una
+revisión de arquitecto. Encontró (código en mano, no impresiones):
+`entrance_side` nunca configurable desde el dashboard (contradice
+potencialmente `street_side`), `medianera_sides` perdido al construir
+el `Lot` de cada planta (afecta validación Y geometría en vivienda
+adosada/pareada), `frente_actual_m` seguía usando el rectángulo, no
+el polígono real (cabo suelto de la conversación con el arquitecto
+consultado). Y del propio dashboard: "no es nada disruptivo y tampoco
+es visualmente atractivo".
+
+Hallazgo clave antes de rediseñar: el CSS ya documentaba un primer
+rediseño anterior ("cianotipo técnico" oscuro) con la misma intención
+que se estaba proponiendo de nuevo -- confirma que el problema no era
+la idea (azul de plano, evitar clichés de IA), era que la ejecución
+se quedó en "otro dashboard oscuro con monospace" sin llegar a las
+convenciones reales del dibujo técnico. Pivote deliberado: de fondo
+oscuro dominante a **papel vegetal claro como superficie principal**,
+con el azul de plano como ACENTO estructural fuerte, no ambiente
+permanente -- así trabaja un arquitecto de verdad.
+
+### Disciplina de compatibilidad
+
+Los NOMBRES de las variables CSS (`--bg`, `--cyan`, `--oc`,
+`--zone-day`...) se preservaron exactamente -- el JS ya las
+referencia directamente (SVG inline, `getPropertyValue`) en 9+
+sitios. Solo cambiaron los valores hexadecimales. Se identificaron y
+corrigieron ~14 `rgba()` con decimales fijos que no se habrían
+actualizado solos al cambiar las variables (algunos ni siquiera
+coincidían ya con ningún color actual -- restos de iteraciones
+anteriores).
+
+### Elemento de firma: norte + escala gráfica en el visor de plano
+
+Identificado en la revisión como "el punto de mayor oportunidad
+perdida" -- el visor de plano es donde un arquitecto pasa más tiempo
+mirando. Añadidos DENTRO del propio SVG (mismo sistema de coordenadas
+en metros que las estancias), no como superposición HTML aparte --
+escalan solas con el dibujo, sin calcular píxeles/metro por separado.
+La escala gráfica se redondea a un múltiplo razonable según el ancho
+real del plano (1/2/5m), no un número fijo arbitrario. Verificado con
+un plano real generado en esta misma sesión, no datos sintéticos.
+
+Otros elementos de firma: navegación por Zonas tratada como "índice
+de láminas" de un juego de planos real; avisos de validadores (`.caveat`)
+dibujados como nube de revisión (el trazo real que usa un arquitecto
+para marcar una corrección), no texto rojo genérico.
+
+Suite: 417 unitarios (2 nuevos), pyflakes limpio. Verificado con
+`jsdom` (valores CSS computados) y con captura raster real +
+muestreo de píxeles (PIL), dado que la inspección visual directa no
+estaba disponible en este turno.
+
+Pendiente: extender la marca "lámina completada" (`.zona-btn.done`,
+ya en CSS) con la lógica JS que la activa; revisar visualmente en un
+navegador real cuando el usuario pueda confirmar.
