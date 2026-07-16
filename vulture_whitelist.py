@@ -40,3 +40,14 @@ INDIFFERENT  # unused variable (src/housing_generator/domain/enums.py:43)
 # bridge.py, invocada por nombre desde py_bundle.js) -- invisible para
 # el analisis estatico de Python, pero es el puente real en uso.
 generar_edificio  # unused function (src/housing_generator/interface/browser/bridge.py:17)
+
+# Fase A de importacion de Catastro, en construccion -- parser real,
+# con tests propios (tests/unit/test_catastro_gml_importer.py, 10
+# tests, incluidos 2 archivos reales de la Sede Electronica del
+# Catastro como fixtures), todavia no conectado al bridge/CLI (falta
+# construir esa pieza). Ver docs/CONTINUIDAD.md, entrada "Importacion
+# de parcela real desde Catastro (Fase A)".
+importar_parcela_gml  # unused function (src/housing_generator/infrastructure/persistence/catastro_gml_importer.py:56)
+ParcelaImportada.referencia_catastral  # unused variable (src/housing_generator/infrastructure/persistence/catastro_gml_importer.py:43)
+ParcelaImportada.poligono  # unused variable (src/housing_generator/infrastructure/persistence/catastro_gml_importer.py:46)
+ParcelaImportada.discrepancia_area_pct  # unused property (src/housing_generator/infrastructure/persistence/catastro_gml_importer.py:49)

@@ -2867,3 +2867,45 @@ que "cronograma").
 
 Suite final: 422 unitarios, mypy y pyflakes limpios en 87 archivos.
 Bundle Pyodide regenerado.
+
+## [ARCH:catastro-gml-importer] Fase A, primera pieza: parser real de GML catastral
+
+A petición del usuario, tras investigar a fondo (archivos reales de
+la Sede Electrónica del Catastro, dos parcelas de Galicia, tres
+librerías de "rectángulo inscrito óptimo" descartadas con evidencia
+real). Primera pieza de código real: `catastro_gml_importer.py`.
+
+Deliberadamente sin GDAL/OGR: el GML de parcela catastral (INSPIRE
+CadastralParcels 4.0) es XML simple y bien estructurado --
+`xml.etree.ElementTree` (librería estándar) basta para extraer
+`cp:areaValue`, `gml:posList`, `cp:nationalCadastralReference`. GDAL
+sería la herramienta correcta para reproyecciones o conversión de
+formatos complejos, no para esto.
+
+`ParcelaImportada`: polígono real (traducido a coordenadas locales,
+origen en el mínimo x,y -- las coordenadas UTM absolutas de Catastro,
+cientos de miles/millones, no sirven directamente para `Lot`) +
+rectángulo de trabajo (`minimum_rotated_rectangle`, el OBB confirmado
+en la investigación) + área declarada vs. área recalculada del
+polígono (nunca se confía ciegamente en la del archivo, mismo
+criterio que usa el propio Catastro para validar sus ficheros).
+
+Verificado con los 2 archivos reales del usuario, copiados como
+fixtures permanentes (`tests/fixtures/catastro/`) -- no datos
+sintéticos. 10 tests, incluida la propiedad geométrica "el rectángulo
+de trabajo debe contener el polígono real completo" (encontrado un
+matiz real al escribirla: `contains()`/`covers()` de shapely fallan
+aquí por ruido de punto flotante puro en los vértices que definen el
+propio OBB -- corregido comparando áreas de intersección, la forma
+robusta de verificar esto en geometría de punto flotante).
+
+Añadido a `vulture_whitelist.py` -- todavía no conectado al
+bridge/CLI (falta esa pieza), mismo patrón ya usado para piezas en
+construcción con tests propios.
+
+Suite: 432 unitarios (10 nuevos), mypy y pyflakes limpios en 88
+archivos.
+
+Pendiente dentro de la Fase A: soporte DXF (formato alternativo),
+conexión al bridge.py/CLI, y el lado JS/dashboard (polígono real +
+OBB + zona de afección en la vista previa de Zona 0).
