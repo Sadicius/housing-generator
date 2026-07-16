@@ -104,6 +104,13 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
                 f"No se pudo generar un layout valido (arbol B*). Ultimas violaciones: "
                 f"{self._constraint_validator.validate(best_layout).violations}"
             )
+        # metadatos de compatibilidad -- el generador clasico
+        # (SimulatedAnnealingLayoutGenerator, eliminado) los exponia,
+        # hallazgo real al eliminarlo: un test dependia de
+        # metadata["hard_violations"] existiendo, KeyError sin esto.
+        best_layout.metadata["annealing_score"] = best_hard
+        best_layout.metadata["hard_violations"] = best_hard
+        best_layout.metadata["soft_penalty"] = best_soft
         return best_layout
 
     def _materialize(self, tree: BStarNode, program: Program, lot: Lot, areas: Dict[str, float]) -> Layout:

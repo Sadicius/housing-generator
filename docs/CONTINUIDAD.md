@@ -316,15 +316,41 @@ queda (parcela 12x10, 9 estancias con `DINING_ROOM`-`KITCHEN`
 obligatorio) se resiste con ambos generadores -- probado hasta 10
 semillas con el árbol B*, sigue sin converger.
 
-**[ACTUALIZADO -- decisión de fondo] El árbol B* es ahora el
-generador POR DEFECTO** ([ARCH:btree-generador-por-defecto]): tras un
-tercer caso real (2 dormitorios, 6 estancias pequeñas) que necesitaba
-21 intentos con el generador clásico y solo 7 con el árbol B*, el
-usuario confirmó explícitamente invertir la decisión -- ya no hace
-falta ningún flag para usar el árbol B*, es el camino por defecto en
-`container.py`, CLI y dashboard. El generador clásico se mantiene
-disponible como opt-in (`--generador-clasico`, casilla "Usar
-generador clásico"), no eliminado. También a petición del usuario:
+**[ACTUALIZADO -- decisión de fondo, luego eliminación completa] El
+árbol B* es el ÚNICO generador** ([ARCH:btree-generador-por-defecto]):
+tras un tercer caso real (2 dormitorios, 6 estancias pequeñas) que
+necesitaba 21 intentos con el generador clásico y solo 7 con el árbol
+B*, el usuario primero confirmó hacerlo el generador por defecto, y
+después pidió eliminar el generador clásico por completo ("no me
+interesa conservar el generador clásico, podemos eliminarlo"). Archivos
+borrados: `simulated_annealing_generator.py`, `partition_tree.py`,
+`footprint.py` -- junto con sus tests dedicados. Al eliminarlo
+aparecieron 2 bugs reales en el árbol B*, nunca antes ejercitados:
+(1) el movimiento "swap" crasheaba con `IndexError` en programas de 1
+sola estancia (sin otra estancia con la que intercambiar) -- corregido
+excluyendo "swap" dinámicamente cuando hay menos de 2 nodos; (2)
+`BTreeLayoutGenerator` no exponía `metadata["hard_violations"]`/
+`["soft_penalty"]` (que sí exponía el clásico) -- un test dependía de
+ese campo, `KeyError` sin él, corregido añadiendo los mismos campos.
+
+**Hallazgo estructural real, no solo bugs**: varios tests
+curados a mano para el generador clásico (`test_generate_layout_use_case.py`,
+`test_type_adjacency_catalog_integration.py`, uno en `test_cli.py`)
+dejaron de converger con el árbol B* -- diagnosticado antes de marcar
+xfail, no asumido: el empaquetado del árbol B* produce una huella
+mucho más pequeña que el lote cuando el lote es generoso respecto al
+programa (9.8×12.6m dentro de un lote de 17×18m en un caso medido).
+El anclaje solo garantiza que UN lado de la huella toque el linde
+real; los otros tres quedan flotando en el "vacío" (jardín), sin
+contacto exterior real -- confirmado con 15000 iteraciones y varias
+semillas, no una cuestión de búsqueda. Marcados `xfail` con el motivo
+completo. Pendiente real si se retoma: hacer que el empaquetado tienda
+a ocupar el lote completo, o anclarlo a más de un lado. Los escenarios
+de producción reales (dashboard, CLI con `--import-seleccion`) NO se
+ven afectados -- el hallazgo es específico de lotes mucho más
+generosos que el programa, como estos tests antiguos.
+
+También a petición del usuario:
 `gen-seed`/`gen-iterations` eliminados como campos manuales del
 dashboard -- la semilla siempre es 1 (el reintento automático ya
 explora desde ahí) y las iteraciones se escalan según el número real

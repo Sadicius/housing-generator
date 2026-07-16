@@ -173,29 +173,6 @@ def test_btree_is_the_default_generator_reaching_the_dashboard():
     assert result["ok"] is True, result.get("error")
 
 
-def test_generador_clasico_opt_out_still_works_from_the_dashboard():
-    # el generador clasico se mantiene disponible (no eliminado) por
-    # si algun caso concreto lo necesitara -- confirma que el flag de
-    # opt-out llega de verdad hasta la generacion real, no solo se
-    # acepta y se ignora.
-    payload = {
-        "version": 2,
-        "levels": {"PLANTA_BAJA": [
-            {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
-            {"type": "KITCHEN", "count": 1, "area_m2": 12},
-            {"type": "BATHROOM", "count": 1, "area_m2": 6},
-            {"type": "LAUNDRY", "count": 1, "area_m2": 6},
-            {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
-            {"type": "STORAGE", "count": 1, "area_m2": 4},
-        ]},
-    }
-    result = generar_edificio(
-        payload, lot_width_m=14, lot_height_m=14, seed=1, max_iterations=3000, retry_seeds=10,
-        usar_generador_clasico=True,
-    )
-    assert result["ok"] is True, result.get("error")
-
-
 def test_analizar_parcela_catastro_with_real_gml_from_the_user(tmp_path):
     # datos reales aportados por el usuario, mismo fixture que
     # test_catastro_gml_importer.py. Verifica el puente completo, no

@@ -296,7 +296,15 @@ def random_neighbor(
 
     nodos = root.nodes()
     room_id = rng.choice([n.room_id for n in nodos])
-    move = rng.choice(("swap", "move", "resize", "reset", "swap_children"))
+    # BUG REAL encontrado al ejecutar tests de integracion tras eliminar
+    # el generador clasico: con un solo nodo en el arbol (programa de
+    # una sola estancia), "swap" no tiene con quien intercambiar --
+    # antes invisible porque nunca se habia probado el arbol B* contra
+    # un programa de 1 sola estancia. Excluido dinamicamente cuando no
+    # hay al menos 2 nodos, en vez de asumir que siempre los hay.
+    posibles_moves = ["swap", "move", "resize", "reset", "swap_children"] if len(nodos) >= 2 \
+        else ["move", "resize", "reset", "swap_children"]
+    move = rng.choice(posibles_moves)
 
     if move == "swap":
         otro = rng.choice([n.room_id for n in nodos if n.room_id != room_id])

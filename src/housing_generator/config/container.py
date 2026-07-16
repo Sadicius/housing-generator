@@ -7,9 +7,6 @@ interfaces (ports).
 from typing import Optional, List
 from housing_generator.application.use_cases.generate_layout import GenerateLayoutUseCase
 from housing_generator.infrastructure.algorithms.zoning.treemap_zoning import TreemapZoningStrategy
-from housing_generator.infrastructure.algorithms.layout_generation.simulated_annealing_generator import (
-    SimulatedAnnealingLayoutGenerator,
-)
 from housing_generator.infrastructure.algorithms.layout_generation.btree_layout_generator import (
     BTreeLayoutGenerator,
 )
@@ -153,8 +150,11 @@ def build_generate_layout_use_case(
     una sola planta (`build_per_floor_validators`) + las de ámbito
     edificio (`ViviendaMinimaValidator`, `BanoAccesoGeneralValidator`
     -- con una única planta, "edificio" y "planta" son lo mismo).
-    Generador: `SimulatedAnnealingLayoutGenerator`. Ver
-    [ARCH:container].
+    Generador: `BTreeLayoutGenerator` -- el generador clásico
+    (`SimulatedAnnealingLayoutGenerator`) se eliminó del proyecto a
+    petición explícita del usuario, tras confirmar en la práctica que
+    el árbol B* converge mejor en todos los casos difíciles probados.
+    Ver [ARCH:container], [ARCH:btree-generador-por-defecto].
     """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
 
@@ -167,7 +167,7 @@ def build_generate_layout_use_case(
     composite = CompositeConstraintValidator(validators)
     soft_scorer = SoftConstraintScorer(adjacency_requirements or [], graph_builder)
 
-    layout_generator = SimulatedAnnealingLayoutGenerator(
+    layout_generator = BTreeLayoutGenerator(
         constraint_validator=composite,
         max_iterations=max_iterations,
         seed=seed,
@@ -186,23 +186,20 @@ def build_generate_building_use_case(
     max_iterations: int = 2000,
     seed: Optional[int] = None,
     vivienda_accesible: bool = False,
-    usar_generador_clasico: bool = False,
 ) -> GenerateBuildingUseCase:
     """Fábrica de `GenerateBuildingUseCase` con las fábricas concretas
     ya resueltas -- único punto que conecta el caso de uso multi-planta
     con infraestructura real. `vivienda_accesible` opt-in, aplicado
     igual en todas las plantas.
 
-    `usar_generador_clasico`: si es `True`, usa
-    `SimulatedAnnealingLayoutGenerator` (árbol de partición,
-    guillotina) en vez de `BTreeLayoutGenerator` (árbol B*, por
-    defecto desde aquí) -- decisión confirmada explícitamente con el
-    usuario tras la Fase 5 de la migración (comparación empírica,
-    ver `docs/referencia/generador/prototipo-btree/`): el árbol B*
-    convergía en menos intentos en TODOS los casos difíciles
-    probados a lo largo de la sesión, no solo el original. El
-    generador clásico se mantiene disponible (no eliminado) por si
-    algún caso concreto lo necesitara. Ver [ARCH:container],
+    Generador: `BTreeLayoutGenerator` (árbol B*, Chang & Chang 2000) --
+    el generador clásico (árbol de partición/guillotina,
+    `SimulatedAnnealingLayoutGenerator`) se eliminó por completo del
+    proyecto a petición explícita del usuario, tras confirmar en la
+    Fase 5 de la migración (comparación empírica,
+    ver `docs/referencia/generador/prototipo-btree/`) que el árbol B*
+    convergía en menos intentos en TODOS los casos difíciles probados
+    a lo largo de la sesión, no solo el original. Ver [ARCH:container],
     [ARCH:btree-generador-por-defecto].
     """
     graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
@@ -223,13 +220,6 @@ def build_generate_building_use_case(
 
     def layout_generator_factory(composite, level_adjacency):
         soft_scorer = SoftConstraintScorer(level_adjacency, graph_builder)
-        if usar_generador_clasico:
-            return SimulatedAnnealingLayoutGenerator(
-                constraint_validator=composite,
-                max_iterations=max_iterations,
-                seed=seed,
-                soft_constraint_scorer=soft_scorer,
-            )
         return BTreeLayoutGenerator(
             constraint_validator=composite,
             max_iterations=max_iterations,

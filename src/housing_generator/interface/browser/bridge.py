@@ -89,13 +89,12 @@ def generar_edificio(
     vivienda_accesible: bool = False,
     retranqueo_m: Optional[float] = None,
     retranqueo_incremento_por_planta_m: Optional[float] = None,
-    usar_generador_clasico: bool = False,
+    poligono_real_coords: Optional[list] = None,
     coeficiente_edificabilidad: Optional[float] = None,
     ocupacion_maxima_pct: Optional[float] = None,
     altura_maxima_plantas: Optional[int] = None,
     frente_minimo_m: Optional[float] = None,
     street_side: str = "south",
-    poligono_real_coords: Optional[list] = None,
 ) -> dict:
     """Genera un edificio real a partir de una selección del dashboard
     y una parcela rectangular. Reintenta semillas automáticamente
@@ -105,12 +104,11 @@ def generar_edificio(
     conceptos ya conectados al CLI (`--retranqueo`/`--retranqueo-incremento`)
     -- sin forma de usarlos desde el dashboard hasta ahora, encontrado
     al revisar las conexiones entre Python y el dashboard a petición
-    del usuario. `usar_generador_clasico`: mismo flag que
-    `--generador-clasico` del CLI -- el árbol B* es el generador POR
-    DEFECTO desde la Fase 5 de la migración (comparación empírica
-    confirmada con el usuario: convergía en menos intentos en todos
-    los casos difíciles probados), ver
-    `docs/referencia/generador/prototipo-btree/`.
+    del usuario. El generador es siempre el árbol B* (Chang & Chang
+    2000) -- el generador clásico (árbol de partición/guillotina) se
+    eliminó por completo del proyecto a petición explícita del
+    usuario, ver `docs/referencia/generador/prototipo-btree/`,
+    [ARCH:btree-generador-por-defecto].
 
     `coeficiente_edificabilidad`/`ocupacion_maxima_pct`/`altura_maxima_plantas`/
     `frente_minimo_m`: parámetros urbanísticos reales (Zona 0 del
@@ -178,7 +176,6 @@ def generar_edificio(
             seed=used_seed,
             max_iterations=max_iterations,
             vivienda_accesible=vivienda_accesible,
-            usar_generador_clasico=usar_generador_clasico,
         )
         try:
             building = use_case.execute(program, lot)

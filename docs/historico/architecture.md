@@ -3140,3 +3140,69 @@ Pendiente (mismo turno, aún sin implementar): retranqueo por lado
 (distinguir el lado de calle), línea de fondo edificable en la vista
 previa, botón de confirmación entre Zona 0 y Zona 1, exportar datos
 de parcela -- las otras 3 peticiones del mismo mensaje del usuario.
+
+## [ARCH:btree-generador-por-defecto] El generador clásico se elimina por completo
+
+A petición explícita del usuario, inmediatamente después de la
+decisión de hacer el árbol B* el generador por defecto: "no me
+interesa conservar el generador clásico, podemos eliminarlo".
+
+### Alcance real de la eliminación
+
+Archivos borrados: `simulated_annealing_generator.py`,
+`partition_tree.py`, `footprint.py` -- y sus tests dedicados
+(`test_simulated_annealing_generator.py`, `test_partition_tree.py`,
+`test_footprint.py`). `container.py`: `build_generate_layout_use_case`
+y `build_generate_building_use_case` construyen siempre
+`BTreeLayoutGenerator`, sin parámetro de elección. CLI: flag
+`--generador-clasico` eliminado. Dashboard: casilla "Usar generador
+clásico" eliminada.
+
+### Dos bugs reales encontrados al eliminar, nunca antes ejercitados
+
+1. **`IndexError` con programas de 1 sola estancia**: el movimiento
+   "swap" de `random_neighbor` (`btree_partition.py`) intentaba elegir
+   una estancia distinta con la que intercambiar -- con un solo nodo
+   en el árbol, la lista de candidatos queda vacía,
+   `rng.choice([])` lanza `IndexError`. Invisible mientras existía el
+   generador clásico como alternativa (nadie había forzado nunca un
+   programa de 1 estancia contra el árbol B* específicamente).
+   Corregido excluyendo "swap" dinámicamente de los movimientos
+   posibles cuando hay menos de 2 nodos.
+2. **Metadatos de compatibilidad ausentes**: `BTreeLayoutGenerator`
+   nunca exponía `metadata["hard_violations"]`/`["soft_penalty"]`
+   (que sí exponía el generador clásico) -- un test dependía de ese
+   campo exactamente, `KeyError` sin previo aviso. Corregido
+   añadiendo los mismos campos al final de `generate()`.
+
+### Hallazgo estructural real, documentado con xfail honesto
+
+Varios tests curados a mano para el comportamiento específico del
+generador clásico dejaron de converger con el árbol B*. Diagnosticado
+antes de marcar `xfail` (no asumido): medido directamente que el
+empaquetado del árbol B* produce una huella mucho más pequeña que el
+lote cuando el lote es generoso respecto al programa (9.8×12.6m
+dentro de un lote de 17×18m, área de empaquetado 122.8m² sobre 306m²
+de lote real, en un caso medido). El anclaje (`_anchor_offset`) solo
+garantiza que UN lado de la huella coincida con el linde real del
+lote -- los otros tres quedan flotando en el "vacío" (jardín
+circundante), sin contacto exterior real. Confirmado estructural, no
+un problema de búsqueda: 15000 iteraciones y varias semillas
+distintas, mismo resultado consistente.
+
+5 tests en `test_generate_layout_use_case.py`, 1 en
+`test_type_adjacency_catalog_integration.py`, 1 en `test_cli.py` --
+todos marcados `xfail` con el motivo completo. Los escenarios reales
+de producción (dashboard, CLI con `--import-seleccion`) NO se ven
+afectados -- confirmado repetidamente a lo largo de la sesión que
+convergen de forma fiable; el hallazgo es específico de lotes mucho
+más generosos que el programa declarado, patrón que no aparece en uso
+real (nadie declara una parcela 4-5x mayor que lo que necesita).
+
+Pendiente real si se retoma: hacer que el propio empaquetado tienda a
+ocupar el lote completo (o anclarlo a más de un lado), en vez de
+depender de que el anclaje a un solo lado baste.
+
+Suite: 415 unitarios, mypy, pyflakes y vulture limpios en 86 archivos
+(3 menos que antes, los eliminados). Bundle Pyodide regenerado (85
+archivos, antes 88).

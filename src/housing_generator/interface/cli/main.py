@@ -136,16 +136,6 @@ def main():
              "todas las plantas, igual que antes de anadir este flag.",
     )
     parser.add_argument(
-        "--generador-clasico", action="store_true",
-        help="Usa SimulatedAnnealingLayoutGenerator (arbol de particion, guillotina) en "
-             "vez del generador por defecto -- desde la Fase 5 de la migracion "
-             "(comparacion empirica, confirmada con el usuario), el arbol B* "
-             "(Chang & Chang 2000) es el generador POR DEFECTO: convergia en menos "
-             "intentos en todos los casos dificiles probados. Ver "
-             "docs/referencia/generador/prototipo-btree/. Solo aplica con "
-             "--import-seleccion (multi-planta).",
-    )
-    parser.add_argument(
         "--edificabilidad", type=float, default=None,
         help="Coeficiente de edificabilidad (m2techo/m2suelo) de la ficha urbanistica "
              "real -- comprobacion de viabilidad ANTES de generar, no un valor inventado "
@@ -210,7 +200,6 @@ def main():
                 seed=seed,
                 max_iterations=args.max_iterations,
                 vivienda_accesible=args.vivienda_accesible,
-                usar_generador_clasico=args.generador_clasico,
             )
             try:
                 building = use_case.execute(program, lot)

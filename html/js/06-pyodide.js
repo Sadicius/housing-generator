@@ -52,7 +52,7 @@ async function ensurePyodideReady(onProgress){
   return PYODIDE_LOADING;
 }
 
-async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, usarGeneradorClasico, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, onProgress){
+async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, onProgress){
   const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Buscando una distribucion valida (puede reintentar varias semillas)...');
 
@@ -63,7 +63,6 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   pyodide.globals.set('max_it_js', maxIterations);
   pyodide.globals.set('retry_js', retrySeeds);
   pyodide.globals.set('accesible_js', viviendaAccesible);
-  pyodide.globals.set('usar_generador_clasico_js', !!usarGeneradorClasico);
   // street_side es un string fijo (viene de un <select> con opciones
   // controladas, no puede ser null/vacio) -- sin el riesgo de JsNull
   // que afecta a los valores numericos opcionales, seguro via globals.set().
@@ -110,7 +109,6 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     '    retry_seeds=int(retry_js), vivienda_accesible=bool(accesible_js),',
     `    retranqueo_m=${retranqueoLiteral},`,
     `    retranqueo_incremento_por_planta_m=${retranqueoIncrementoLiteral},`,
-    '    usar_generador_clasico=bool(usar_generador_clasico_js),',
     `    coeficiente_edificabilidad=${edificabilidadLiteral},`,
     `    ocupacion_maxima_pct=${ocupacionMaximaLiteral},`,
     `    altura_maxima_plantas=${alturaMaximaLiteral},`,
@@ -176,8 +174,6 @@ async function handleGenerateNow(){
   const retranqueoM = retranqueoEl && retranqueoEl.value !== '' ? parseFloat(retranqueoEl.value) : null;
   const retranqueoIncEl = document.getElementById('gen-retranqueo-incremento');
   const retranqueoIncremento = retranqueoIncEl && retranqueoIncEl.value !== '' ? parseFloat(retranqueoIncEl.value) : null;
-  const generadorClasicoEl = document.getElementById('gen-generador-clasico');
-  const usarGeneradorClasico = generadorClasicoEl ? generadorClasicoEl.checked : false;
   // Zona 0: parametros urbanisticos reales -- mismo patron "vacio = sin
   // restriccion" que retranqueo. Ver [ARCH:viabilidad-urbanistica].
   const numOpcional = (id) => {
@@ -205,7 +201,7 @@ async function handleGenerateNow(){
   try{
     const result = await generarEdificioReal(
       payload, lotW, lotH, seed, maxIterations, 10, accesible,
-      retranqueoM, retranqueoIncremento, usarGeneradorClasico,
+      retranqueoM, retranqueoIncremento,
       edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide,
       poligonoRealCoords,
       (msg) => setGenerateStatus(msg, 'loading'),

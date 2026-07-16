@@ -229,34 +229,32 @@ def test_generate_now_button_and_status_area_exist():
     assert 'id="generate-config"' in html
 
 
-def test_retranqueo_and_generador_clasico_controls_are_wired_end_to_end():
+def test_retranqueo_controls_are_wired_end_to_end():
     # hallazgo real al revisar las conexiones del dashboard a peticion
-    # del usuario: la funcionalidad de retranqueo/generador-clasico
-    # ya estaba correctamente implementada de extremo a extremo (HTML ->
-    # JS -> Python), pero sin NINGUN test que la protegiera -- si alguien
-    # tocaba uno de los tres eslabones sin querer, nada lo habria
-    # detectado. Verifica los tres eslabones reales, no solo que "algo
-    # con ese nombre existe en algun sitio".
+    # del usuario: la funcionalidad de retranqueo ya estaba correctamente
+    # implementada de extremo a extremo (HTML -> JS -> Python), pero sin
+    # NINGUN test que la protegiera -- si alguien tocaba uno de los tres
+    # eslabones sin querer, nada lo habria detectado. Verifica los tres
+    # eslabones reales, no solo que "algo con ese nombre existe en algun
+    # sitio".
     html = _read(HTML_PATH)
     js = _read(JS_DIR / "06-pyodide.js")
 
-    # eslabon 1: los tres controles existen en el HTML con el id exacto
+    # eslabon 1: los dos controles existen en el HTML con el id exacto
     # que el JS espera
-    for control_id in ("gen-retranqueo", "gen-retranqueo-incremento", "gen-generador-clasico"):
+    for control_id in ("gen-retranqueo", "gen-retranqueo-incremento"):
         assert f'id="{control_id}"' in html, f"falta el control {control_id} en el HTML"
 
     # eslabon 2: handleGenerateNow los lee del DOM y los pasa a
     # generarEdificioReal (no silenciosamente ignorados)
     assert "getElementById('gen-retranqueo')" in js
     assert "getElementById('gen-retranqueo-incremento')" in js
-    assert "getElementById('gen-generador-clasico')" in js
-    assert "retranqueoM, retranqueoIncremento, usarGeneradorClasico" in js
+    assert "retranqueoM, retranqueoIncremento" in js
 
     # eslabon 3: generarEdificioReal los reenvia de verdad al Python real
     # (no solo los recibe y los descarta)
     assert "retranqueo_m=" in js
     assert "retranqueo_incremento_por_planta_m=" in js
-    assert "usar_generador_clasico=bool(usar_generador_clasico_js)" in js
 
 
 def test_retranqueo_none_case_does_not_rely_on_pyodide_null_conversion():
@@ -659,15 +657,14 @@ def test_seed_and_iterations_are_automatic_not_manual_fields():
     assert "Math.max(1500, totalRooms * 300)" in js
 
 
-def test_btree_default_generator_end_to_end_flag_naming_is_consistent():
-    # confirma que la casilla invertida ("generador clasico", no
-    # "arbol B*") llega hasta Python con el nombre correcto en los
-    # tres eslabones -- mismo patron de proteccion ya usado para
-    # retranqueo/poligono_real.
+def test_no_classic_generator_option_remains_anywhere_in_the_dashboard():
+    # el generador clasico se elimino por completo del proyecto a
+    # peticion explicita del usuario -- confirma que no queda ningun
+    # resto (casilla, variable, nombre de parametro) en el dashboard.
     html = _read(HTML_PATH)
     js = _read(JS_DIR / "06-pyodide.js")
-    assert 'id="gen-generador-clasico"' in html
-    assert "getElementById('gen-generador-clasico')" in js
-    assert "usar_generador_clasico=bool(usar_generador_clasico_js)" in js
+    assert "generador-clasico" not in html
+    assert "generadorClasico" not in js
+    assert "usar_generador_clasico" not in js
     assert "gen-experimental-btree" not in html
     assert "experimental_btree" not in js

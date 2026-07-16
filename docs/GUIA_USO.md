@@ -479,14 +479,13 @@ ajustadas de tamaño. Con `--import-seleccion` esto ya se maneja solo
 sí, sin que hiciera falta buscarla a mano.
 
 [ACTUALIZADO] El árbol B* (Chang & Chang 2000, representación
-geométrica distinta a la guillotina) es el generador POR DEFECTO
-desde que se confirmó con el usuario tras la Fase 5 de la migración
+geométrica distinta a la guillotina) es el ÚNICO generador desde que
+se confirmó con el usuario tras la Fase 5 de la migración
 (comparación empírica): convergía en menos intentos en todos los
 casos difíciles probados a lo largo de la sesión, no solo el
-original. El generador clásico (árbol de partición) se mantiene
-disponible como opción (`--generador-clasico` en el CLI, casilla
-"Usar generador clásico" en el dashboard) por si algún caso concreto
-lo necesitara -- ya no hace falta activar nada para usar el árbol B*.
+original. El generador clásico (árbol de partición/guillotina) se
+eliminó por completo del proyecto a petición explícita del usuario --
+ya no existe ninguna opción para volver a él.
 
 **Cambié algo del generador (movimientos, restricciones) y una
 semilla que antes funcionaba ya no converge**
