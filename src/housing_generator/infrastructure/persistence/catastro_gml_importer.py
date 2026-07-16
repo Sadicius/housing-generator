@@ -13,10 +13,11 @@ de formatos complejos, que no es lo que hace falta aquí.
 
 Ver [ARCH:catastro-gml-importer].
 """
+import math
 import xml.etree.ElementTree as ET
 from typing import NamedTuple
 from shapely.geometry import Polygon
-from shapely.affinity import translate
+from shapely.affinity import rotate, translate
 
 NS = {
     "gml": "http://www.opengis.net/gml/3.2",
@@ -97,10 +98,37 @@ def importar_parcela_gml(contenido: str) -> ParcelaImportada:
     poligono_local = translate(poligono_utm, xoff=-minx, yoff=-miny)
     rectangulo_trabajo = poligono_local.minimum_rotated_rectangle
 
+    # BUG REAL encontrado al verificar la generacion de extremo a
+    # extremo (confirmado con un caso real: estancias generadas fuera
+    # del poligono real, incluso fuera del propio poligono en bruto,
+    # no solo del margen de retranqueo): `minimum_rotated_rectangle`
+    # normalmente NO esta alineado a ejes (rotado -- confirmado hasta
+    # 151.9 grados en un caso real), pero el generador coloca
+    # estancias en un rectangulo `box(0,0,ancho,fondo)` SIEMPRE
+    # alineado a ejes, empezando en el origen. Sin esta correccion,
+    # `poligono` y `rectangulo_trabajo` quedaban en un sistema de
+    # coordenadas distinto al que usa de verdad el generador --
+    # geometricamente inconsistentes entre si, aunque cada uno por
+    # separado fuera correcto. Corregido: se rota TODO (poligono +
+    # OBB) para que el OBB quede alineado a ejes con su esquina en
+    # (0,0) -- el mismo sistema que usara `box(0,0,ancho_m,fondo_m)`
+    # al construir el Lot real. Ver [ARCH:parcela-real].
+    obb_coords = list(rectangulo_trabajo.exterior.coords)
+    angulo_obb_deg = math.degrees(math.atan2(
+        obb_coords[1][1] - obb_coords[0][1], obb_coords[1][0] - obb_coords[0][0],
+    ))
+    origen_rotacion = obb_coords[0]
+    poligono_rotado = rotate(poligono_local, -angulo_obb_deg, origin=origen_rotacion)
+    obb_rotado = rotate(rectangulo_trabajo, -angulo_obb_deg, origin=origen_rotacion)
+
+    minx2, miny2, _, _ = obb_rotado.bounds
+    poligono_alineado = translate(poligono_rotado, xoff=-minx2, yoff=-miny2)
+    obb_alineado = translate(obb_rotado, xoff=-minx2, yoff=-miny2)
+
     return ParcelaImportada(
         referencia_catastral=referencia_el.text if referencia_el is not None and referencia_el.text else "",
-        area_declarada_m2=float(area_el.text) if area_el is not None and area_el.text else poligono_local.area,
-        area_calculada_m2=poligono_local.area,
-        poligono=poligono_local,
-        rectangulo_trabajo=rectangulo_trabajo,
+        area_declarada_m2=float(area_el.text) if area_el is not None and area_el.text else poligono_alineado.area,
+        area_calculada_m2=poligono_alineado.area,
+        poligono=poligono_alineado,
+        rectangulo_trabajo=obb_alineado,
     )

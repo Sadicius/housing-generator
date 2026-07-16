@@ -5,7 +5,7 @@ dentro de Pyodide -- no un servidor aparte. Solo cruza datos planos
 """
 import math
 from typing import Optional
-from shapely.geometry import box
+from shapely.geometry import box, Polygon
 
 from housing_generator.config.container import build_generate_building_use_case
 from housing_generator.domain.entities.lot import Lot
@@ -95,6 +95,7 @@ def generar_edificio(
     altura_maxima_plantas: Optional[int] = None,
     frente_minimo_m: Optional[float] = None,
     street_side: str = "south",
+    poligono_real_coords: Optional[list] = None,
 ) -> dict:
     """Genera un edificio real a partir de una selección del dashboard
     y una parcela rectangular. Reintenta semillas automáticamente
@@ -118,6 +119,19 @@ def generar_edificio(
     igual que cualquier otro `LayoutGenerationError`, sin tratamiento
     especial.
 
+    `poligono_real_coords`: lista de [x,y] del polígono REAL de la
+    parcela (importado de Catastro, mismas coordenadas locales que
+    `analizar_parcela_catastro` devuelve). Hallazgo real, confirmado
+    por el usuario con captura del navegador: sin esto, el generador
+    SIEMPRE trabajaba sobre el rectángulo de trabajo (`lot_width_m`×
+    `lot_height_m`), nunca sobre la forma real -- una vivienda podía
+    colocar estancias en las esquinas donde el rectángulo sobresale
+    del polígono real (hasta 49m² en un caso real). Con esto,
+    `ParcelaRealValidator` (restricción dura) rechaza cualquier
+    estancia que sobresalga del área edificable real. `None` (caso
+    manual, sin importar) -- mismo comportamiento de siempre, sin
+    cambios. Ver [ARCH:parcela-real].
+
     Devuelve SIEMPRE un dict:
       {"ok": True, "semilla_usada": N, "reintentos": N,
        "floors": {"planta_baja": {"rooms":[...], "doors":[...], "metadata":{...}}, ...}}
@@ -135,6 +149,7 @@ def generar_edificio(
     if not program.rooms:
         return {"ok": False, "error": "La selección no tiene ninguna estancia -- añade al menos el programa mínimo.", "semillas_probadas": 0}
 
+    poligono_real = Polygon(poligono_real_coords) if poligono_real_coords else None
     lot = Lot(
         boundary=Boundary(polygon=box(0, 0, lot_width_m, lot_height_m)),
         medianera_sides=seleccion.medianera_sides,
@@ -145,6 +160,7 @@ def generar_edificio(
         altura_maxima_plantas=altura_maxima_plantas,
         frente_minimo_m=frente_minimo_m,
         street_side=street_side,
+        poligono_real=poligono_real,
     )
 
     building = None

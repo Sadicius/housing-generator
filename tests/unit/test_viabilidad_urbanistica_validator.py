@@ -1,3 +1,4 @@
+import pytest
 from shapely.geometry import box
 from housing_generator.infrastructure.algorithms.constraints.viabilidad_urbanistica_validator import (
     ViabilidadUrbanisticaValidator,
@@ -113,3 +114,27 @@ def test_multiple_violations_all_reported_together():
                ocupacion_maxima_pct=10, altura_maxima_plantas=1, frente_minimo_m=20)
     result = ViabilidadUrbanisticaValidator().validate(program, lot, num_plantas=3)
     assert len(result.violations) == 4  # las 4 restricciones fallan a la vez, todas reportadas
+
+
+def test_edificabilidad_uses_real_polygon_area_not_working_rectangle_when_available():
+    # hallazgo real confirmado por el usuario: si hay poligono_real
+    # (Catastro), la superficie de parcela para edificabilidad/ocupacion
+    # debe ser la REAL, no la del rectangulo de trabajo (que puede
+    # sobrestimarla). Aqui: rectangulo de trabajo 20x20=400m2, poligono
+    # real solo 300m2 (mas pequeno, como en un caso real irregular).
+    from shapely.geometry import Polygon
+    poligono_real = Polygon([(2, 2), (18, 2), (18, 16), (10, 18), (2, 16), (2, 2)])
+    assert poligono_real.area == pytest.approx(240.0, abs=1.0)
+
+    lot = _lot(width=20, depth=20, coeficiente_edificabilidad=0.5)
+    lot_con_poligono = lot.__class__(
+        boundary=lot.boundary, coeficiente_edificabilidad=0.5, poligono_real=poligono_real,
+    )
+    program = Program(rooms=[_room("a", 160)])  # 160m2: supera 0.5*240=120 (real), no 0.5*400=200 (rectangulo)
+
+    result_sin_poligono = ViabilidadUrbanisticaValidator().validate(program, lot, num_plantas=1)
+    result_con_poligono = ViabilidadUrbanisticaValidator().validate(program, lot_con_poligono, num_plantas=1)
+
+    assert result_sin_poligono.violations == []  # 160 < 200 (rectangulo) -> pasa
+    assert len(result_con_poligono.violations) == 1  # 160 > 120 (real) -> falla
+    assert "120.0m²" in result_con_poligono.violations[0]  # usa el area REAL, no 200

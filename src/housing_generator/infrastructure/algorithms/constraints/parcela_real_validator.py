@@ -32,19 +32,27 @@ class ParcelaRealValidator(ConstraintValidatorPort):
             return ValidationResult(violations=[])
 
         violations: List[str] = []
+        # se usa area_edificable_real (poligono real YA reducido por
+        # retranqueo), no poligono_real en bruto -- corregido tras
+        # revisar el propio diseno: si no se reduce aqui tambien, una
+        # estancia podria quedar justo en el linde de propiedad,
+        # ignorando el retranqueo para el caso de poligono real (el
+        # rectangulo de trabajo SI lo aplica via buildable_area, esto
+        # lo dejaba inconsistente). Ver [ARCH:parcela-real].
+        area_edificable = layout.lot.area_edificable_real.polygon
         # mismo criterio de rendimiento ya aplicado en AdjacencyConstraintValidator:
         # el buffer se calcula UNA vez por validacion, no una vez por
         # estancia. Ver [ARCH:adjacency-validator].
-        poligono_real_buffered = layout.lot.poligono_real.buffer(self._tolerance)
+        area_edificable_buffered = area_edificable.buffer(self._tolerance)
 
         for room in layout.rooms:
             if not room.is_placed:
                 continue  # ya lo reporta AdjacencyConstraintValidator, no duplicar
-            if not poligono_real_buffered.contains(room.boundary.polygon):
-                sobresale = room.boundary.polygon.difference(poligono_real_buffered)
+            if not area_edificable_buffered.contains(room.boundary.polygon):
+                sobresale = room.boundary.polygon.difference(area_edificable_buffered)
                 violations.append(
-                    f"La estancia '{room.id}' queda fuera del polígono real de la parcela "
-                    f"(sobresale {sobresale.area:.1f}m² del linde legal real)"
+                    f"La estancia '{room.id}' queda fuera del área edificable real de la parcela "
+                    f"(sobresale {sobresale.area:.1f}m² del linde legal real, con retranqueo aplicado)"
                 )
 
         return ValidationResult(violations=violations)

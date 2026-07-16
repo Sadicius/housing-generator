@@ -1,4 +1,5 @@
 from typing import Callable, Dict, List, Optional
+from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 from housing_generator.application.ports.zoning_strategy_port import ZoningStrategyPort
 from housing_generator.application.ports.layout_generator_port import LayoutGeneratorPort
@@ -73,7 +74,35 @@ class GenerateBuildingUseCase:
 
         building = Building()
         previous_layout: Optional[Layout] = None
-        current_buildable_polygon: BaseGeometry = lot.buildable_area.polygon
+        # HALLAZGO REAL, confirmado con captura del navegador: antes de
+        # esto, se usaba SIEMPRE lot.buildable_area.polygon (el
+        # rectangulo de trabajo), nunca el poligono real importado --
+        # una vivienda generada podia colocar estancias en las
+        # esquinas donde el rectangulo sobresale del poligono real
+        # (hasta 49m2 en un caso real). Investigado antes de
+        # implementar: la tecnica real (GFLAN 2025) es seguir
+        # generando con un rectangulo de partida, pero derivarlo del
+        # poligono real YA reducido por retranqueo (mas ajustado, no
+        # el rectangulo completo sin reducir) -- el rectangulo sigue
+        # pudiendo sobresalir un poco en las esquinas, por eso
+        # ParcelaRealValidator (restriccion dura) es la garantia real,
+        # no el ajuste de este rectangulo de partida. Se mantiene
+        # axis-aligned (bounds, no minimum_rotated_rectangle) a
+        # proposito -- una rotacion complicaria el sistema de
+        # coordenadas que usa el resto del pipeline (anclaje,
+        # entrance_side). Ver [ARCH:parcela-real].
+        if lot.poligono_real is not None:
+            area_real = lot.area_edificable_real.polygon
+            if area_real.is_empty:
+                # mismo comportamiento que buildable_area colapsada (caja):
+                # un poligono vacio real, no un box con NaN -- el resto del
+                # pipeline ya sabe fallar con claridad ante esto.
+                current_buildable_polygon: BaseGeometry = area_real
+            else:
+                minx, miny, maxx, maxy = area_real.bounds
+                current_buildable_polygon = box(minx, miny, maxx, maxy)
+        else:
+            current_buildable_polygon = lot.buildable_area.polygon
 
         for level in levels:
             level_rooms = rooms_by_level[level]
@@ -99,6 +128,7 @@ class GenerateBuildingUseCase:
                 entrance_side=lot.entrance_side,
                 street_side=lot.street_side,
                 retranqueo_m=None,  # ya aplicado al construir current_buildable_polygon
+                poligono_real=lot.poligono_real,  # para que ParcelaRealValidator compruebe cada planta
             )
 
             composite = self._per_floor_validators_factory(

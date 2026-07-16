@@ -42,12 +42,3 @@ INDIFFERENT  # unused variable (src/housing_generator/domain/enums.py:43)
 generar_edificio  # unused function (src/housing_generator/interface/browser/bridge.py:17)
 analizar_parcela_catastro  # unused function (src/housing_generator/interface/browser/bridge.py:19) -- Fase A de importacion de Catastro, mismo patron: llamada dinamicamente desde JS (00b-parcela.js) via Pyodide
 
-# Fase 0 de generacion dentro del poligono real (parcela irregular
-# importada de Catastro), en construccion -- Lot.area_edificable_real
-# tiene tests propios (tests/unit/test_lot.py, 5 tests), todavia no
-# conectado a bridge.py/GenerateBuildingUseCase (falta esa pieza, es
-# la que decide el rectangulo de trabajo real que se pasa al
-# generador). ParcelaRealValidator (el validador que SI usa este
-# poligono) ya esta conectado de verdad via container.py. Ver
-# docs/CONTINUIDAD.md.
-area_edificable_real  # unused property (src/housing_generator/domain/entities/lot.py:60)

@@ -69,7 +69,7 @@ def test_room_in_the_corner_gap_between_working_rectangle_and_real_polygon_fails
     layout = Layout(lot=lot, rooms=[room], zones=[])
     result = ParcelaRealValidator().validate(layout)
     assert len(result.violations) == 1
-    assert "fuera del polígono real" in result.violations[0]
+    assert "fuera del área edificable real" in result.violations[0]
 
 
 def test_unplaced_room_is_skipped_not_double_reported():
@@ -83,23 +83,37 @@ def test_unplaced_room_is_skipped_not_double_reported():
     assert result.violations == []
 
 
-def test_retranqueo_reduced_polygon_correctly_rejects_rooms_too_close_to_the_edge():
-    # confirma que el validador usa el poligono real TAL CUAL viene en
-    # Lot.poligono_real (sin aplicar retranqueo el mismo) -- el
-    # retranqueo se aplica antes, al construir el rectangulo de
-    # trabajo/area edificable que alimenta al generador. Este test
-    # documenta esa responsabilidad: si alguien pasa el poligono SIN
-    # reducir, una estancia junto al borde exterior debe pasar (esta
-    # DENTRO del poligono real, aunque no respete un retranqueo que
-    # este validador no conoce).
+def test_room_within_retranqueo_margin_of_real_polygon_fails():
+    # confirma el comportamiento CORREGIDO: el validador usa
+    # area_edificable_real (poligono real YA reducido por retranqueo),
+    # no el poligono en bruto -- una estancia que esta DENTRO del
+    # poligono real pero DENTRO del margen de retranqueo debe fallar
+    # igualmente, no solo cuando sobresale del poligono en bruto.
     poligono_real = _poligono_real_de_fixture()
-    lot = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real)
-    # una estancia justo en el borde interior del poligono real (no
-    # reducido) -- debe pasar, este validador no aplica retranqueo
-    centro = poligono_real.centroid
-    room_poly = box(centro.x - 5, centro.y - 5, centro.x + 5, centro.y + 5)
-    if poligono_real.contains(room_poly):
-        room = _placed("a", room_poly)
-        layout = Layout(lot=lot, rooms=[room], zones=[])
-        result = ParcelaRealValidator().validate(layout)
-        assert result.violations == []
+    lot_sin_retranqueo = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real)
+    lot_con_retranqueo = Lot(
+        boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=3.0,
+    )
+
+    # una estancia junto al borde del poligono real (dentro de el, pero
+    # a menos de 3m del linde) -- pasa SIN retranqueo, falla CON retranqueo
+    borde = list(poligono_real.exterior.coords)[0]
+    hacia_dentro = poligono_real.centroid
+    dx, dy = hacia_dentro.x - borde[0], hacia_dentro.y - borde[1]
+    largo = (dx**2 + dy**2) ** 0.5
+    punto_cercano_al_borde = (borde[0] + dx / largo * 1.0, borde[1] + dy / largo * 1.0)  # 1m hacia dentro
+    room_poly = box(
+        punto_cercano_al_borde[0] - 0.3, punto_cercano_al_borde[1] - 0.3,
+        punto_cercano_al_borde[0] + 0.3, punto_cercano_al_borde[1] + 0.3,
+    )
+    if not poligono_real.contains(room_poly):
+        return  # geometria del punto de prueba no cayo dentro, test no aplicable esta vez
+
+    room = _placed("a", room_poly)
+
+    result_sin_retranqueo = ParcelaRealValidator().validate(Layout(lot=lot_sin_retranqueo, rooms=[room], zones=[]))
+    result_con_retranqueo = ParcelaRealValidator().validate(Layout(lot=lot_con_retranqueo, rooms=[room], zones=[]))
+
+    assert result_sin_retranqueo.violations == []  # dentro del poligono real, sin retranqueo aplicado
+    assert len(result_con_retranqueo.violations) == 1  # dentro del margen de retranqueo -> falla
+    assert "retranqueo aplicado" in result_con_retranqueo.violations[0]

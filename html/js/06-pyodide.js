@@ -52,7 +52,7 @@ async function ensurePyodideReady(onProgress){
   return PYODIDE_LOADING;
 }
 
-async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, experimentalBtree, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, onProgress){
+async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, experimentalBtree, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, onProgress){
   const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Buscando una distribucion valida (puede reintentar varias semillas)...');
 
@@ -92,6 +92,13 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   const ocupacionMaximaLiteral = literalOpcional(ocupacionMaxima, 'float');
   const alturaMaximaLiteral = literalOpcional(alturaMaxima, 'int');
   const frenteMinimoLiteral = literalOpcional(frenteMinimo, 'float');
+  // poligonoRealCoords: array anidado (lista de [x,y]), no un numero
+  // simple -- se pasa como JSON embebido directamente en el codigo
+  // Python (mismo patron "literal directo, no variable global" que
+  // evita el bug de JsNull), en vez de por pyodide.globals.set(),
+  // para no depender de como Pyodide convierta arrays anidados.
+  const poligonoRealLiteral = (poligonoRealCoords && poligonoRealCoords.length > 0)
+    ? `json.loads(${JSON.stringify(JSON.stringify(poligonoRealCoords))})` : 'None';
 
   const pyCode = [
     'import json',
@@ -109,6 +116,7 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     `    altura_maxima_plantas=${alturaMaximaLiteral},`,
     `    frente_minimo_m=${frenteMinimoLiteral},`,
     '    street_side=str(street_side_js),',
+    `    poligono_real_coords=${poligonoRealLiteral},`,
     ')',
     'json.dumps(resultado)',
   ].join('\n');
@@ -171,6 +179,15 @@ async function handleGenerateNow(){
   const frenteMinimo = numOpcional('gen-frente-minimo');
   const streetSideEl = document.getElementById('gen-street-side');
   const streetSide = streetSideEl ? streetSideEl.value : 'south';
+  // si hay una parcela importada de Catastro, pasar su poligono real
+  // (en BRUTO, no zona_afeccion -- esa ya viene reducida por
+  // retranqueo, y retranqueo_m se aplica dentro de Lot, no hay que
+  // aplicarlo dos veces). Hallazgo real, confirmado por el usuario
+  // con captura del navegador: sin esto, la generacion siempre
+  // trabajaba sobre el rectangulo de trabajo, nunca sobre la parcela
+  // real. Ver [ARCH:parcela-real].
+  const poligonoRealCoords = (typeof PARCELA_IMPORTADA !== 'undefined' && PARCELA_IMPORTADA)
+    ? PARCELA_IMPORTADA.poligono_real : null;
 
   btn.disabled = true;
   setGenerateStatus('Iniciando...', 'loading');
@@ -179,6 +196,7 @@ async function handleGenerateNow(){
       payload, lotW, lotH, seed, maxIterations, 10, accesible,
       retranqueoM, retranqueoIncremento, experimentalBtree,
       edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide,
+      poligonoRealCoords,
       (msg) => setGenerateStatus(msg, 'loading'),
     );
     if(!result.ok){

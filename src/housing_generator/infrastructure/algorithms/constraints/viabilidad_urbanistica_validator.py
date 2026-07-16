@@ -33,7 +33,12 @@ class ViabilidadUrbanisticaValidator(ViabilidadUrbanisticaValidatorPort):
 
     def validate(self, program: Program, lot: Lot, num_plantas: int) -> ValidationResult:
         violations: List[str] = []
-        superficie_parcela = lot.boundary.polygon.area
+        # hallazgo real, confirmado por el usuario con captura del
+        # navegador: si hay poligono_real (importado de Catastro), la
+        # superficie de parcela debe ser la REAL, no la del rectangulo
+        # de trabajo (que puede sobrestimarla hasta un 12-22%,
+        # confirmado con 2 parcelas reales de Galicia). Ver [ARCH:parcela-real].
+        superficie_parcela = lot.poligono_real.area if lot.poligono_real is not None else lot.boundary.polygon.area
 
         if lot.coeficiente_edificabilidad is not None:
             techo_declarado = sum(r.dimensions.area_m2 for r in program.rooms)

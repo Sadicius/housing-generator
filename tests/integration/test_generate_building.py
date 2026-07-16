@@ -333,3 +333,52 @@ def test_excessive_shrink_increment_falls_back_to_same_footprint_as_below():
     huella_pb = unary_union([r.boundary.polygon for r in building.floors[NivelPlanta.PLANTA_BAJA].rooms])
     huella_ps = unary_union([r.boundary.polygon for r in building.floors[NivelPlanta.PLANTA_SUPERIOR].rooms])
     assert huella_pb.bounds == huella_ps.bounds == (0.0, 0.0, 16.0, 16.0)
+
+
+def test_generation_with_real_imported_polygon_never_places_rooms_outside_it():
+    # HALLAZGO REAL, confirmado con captura del navegador del usuario:
+    # antes de esto, el generador SIEMPRE trabajaba sobre el rectangulo
+    # de trabajo (OBB), nunca sobre el poligono real importado -- una
+    # vivienda generada podia colocar estancias en las esquinas donde
+    # el rectangulo sobresale del poligono real (hasta 49m2 en un caso
+    # real, confirmado en la investigacion). Verificado aqui de
+    # extremo a extremo, con la misma parcela real usada en el resto
+    # de la Fase A, no datos sinteticos. Ver [ARCH:parcela-real].
+    from pathlib import Path
+    from housing_generator.infrastructure.persistence.catastro_gml_importer import importar_parcela_gml
+
+    fixture = Path(__file__).parents[1] / "fixtures" / "catastro" / "parcela_sin_edificar.gml"
+    resultado = importar_parcela_gml(fixture.read_text(encoding="utf-8"))
+    poligono_real = resultado.poligono
+    minx, miny, maxx, maxy = poligono_real.bounds
+
+    rooms = [
+        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
+        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=10)),
+        Room(id="bath", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
+        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4.5)),
+        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=3)),
+        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=2)),
+        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=3)),
+    ]
+    program = Program(rooms=rooms)
+    lot = Lot(boundary=Boundary(polygon=box(minx, miny, maxx, maxy)), poligono_real=poligono_real, retranqueo_m=1.0)
+
+    building = None
+    for seed in range(1, 11):
+        use_case = build_generate_building_use_case(seed=seed, max_iterations=3000)
+        try:
+            building = use_case.execute(program, lot)
+            break
+        except Exception:
+            continue
+
+    assert building is not None, "ninguna de 10 semillas convergio"
+    poligono_real_con_tolerancia = poligono_real.buffer(0.06)  # margen minimo, mismo que usa el validador
+    planta = list(building.floors.values())[0]
+    for room in planta.rooms:
+        if room.is_placed:
+            assert poligono_real_con_tolerancia.contains(room.boundary.polygon), (
+                f"'{room.id}' quedo fuera del poligono real de la parcela -- "
+                f"esto es exactamente el bug real que este test protege"
+            )

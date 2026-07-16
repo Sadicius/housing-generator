@@ -3036,3 +3036,59 @@ Pendiente dentro de esta fase: conectar `bridge.py`/
 `GenerateBuildingUseCase` para que reciban y usen `poligono_real` de
 verdad (ahora mismo el campo existe y el validador lo comprobaría,
 pero nadie se lo pasa todavía desde la Zona 0 real).
+
+## [ARCH:parcela-real] Fase 1: conexión completa, con un hallazgo crítico de rotación
+
+Continuación directa de la Fase 0 (`Lot.poligono_real` +
+`ParcelaRealValidator`). Conectado de extremo a extremo: `bridge.py`
+recibe `poligono_real_coords`, lo construye como `Polygon` real, y lo
+pasa a `Lot`. `GenerateBuildingUseCase` deriva el rectángulo de
+partida del área edificable REAL (ya reducida por retranqueo vía
+`.buffer()`), no del rectángulo sin reducir -- y pasa `poligono_real`
+a CADA planta, para que `ParcelaRealValidator` compruebe todas, no
+solo la primera. `ViabilidadUrbanisticaValidator` corregido para usar
+la superficie real (no la del rectángulo, que la sobrestima 12-22%)
+en los cálculos de edificabilidad/ocupación.
+
+### Hallazgo crítico, encontrado al verificar de extremo a extremo
+
+`minimum_rotated_rectangle` normalmente NO está alineado a ejes
+(rotado hasta ~152° en un caso real) -- pero el generador coloca
+estancias en `box(0,0,ancho,fondo)`, SIEMPRE alineado a ejes desde el
+origen. Sin corregir esto, `poligono` y `rectangulo_trabajo` quedaban
+en un sistema de coordenadas DISTINTO al que el generador usa de
+verdad -- geométricamente inconsistentes entre sí, aunque cada uno
+por separado pareciera correcto. Una estancia que el validador
+consideraba "dentro" podía en realidad estar mal referenciada.
+Corregido: se rota tanto el polígono como el OBB para que el OBB
+quede alineado a ejes con su esquina en (0,0) -- el mismo sistema que
+`box(0,0,ancho_m,fondo_m)`. Verificado con datos reales: diferencia
+simétrica entre el rectángulo de trabajo corregido y
+`box(0,0,ancho,fondo)` de `5.7e-13` (ruido de punto flotante, no un
+error real).
+
+Un test antiguo (`test_real_parcels_are_genuinely_irregular_not_rectangular`)
+dejó de medir lo que pretendía tras este cambio (el ratio contra el
+rectángulo envolvente en ejes ya no refleja irregularidad, al estar
+ahora el polígono alineado a su propio OBB) -- sustituido por una
+medida más robusta (número de vértices), no simplemente relajado.
+
+### Verificado de extremo a extremo con datos reales, en 3 niveles
+
+1. `GenerateBuildingUseCase` directo: semilla 4 rechazada por
+   `ParcelaRealValidator` en tiempo real (mensaje exacto capturado),
+   semilla 9 exitosa con las 7 estancias confirmadas dentro del
+   polígono real.
+2. `bridge.py:generar_edificio()` (la misma función que llama el
+   dashboard): mismo resultado, las 7 estancias confirmadas dentro.
+3. `jsdom` + `ast.parse`: el código Python que genera
+   `generarEdificioReal()` es sintácticamente válido y ejecuta
+   correctamente, con y sin polígono real.
+
+Suite: 450 unitarios + 5 integración (incluida la prueba de extremo a
+extremo con datos reales, 93s), mypy y pyflakes limpios en 89
+archivos. Bundle Pyodide regenerado.
+
+Con esto, la solución completa (Fase A + generación dentro del
+polígono real) está funcionalmente terminada -- pendiente solo de
+confirmación del usuario probando en un navegador real.

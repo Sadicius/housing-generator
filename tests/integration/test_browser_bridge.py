@@ -240,3 +240,56 @@ def test_analizar_parcela_catastro_rejects_invalid_content_gracefully():
     resultado = analizar_parcela_catastro("esto no es un GML valido")
     assert resultado["ok"] is False
     assert "error" in resultado
+
+
+def test_generar_edificio_with_real_poligono_real_places_all_rooms_inside_it():
+    # HALLAZGO REAL Y GRAVE, confirmado por el usuario con captura del
+    # navegador: sin pasar poligono_real_coords, el generador SIEMPRE
+    # trabajaba sobre el rectangulo de trabajo, nunca sobre la parcela
+    # real -- podia colocar estancias fuera del linde legal real.
+    # Verificado y corregido en dos capas: (1) ParcelaRealValidator
+    # (restriccion dura), (2) el bug de sistemas de coordenadas
+    # distintos entre poligono real y rectangulo de trabajo (rotacion
+    # hasta 151.9 grados en un caso real) -- encontrado precisamente
+    # al escribir ESTE test de extremo a extremo, no en un test
+    # aislado. Ver [ARCH:parcela-real].
+    import json
+    from pathlib import Path
+    from shapely.geometry import Polygon, box
+    from housing_generator.interface.browser.bridge import analizar_parcela_catastro, generar_edificio
+
+    fixture_path = Path(__file__).parents[1] / "fixtures" / "catastro" / "parcela_sin_edificar.gml"
+    contenido = fixture_path.read_text(encoding="utf-8")
+    analisis = analizar_parcela_catastro(contenido, retranqueo_m=3.0)
+    assert analisis["ok"] is True
+
+    payload = {
+        "version": 2,
+        "levels": {"PLANTA_BAJA": [
+            {"type": "LIVING_ROOM", "count": 1, "area_m2": 25},
+            {"type": "KITCHEN", "count": 1, "area_m2": 10},
+            {"type": "BATHROOM", "count": 1, "area_m2": 6},
+            {"type": "ENTRANCE_HALL", "count": 1, "area_m2": 4.5},
+            {"type": "LAUNDRY", "count": 1, "area_m2": 4},
+            {"type": "DRYING_AREA", "count": 1, "area_m2": 2},
+            {"type": "STORAGE", "count": 1, "area_m2": 3},
+        ]},
+    }
+    resultado = generar_edificio(
+        payload, analisis["ancho_m"], analisis["fondo_m"],
+        seed=1, max_iterations=3000, retry_seeds=15,
+        retranqueo_m=3.0, coeficiente_edificabilidad=0.4, ocupacion_maxima_pct=45,
+        altura_maxima_plantas=2, frente_minimo_m=12, street_side="south",
+        poligono_real_coords=analisis["poligono_real"],
+    )
+
+    assert resultado["ok"] is True, resultado.get("error")
+    poligono_real = Polygon(analisis["poligono_real"])
+    poligono_real_con_margen = poligono_real.buffer(0.15)  # tolerancia razonable, no exigir precision perfecta de punto flotante
+    for room in resultado["floors"]["planta_baja"]["rooms"]:
+        room_poly = box(*room["bounds"])
+        assert poligono_real_con_margen.contains(room_poly), (
+            f"'{room['name']}' queda fuera del poligono real de la parcela -- "
+            f"exactamente el bug real que este test protege"
+        )
+    json.dumps(resultado)  # confirma que sigue siendo serializable, viaja igual al dashboard

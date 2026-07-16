@@ -618,3 +618,25 @@ def test_zona_afeccion_recalculates_on_retranqueo_change_after_import():
     js = _read(JS_DIR / "00b-parcela.js")
     assert "function reanalizarZonaAfeccionSiHayImportada" in js
     assert "reanalizarZonaAfeccionSiHayImportada()" in js
+
+
+def test_real_polygon_reaches_generation_not_just_the_preview():
+    # HALLAZGO REAL, confirmado por el usuario con captura del
+    # navegador: el resumen de la Zona 0 mostraba numeros correctos
+    # del poligono real, pero generar_edificio() solo recibia
+    # ancho/fondo -- la generacion SIEMPRE trabajaba sobre el
+    # rectangulo, nunca sobre la forma real. Verifica los 3 eslabones
+    # reales de la conexion completa. Ver [ARCH:parcela-real].
+    js_pyodide = _read(JS_DIR / "06-pyodide.js")
+
+    # eslabon 1: generarEdificioReal acepta y reenvia el poligono real
+    assert "poligonoRealCoords" in js_pyodide
+    assert "poligono_real_coords=${poligonoRealLiteral}" in js_pyodide
+
+    # eslabon 2: handleGenerateNow lee PARCELA_IMPORTADA de verdad, no
+    # solo lo ignora
+    assert "PARCELA_IMPORTADA.poligono_real" in js_pyodide
+
+    # eslabon 3: se pasa el poligono EN BRUTO (no zona_afeccion) --
+    # confirma que no se aplica el retranqueo dos veces
+    assert "PARCELA_IMPORTADA.zona_afeccion" not in js_pyodide.split("handleGenerateNow")[1].split("async function")[0]
