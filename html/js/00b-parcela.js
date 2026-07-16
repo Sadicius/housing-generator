@@ -90,8 +90,18 @@ function renderParcelaPreview(){
 
 function renderParcelaImportada(datos, svg, resumen){
   // ---- caso IMPORTADO: poligono real + OBB + zona de afeccion ----
+  // Se dibuja la version en ORIENTACION REAL (sin la rotacion que
+  // alinea el rectangulo de trabajo al generador) -- hallazgo real
+  // del usuario: mostrar la version rotada "no es adecuado para una
+  // buena interpretacion" de como es la parcela de verdad respecto al
+  // norte. El generador sigue usando la version alineada por
+  // separado (poligono_real/rectangulo_trabajo), sin cambios. Ver
+  // [ARCH:parcela-orientacion-real].
   const p = PARCELA_IMPORTADA;
-  const todosLosPuntos = p.poligono_real.concat(p.rectangulo_trabajo);
+  const poligono = p.poligono_orientacion_real;
+  const rectangulo = p.rectangulo_trabajo_orientacion_real;
+  const zonaAfeccion = p.zona_afeccion_orientacion_real;
+  const todosLosPuntos = poligono.concat(rectangulo);
   const xs = todosLosPuntos.map(c => c[0]), ys = todosLosPuntos.map(c => c[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
   const minY = Math.min(...ys), maxY = Math.max(...ys);
@@ -100,26 +110,26 @@ function renderParcelaImportada(datos, svg, resumen){
   const px = (x) => margen + (x - minX) * escala;
   const py = (y) => 300 - margen - (y - minY) * escala;
 
-  let svgContent = `<polygon points="${_puntosSvg(p.poligono_real, px, py)}"
+  let svgContent = `<polygon points="${_puntosSvg(poligono, px, py)}"
       fill="var(--ink-faint)" fill-opacity="0.5" stroke="var(--ink-dim)" stroke-width="1.5"/>`;
-  svgContent += `<polygon points="${_puntosSvg(p.rectangulo_trabajo, px, py)}"
+  svgContent += `<polygon points="${_puntosSvg(rectangulo, px, py)}"
       fill="none" stroke="var(--ink-faint)" stroke-width="1.5" stroke-dasharray="5,4"/>`;
 
-  const afeccionColapsada = p.zona_afeccion !== null && p.zona_afeccion !== undefined && p.zona_afeccion.length === 0;
-  if(p.zona_afeccion && p.zona_afeccion.length > 0){
-    svgContent += `<polygon points="${_puntosSvg(p.zona_afeccion, px, py)}"
+  const afeccionColapsada = zonaAfeccion !== null && zonaAfeccion !== undefined && zonaAfeccion.length === 0;
+  if(zonaAfeccion && zonaAfeccion.length > 0){
+    svgContent += `<polygon points="${_puntosSvg(zonaAfeccion, px, py)}"
         fill="var(--pa)" fill-opacity="0.4" stroke="var(--pa)" stroke-width="2"/>`;
-  } else if(!p.zona_afeccion){
+  } else if(!zonaAfeccion){
     // sin retranqueo pedido -- la huella util es el propio poligono real
-    svgContent += `<polygon points="${_puntosSvg(p.poligono_real, px, py)}"
+    svgContent += `<polygon points="${_puntosSvg(poligono, px, py)}"
         fill="var(--pa)" fill-opacity="0.25" stroke="none"/>`;
   }
 
   svgContent += _lineaFrente(datos, px, py);
   svg.innerHTML = svgContent;
 
-  const superficieAfeccion = (p.zona_afeccion && p.zona_afeccion.length > 0)
-    ? _areaPoligono(p.zona_afeccion)
+  const superficieAfeccion = (zonaAfeccion && zonaAfeccion.length > 0)
+    ? _areaPoligono(zonaAfeccion)
     : (afeccionColapsada ? 0 : p.area_calculada_m2);
   resumen.innerHTML = _resumenHtml(datos, p.area_calculada_m2, superficieAfeccion, afeccionColapsada, 'importado');
 }

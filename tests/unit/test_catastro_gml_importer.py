@@ -159,3 +159,31 @@ def test_polygon_and_working_rectangle_are_in_the_same_coordinate_frame():
     assert poly_miny >= miny - 0.01
     assert poly_maxx <= maxx + 0.01
     assert poly_maxy <= maxy + 0.01
+
+
+def test_poligono_orientacion_real_preserves_true_rotation_unlike_the_aligned_version():
+    # hallazgo real del usuario: mostrar el poligono alineado al
+    # generador (rotado) "no es adecuado para una buena interpretacion"
+    # de como es la parcela de verdad respecto al norte. Confirma que
+    # poligono_orientacion_real NO tiene la misma orientacion que el
+    # poligono alineado (a menos que, por casualidad, ya estuviera a
+    # 0/90/180/270 grados) -- y que ambos representan la MISMA area
+    # real (la rotacion no cambia el area).
+    resultado = importar_parcela_gml(_leer("parcela_sin_edificar.gml"))
+    assert resultado.poligono_orientacion_real.area == pytest.approx(resultado.poligono.area, abs=0.5)
+
+    # confirmar que de verdad son geometrias distintas (no el mismo
+    # poligono devuelto dos veces por error) -- bounds diferentes
+    bounds_alineado = resultado.poligono.bounds
+    bounds_real = resultado.poligono_orientacion_real.bounds
+    assert bounds_alineado != bounds_real
+
+
+def test_rectangulo_trabajo_orientacion_real_still_covers_the_true_polygon():
+    # mismo hallazgo de la investigacion original (el rectangulo de
+    # trabajo debe contener el poligono real) pero verificado tambien
+    # para la version en orientacion real -- no solo para la alineada.
+    resultado = importar_parcela_gml(_leer("parcela_sin_edificar.gml"))
+    rect_real = resultado.poligono_orientacion_real.minimum_rotated_rectangle
+    interseccion = rect_real.intersection(resultado.poligono_orientacion_real)
+    assert interseccion.area == pytest.approx(resultado.poligono_orientacion_real.area, abs=1e-6)

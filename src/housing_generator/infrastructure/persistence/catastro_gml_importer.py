@@ -29,9 +29,22 @@ class ParcelaImportada(NamedTuple):
     """Resultado de importar un GML de parcela catastral.
 
     `poligono`/`rectangulo_trabajo`: en coordenadas LOCALES (origen
-    trasladado al mínimo x,y del polígono real) -- las coordenadas
-    UTM absolutas (cientos de miles/millones) no sirven directamente
-    para nuestro `Lot`, que trabaja en coordenadas relativas.
+    trasladado al mínimo x,y del polígono real), Y ROTADOS para que
+    el rectángulo de trabajo quede alineado a ejes -- el sistema de
+    coordenadas que usa de verdad el generador (`box(0,0,ancho,fondo)`).
+    Las coordenadas UTM absolutas (cientos de miles/millones) no
+    sirven directamente para nuestro `Lot`, que trabaja en
+    coordenadas relativas.
+
+    `poligono_orientacion_real`: el MISMO polígono, trasladado pero
+    SIN rotar -- conserva la orientación real respecto al norte
+    (las coordenadas UTM de origen ya están orientadas a norte, la
+    traslación no cambia ángulos). Uso exclusivo para VISUALIZACIÓN
+    (Zona 0 del dashboard) -- el generador nunca lo usa, sigue
+    trabajando con `poligono`/`rectangulo_trabajo` alineados. Hallazgo
+    real del usuario: mostrar la versión rotada "no es adecuado para
+    una buena interpretación" de la parcela real. Ver
+    [ARCH:parcela-orientacion-real].
 
     `area_declarada_m2`: la que trae el propio archivo
     (`cp:areaValue`) -- NO se usa para los cálculos, solo para el
@@ -46,6 +59,7 @@ class ParcelaImportada(NamedTuple):
     area_calculada_m2: float
     poligono: Polygon
     rectangulo_trabajo: Polygon
+    poligono_orientacion_real: Polygon
 
     @property
     def discrepancia_area_pct(self) -> float:
@@ -131,4 +145,5 @@ def importar_parcela_gml(contenido: str) -> ParcelaImportada:
         area_calculada_m2=poligono_alineado.area,
         poligono=poligono_alineado,
         rectangulo_trabajo=obb_alineado,
+        poligono_orientacion_real=poligono_local,
     )

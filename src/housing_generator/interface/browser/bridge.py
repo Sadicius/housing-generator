@@ -42,9 +42,21 @@ def analizar_parcela_catastro(gml_content: str, retranqueo_m: Optional[float] = 
       {"ok": True, "referencia_catastral": ..., "area_declarada_m2": ...,
        "area_calculada_m2": ..., "discrepancia_area_pct": ...,
        "poligono_real": [[x,y],...], "rectangulo_trabajo": [[x,y],...],
+       "poligono_orientacion_real": [[x,y],...],
+       "rectangulo_trabajo_orientacion_real": [[x,y],...],
+       "zona_afeccion_orientacion_real": [[x,y],...] o None,
        "ancho_m": ..., "fondo_m": ..., "zona_afeccion": [[x,y],...] o None}
     o, si el archivo no es válido:
       {"ok": False, "error": "mensaje legible"}
+
+    `poligono_orientacion_real`/`zona_afeccion_orientacion_real`: la
+    MISMA parcela y zona de afección, pero SIN la rotación que alinea
+    el rectángulo de trabajo al generador -- conservan la orientación
+    real respecto al norte, para que la Zona 0 del dashboard la
+    dibuje de forma interpretable. Hallazgo real del usuario: mostrar
+    la versión rotada "no es adecuado para una buena interpretación".
+    El generador sigue usando `poligono`/`rectangulo_trabajo`
+    (alineados), sin cambios. Ver [ARCH:parcela-orientacion-real].
 
     Ver [ARCH:catastro-gml-importer].
     """
@@ -58,12 +70,19 @@ def analizar_parcela_catastro(gml_content: str, retranqueo_m: Optional[float] = 
     fondo_m = math.hypot(coords_rect[2][0] - coords_rect[1][0], coords_rect[2][1] - coords_rect[1][1])
 
     zona_afeccion = None
+    zona_afeccion_orientacion_real = None
     if retranqueo_m is not None and retranqueo_m > 0:
         afeccion_poly = resultado.poligono.buffer(-retranqueo_m)
         if not afeccion_poly.is_empty and afeccion_poly.geom_type == "Polygon":
             zona_afeccion = [list(c) for c in afeccion_poly.exterior.coords]
         else:
             zona_afeccion = []  # retranqueo excesivo, colapsa a vacio -- no es un error
+
+        afeccion_real = resultado.poligono_orientacion_real.buffer(-retranqueo_m)
+        if not afeccion_real.is_empty and afeccion_real.geom_type == "Polygon":
+            zona_afeccion_orientacion_real = [list(c) for c in afeccion_real.exterior.coords]
+        else:
+            zona_afeccion_orientacion_real = []
 
     return {
         "ok": True,
@@ -73,6 +92,11 @@ def analizar_parcela_catastro(gml_content: str, retranqueo_m: Optional[float] = 
         "discrepancia_area_pct": round(resultado.discrepancia_area_pct, 2),
         "poligono_real": [list(c) for c in resultado.poligono.exterior.coords],
         "rectangulo_trabajo": [list(c) for c in resultado.rectangulo_trabajo.exterior.coords],
+        "poligono_orientacion_real": [list(c) for c in resultado.poligono_orientacion_real.exterior.coords],
+        "rectangulo_trabajo_orientacion_real": [
+            list(c) for c in resultado.poligono_orientacion_real.minimum_rotated_rectangle.exterior.coords
+        ],
+        "zona_afeccion_orientacion_real": zona_afeccion_orientacion_real,
         "ancho_m": round(ancho_m, 2),
         "fondo_m": round(fondo_m, 2),
         "zona_afeccion": zona_afeccion,

@@ -771,3 +771,14 @@ def test_confirmar_parcela_button_connects_zona_0_to_zona_1():
     assert 'id="confirmar-parcela"' in html
     assert "getElementById('confirmar-parcela')" in js
     assert "data-zona=\"diseno\"" in js
+
+
+def test_parcela_preview_draws_true_orientation_not_the_generator_aligned_version():
+    # hallazgo real del usuario ("rota la orientacion real de la
+    # parcela, cosa que no es adecuado para una buena interpretacion"):
+    # la vista previa debe dibujar poligono_orientacion_real, no
+    # poligono_real (que esta rotado para encajar con el generador).
+    js = _read(JS_DIR / "00b-parcela.js")
+    assert "const poligono = p.poligono_orientacion_real" in js
+    assert "const rectangulo = p.rectangulo_trabajo_orientacion_real" in js
+    assert "const zonaAfeccion = p.zona_afeccion_orientacion_real" in js

@@ -3394,3 +3394,38 @@ confirmar parcela navega a Diseño y marca Zona 0 como completada.
   vial), ni representado en el visor.
 - Sin selección de tipos de suelo/clasificación urbanística (podría
   haber más de uno afectando la misma parcela).
+
+## [ARCH:parcela-orientacion-real] Vista previa con orientación real, no la del generador
+
+A petición del usuario: "rota la orientación real de la parcela,
+cosa que no es adecuado para una buena interpretación". El polígono
+se rotaba (en `catastro_gml_importer.py`) para que el rectángulo de
+trabajo quedara alineado a ejes -- necesario para el generador
+(`box(0,0,ancho,fondo)`), pero esa MISMA versión rotada era la que se
+mostraba en la Zona 0, perdiendo la orientación real respecto al
+norte.
+
+### Separación real: dos versiones, un solo origen de datos
+
+`ParcelaImportada` gana `poligono_orientacion_real` -- el mismo
+polígono, trasladado pero SIN rotar (las coordenadas UTM de origen ya
+están orientadas a norte; la traslación no cambia ángulos). El
+generador sigue usando `poligono`/`rectangulo_trabajo` (alineados),
+sin ningún cambio. `analizar_parcela_catastro()` propaga también
+`rectangulo_trabajo_orientacion_real` (el OBB calculado sobre la
+versión SIN rotar, para no perder la referencia visual del rectángulo
+de trabajo) y `zona_afeccion_orientacion_real` (el retranqueo aplicado
+también sobre la versión sin rotar, para que todo lo dibujado use la
+misma orientación consistente).
+
+`00b-parcela.js` actualizado para dibujar estas 3 versiones nuevas,
+no las alineadas. Verificado con datos sintéticos deliberadamente muy
+distintos (offset grande) para confirmar sin ambigüedad cuál versión
+usa de verdad el renderizado, no solo que "algo" se dibuja.
+
+Suite: 426 unitarios (5 nuevos), mypy y pyflakes limpios en 86
+archivos. Bundle Pyodide regenerado.
+
+Pendiente, del mismo lote de feedback: layout de dos columnas en
+Zona 0, retranqueo por lindero, selector de lado de calle sobre el
+polígono real, fondo de edificación, tipos de suelo.
