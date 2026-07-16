@@ -1,9 +1,16 @@
 # Housing Generator
 
-Sistema generativo de plantas de vivienda con **zonificación día/noche/servicio**
-y organización por adyacencias, construido con **arquitectura hexagonal
-(ports & adapters)** para permitir intercambiar algoritmos de generación
-(slicing simple, CSP, genético, ML) sin tocar la lógica de dominio.
+Generador de plantas de vivienda unifamiliar, validado contra el **Decreto
+29/2010 de Galicia** (normas de habitabilidad, modificado por Decreto
+128/2023). A partir de un programa de estancias y una parcela -- real,
+importada desde el **Catastro** (GML), o declarada a mano -- genera la
+distribución mediante un **árbol B*** (Chang & Chang 2000) optimizado por
+recocido simulado, y comprueba automáticamente más de 20 reglas normativas:
+superficies mínimas, anchos libres, adyacencias obligatorias, núcleo húmedo,
+zonificación día/noche/servicio, edificabilidad, ocupación y accesibilidad,
+entre otras. Construido con **arquitectura hexagonal (ports & adapters)**
+para poder intercambiar piezas (algoritmo de generación, validadores, origen
+de la parcela) sin tocar la lógica de dominio.
 
 ## Empezar aquí
 
@@ -38,10 +45,21 @@ pip install -e ".[dev]"
 python -m housing_generator.interface.cli.main --output layout.json
 ```
 
-Esto construye un programa de ejemplo (vivienda de 2 dormitorios + garaje),
-genera un layout mediante recocido simulado sobre un árbol de partición
-único (respetando núcleo húmedo, zonificación día/noche/servicio, Tabla 1
-y Tabla 2 a la vez) y lo guarda en `layout.json`.
+Esto construye un programa de ejemplo (6 estancias: estar, cocina, baño,
+lavadero, tendedero, almacén), genera un layout con el árbol B* --
+recocido simulado sobre una representación de empaquetado, no de
+particionado de rectángulo -- respetando núcleo húmedo, zonificación
+día/noche/servicio, Tabla 1 y Tabla 2 a la vez, y lo guarda en `layout.json`.
+
+El CLI también admite, entre otras opciones (`--help` para el listado
+completo): `--import-seleccion` (importar la exportación real del
+dashboard y construir un `Program`/`Lot` real, con reintento automático
+de semillas), `--retranqueo`/`--retranqueo-incremento` (separación a
+lindero, vivienda aislada), `--edificabilidad`/`--ocupacion-maxima`/
+`--altura-maxima-plantas`/`--frente-minimo` (comprobación de viabilidad
+urbanística contra la ficha real del solar) y `--vivienda-accesible`
+(círculo de giro Ø1.50m + pasillo ≥1.20m, DB-SUA + Base 5.4 Galicia,
+opt-in).
 
 ## Tests
 
@@ -54,23 +72,26 @@ pytest -v
 ```
 src/housing_generator/
 ├── domain/            # Entidades y value objects puros (sin dependencias externas)
-│   ├── entities/       # Room, Zone, Lot, Program, Layout
+│   ├── entities/       # Room, Zone, Lot, Program, Layout, Building
 │   ├── value_objects/  # Dimensions, Boundary, AdjacencyRequirement
-│   ├── enums.py        # ZoneType, RoomType, AdjacencyStrength
+│   ├── services/        # type_adjacency_catalog (catálogo de 120 pares)
+│   ├── enums.py        # RoomType, NivelPlanta, tablas de valores por defecto
 │   └── exceptions.py
 ├── application/        # Casos de uso + puertos (interfaces)
-│   ├── ports/           # Contratos que debe cumplir la infraestructura
-│   ├── use_cases/        # GenerateLayoutUseCase, ValidateLayoutUseCase...
+│   ├── ports/           # LayoutGeneratorPort, ZoningStrategyPort, ConstraintValidatorPort...
+│   ├── use_cases/        # GenerateLayoutUseCase, GenerateBuildingUseCase, ValidateLayoutUseCase...
 │   └── dto/
 ├── infrastructure/      # Implementaciones concretas de los puertos
 │   ├── algorithms/
-│   │   ├── zoning/            # TreemapZoningStrategy
-│   │   ├── layout_generation/ # GraphBasedLayoutGenerator (slicing)
-│   │   └── constraints/       # AdjacencyConstraintValidator
+│   │   ├── zoning/             # TreemapZoningStrategy
+│   │   ├── layout_generation/  # BTreeLayoutGenerator (árbol B*), SoftConstraintScorer
+│   │   ├── adjacency/          # GeometryAdjacencyGraphBuilder, door_graph
+│   │   └── constraints/        # 20+ validadores normativos/prácticos + 1 combinador
 │   ├── geometry/         # Utilidades shapely compartidas
-│   └── persistence/      # JsonLayoutRepository
+│   └── persistence/      # JsonLayoutRepository, seleccion_plantas_importer, catastro_gml_importer
 ├── interface/
-│   └── cli/              # Punto de entrada de línea de comandos
+│   ├── cli/              # Punto de entrada de línea de comandos
+│   └── browser/          # Puente Pyodide para el dashboard (bridge.py)
 └── config/
     └── container.py      # Composition root: aquí se conecta todo
 
@@ -78,11 +99,17 @@ tests/
 ├── unit/          # Dominio y algoritmos aislados
 └── integration/   # Caso de uso completo (composition root real)
 
-docs/historico/architecture.md   # Decisiones de arquitectura y fundamentos de dominio
-docs/fuentes/relaciones_espaciales.md  # Catalogo de 120 relaciones entre tipos de estancia
-docs/fuentes/niveles_plantas.md  # Catalogo de preferencia de planta/nivel por tipo (no implementado)
-html/relaciones_espaciales.html  # Dashboard interactivo (matriz, plantas, burbujas arrastrables, sinergias, fichas)
-examples/sample_program.json  # Programa de ejemplo en formato de datos
+docs/                                # Ver docs/README.md como índice completo
+├── GUIA_USO.md                       # Cómo usar cada zona del dashboard, el CLI y la instalación
+├── COMO_FUNCIONA.md                  # Arquitectura interna de un vistazo
+├── CONTINUIDAD.md                    # Pendientes reales y decisiones, para retomar el proyecto
+├── historico/architecture.md         # Registro cronológico, append-only, de cada decisión
+├── referencia/                       # Referencia técnica consolidada por tema
+└── fuentes/relaciones_espaciales.md  # Catálogo de 120 relaciones entre tipos de estancia
+
+html/relaciones_espaciales.html  # Dashboard interactivo (3 zonas: Diseño, Consulta, Planificación)
+INICIO.html                      # Punto de entrada único del proyecto
+examples/sample_program.json     # Programa de ejemplo en formato de datos
 ```
 
 ## Por qué esta arquitectura
@@ -92,24 +119,42 @@ examples/sample_program.json  # Programa de ejemplo en formato de datos
   el área total, qué hace inválido un programa) se pueden testear sin
   levantar ningún algoritmo de generación.
 - **Puertos como contratos**: `LayoutGeneratorPort`, `ZoningStrategyPort` y
-  `ConstraintValidatorPort` son las tres piezas que se van a querer sustituir
-  a medida que el proyecto evolucione (por ejemplo, pasar de slicing simple
-  a un solver por restricciones o a un modelo de ML). El caso de uso
-  `GenerateLayoutUseCase` no cambia cuando eso ocurra.
+  `ConstraintValidatorPort` son las piezas pensadas para sustituirse a medida
+  que el proyecto evolucione (por ejemplo, pasar del árbol B* actual a un
+  solver por restricciones o a un modelo de ML). El caso de uso
+  `GenerateLayoutUseCase` no cambia cuando eso ocurra -- de hecho, el propio
+  generador ya pasó por una migración así: el árbol de partición/guillotina
+  original (`SimulatedAnnealingLayoutGenerator`) se sustituyó por completo
+  por el árbol B* (`BTreeLayoutGenerator`) tras confirmar empíricamente que
+  convergía mejor en todos los casos difíciles probados, sin tocar el caso
+  de uso ni los validadores.
 - **Composition root único**: `config/container.py` es el único módulo que
   conoce simultáneamente las abstracciones y las implementaciones concretas,
   evitando que ese acoplamiento se disperse por el resto del código.
 
-## Próximos pasos sugeridos
+## Pendiente real, si se retoma
 
-1. Sustituir `GraphBasedLayoutGenerator` (slicing) por un generador basado
-   en resolución de restricciones (p. ej. `constraint` o `ortools`) que use
-   el grafo de adyacencia (`BuildAdjacencyGraphUseCase`) como función de
-   coste real, en vez de solo geometría proporcional.
-2. Añadir un `ConstraintValidatorPort` adicional para luz natural /
-   ventilación (orientación del solar vs. `requires_natural_light`).
-3. Añadir un adaptador de entrada que lea `examples/sample_program.json`
-   y construya un `Program` real (hoy el JSON es solo referencia de formato).
-4. Considerar un generador evolutivo (`infrastructure/algorithms/layout_generation/genetic_generator.py`)
-   que optimice una función de fitness combinando adyacencias cumplidas,
-   compacidad y exposición solar.
+Lista honesta, no exhaustiva -- el detalle completo con contexto y
+decisiones vive en `docs/CONTINUIDAD.md`:
+
+- **Sección vertical automática solo cubre 1-2 plantas** (planta baja/
+  superior); sótano, semisótano y bajo cubierta no se generan
+  automáticamente (sí son editables a mano en el dashboard).
+- **Las puertas del visor son una marca genérica** (0.9m en la pared
+  compartida), no una posición/ancho/sentido de apertura real.
+- **`CocinaIntegradaValidator`** (cocina abierta al salón) no tiene forma
+  de activarse ni explicarse todavía desde el dashboard.
+- **Modo espejo no transforma la zona de vacío exterior** al reflejar o
+  rotar el plano -- se omite en vez de dibujarse en el sitio equivocado.
+- **`SolarExposureValidator`** (asoleamiento/orientación de fachada):
+  aparcado deliberadamente, con una referencia externa concreta si se
+  retoma (ver `docs/CONTINUIDAD.md`), no una extensión trivial del modelo
+  actual de habitaciones.
+- **Cytoscape.js para la pestaña "Sinergias"**: investigado, viable, pero
+  pospuesto -- sustituiría la red SVG dibujada a mano por una red
+  interactiva real; coste real de integración (canvas, no SVG, e
+  inicialización con pestañas ocultas), no un simple añadido de librería.
+- Un escenario de prueba concreto (parcela 12×10, 9 estancias con
+  adyacencia obligatoria `DINING_ROOM`-`KITCHEN`) sigue sin converger con
+  ninguno de los generadores probados hasta la fecha -- documentado como
+  `xfail`, no oculto.
