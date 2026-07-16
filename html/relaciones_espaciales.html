@@ -32,6 +32,11 @@
 
 <div class="zonas-bar"><button class="zona-btn active" data-zona="parcela"><span class="zona-num">ZONA 0</span>Parcela<span class="zona-desc">Datos de la parcela y viabilidad urbanística</span></button><button class="zona-btn" data-zona="diseno"><span class="zona-num">ZONA 1</span>Diseño<span class="zona-desc">Configurar y generar tu vivienda</span></button><button class="zona-btn" data-zona="consulta"><span class="zona-num">ZONA 2</span>Consulta<span class="zona-desc">Referencia normativa y de materiales</span></button><button class="zona-btn" data-zona="planificacion"><span class="zona-num">ZONA 3</span>Planificación<span class="zona-desc">Cronograma de ejecución de obra</span></button></div><div class="zona-panel active" id="zona-parcela"><div class="panel active" id="panel-parcela">
 <button class="nota-indicador" data-nota="nota-parcela">ⓘ nota de alcance</button>
+<div class="parcela-layout">
+<div class="parcela-col-plano">
+<svg class="parcela-preview" id="parcela-preview" viewBox="0 0 300 300"></svg>
+</div>
+<div class="parcela-col-form">
 <div class="parcela-import">
 <label class="parcela-import-drop" id="parcela-drop-zone" for="parcela-gml-input">
 <input accept=".gml,.xml" id="parcela-gml-input" style="display:none" type="file"/>
@@ -49,7 +54,9 @@
 <label>Altura máxima (plantas) <input id="gen-altura-maxima" min="1" step="1" type="number" placeholder="sin restricción"/></label>
 <label>Frente mínimo (m) <input id="gen-frente-minimo" min="0" step="0.5" type="number" placeholder="sin restricción"/></label>
 </div>
-<div class="parcela-preview-wrap"><svg class="parcela-preview" id="parcela-preview" viewBox="0 0 300 300"></svg><div class="parcela-resumen" id="parcela-resumen"></div></div>
+<div class="parcela-resumen" id="parcela-resumen"></div>
+</div>
+</div>
 <div class="zona-confirmar-row">
 <button class="picker-btn primary" id="confirmar-parcela">Confirmar parcela y continuar a Diseño →</button>
 <span class="net-hint">Los datos de esta parcela ya se usan directamente al generar en Zona 1 -- este botón solo te lleva al siguiente paso.</span>

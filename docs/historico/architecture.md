@@ -3429,3 +3429,32 @@ archivos. Bundle Pyodide regenerado.
 Pendiente, del mismo lote de feedback: layout de dos columnas en
 Zona 0, retranqueo por lindero, selector de lado de calle sobre el
 polígono real, fondo de edificación, tipos de suelo.
+
+## Layout de dos columnas en Zona 0
+
+A petición del usuario: "el plano actual es demasiado pequeño...
+haciendo dos columnas una para ver el plano y otra con el formulario
+y datos". Reestructurado: `.parcela-layout` (grid de 2 columnas,
+1.15fr/1fr) con `.parcela-col-plano` (el SVG, ahora responsive --
+`width:100%; aspect-ratio:1`, ya no 280px fijos) y `.parcela-col-form`
+(import + formulario + resumen de datos, movido junto al formulario
+como pidió explícitamente, no junto al plano). Columna del plano con
+`position:sticky` para que se mantenga visible al hacer scroll por un
+formulario largo. Colapsa a una columna en pantallas estrechas
+(`max-width:900px`).
+
+**Limitación real de verificación encontrada**: `wkhtmltoimage`
+(motor WebKit del entorno de desarrollo, muy antiguo) no soporta CSS
+Grid en absoluto -- confirmado con una prueba aislada mínima (un grid
+de 2 columnas rojo/azul, el azul desaparece por completo, el rojo
+ocupa el ancho completo). Esto invalida la captura raster como método
+de verificación para ESTA pieza concreta -- verificado en su lugar
+con `jsdom` (`getComputedStyle` confirma `display:grid` y
+`grid-template-columns:1.15fr 1fr` resueltos correctamente) y con la
+estructura DOM real (svg dentro de col-plano, resumen dentro de
+col-form). CSS Grid tiene soporte completo en navegadores reales
+desde 2017 -- debería renderizar correctamente para el usuario, pero
+queda pendiente su confirmación visual real, como con los rediseños
+anteriores.
+
+1 test nuevo. Suite: 427 unitarios, pyflakes limpio.

@@ -403,8 +403,13 @@ table.matrix th.dim{opacity:.3;}
   font-family:'Archivo',sans-serif; font-size:12px; padding:6px 8px;
   background:var(--papel); border:1px solid var(--line); color:var(--ink); border-radius:4px;
 }
-.parcela-preview-wrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; margin-top:16px;}
-.parcela-preview{width:280px; height:280px; background:var(--papel); border:1px solid var(--line); border-radius:8px; flex-shrink:0; position:relative;}
+.parcela-layout{display:grid; grid-template-columns:1.15fr 1fr; gap:28px; align-items:start; margin-top:16px;}
+.parcela-col-plano{position:sticky; top:20px;}
+.parcela-preview{width:100%; height:auto; aspect-ratio:1; background:var(--papel); border:1px solid var(--line); border-radius:8px; display:block;}
+@media (max-width:900px){
+  .parcela-layout{grid-template-columns:1fr;}
+  .parcela-col-plano{position:static;}
+}
 .parcela-resumen{display:flex; flex-direction:column; gap:8px; font-family:'Archivo',sans-serif; font-size:12.5px; padding-top:8px;}
 .parcela-resumen .stat{color:var(--ink-dim);}
 .parcela-resumen .stat b{color:var(--ink); font-family:'Space Mono',monospace;}

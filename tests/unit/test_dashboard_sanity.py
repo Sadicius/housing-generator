@@ -782,3 +782,24 @@ def test_parcela_preview_draws_true_orientation_not_the_generator_aligned_versio
     assert "const poligono = p.poligono_orientacion_real" in js
     assert "const rectangulo = p.rectangulo_trabajo_orientacion_real" in js
     assert "const zonaAfeccion = p.zona_afeccion_orientacion_real" in js
+
+
+def test_zona_parcela_uses_a_two_column_layout_plano_and_form():
+    # a peticion del usuario: "el plano actual es demasiado pequeño...
+    # haciendo dos columnas una para ver el plano y otra con el
+    # formulario y datos". El plano pasa de 280px fijos a responsive
+    # (llena su columna), el resumen se mueve junto al formulario, no
+    # junto al plano.
+    html = _read(HTML_PATH)
+    css = _read(CSS_PATH)
+    assert 'class="parcela-layout"' in html
+    assert 'class="parcela-col-plano"' in html
+    assert 'class="parcela-col-form"' in html
+    # el svg y el resumen deben estar en columnas distintas
+    idx_col_plano = html.index('class="parcela-col-plano"')
+    idx_col_form = html.index('class="parcela-col-form"')
+    idx_svg = html.index('id="parcela-preview"')
+    idx_resumen = html.index('id="parcela-resumen"')
+    assert idx_col_plano < idx_svg < idx_col_form, "el svg deberia estar en col-plano"
+    assert idx_col_form < idx_resumen, "el resumen deberia estar en col-form, junto al formulario"
+    assert ".parcela-layout{display:grid" in css
