@@ -52,7 +52,7 @@ async function ensurePyodideReady(onProgress){
   return PYODIDE_LOADING;
 }
 
-async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, clasificacionSuelo, onProgress){
+async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, clasificacionSuelo, retranqueoPorLado, onProgress){
   const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Buscando una distribucion valida (puede reintentar varias semillas)...');
 
@@ -102,6 +102,10 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   // poligonoRealCoords -- JSON embebido directo, no variable global.
   const clasificacionSueloLiteral = (clasificacionSuelo && clasificacionSuelo.length > 0)
     ? `json.loads(${JSON.stringify(JSON.stringify(clasificacionSuelo))})` : 'None';
+  // retranqueoPorLado: dict simple {lado: numero} -- mismo patron de
+  // JSON embebido directo.
+  const retranqueoPorLadoLiteral = (retranqueoPorLado && Object.keys(retranqueoPorLado).length > 0)
+    ? `json.loads(${JSON.stringify(JSON.stringify(retranqueoPorLado))})` : 'None';
 
   const pyCode = [
     'import json',
@@ -120,6 +124,7 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     '    street_side=str(street_side_js),',
     `    poligono_real_coords=${poligonoRealLiteral},`,
     `    clasificacion_suelo=${clasificacionSueloLiteral},`,
+    `    retranqueo_por_lado=${retranqueoPorLadoLiteral},`,
     ')',
     'json.dumps(resultado)',
   ].join('\n');
@@ -200,6 +205,13 @@ async function handleGenerateNow(){
   // real. Ver [ARCH:parcela-real].
   const poligonoRealCoords = (typeof PARCELA_IMPORTADA !== 'undefined' && PARCELA_IMPORTADA)
     ? PARCELA_IMPORTADA.poligono_real : null;
+  // retranqueo por lado -- a peticion del usuario. Solo se envian los
+  // lados con un valor real puesto, el resto usa retranqueoM (el
+  // valor unico de siempre) via el fallback en Lot.
+  const retranqueoPorLado = {};
+  document.querySelectorAll('.retranqueo-lado-input').forEach(input => {
+    if(input.value !== '') retranqueoPorLado[input.dataset.lado] = parseFloat(input.value);
+  });
   // clasificacion del suelo (Ley 2/2016) -- puramente informativo,
   // ningun validador aplica reglas distintas segun el valor todavia.
   const clasificacionSuelo = Array.from(document.querySelectorAll('.clasificacion-suelo-check:checked'))
@@ -212,7 +224,7 @@ async function handleGenerateNow(){
       payload, lotW, lotH, seed, maxIterations, 10, accesible,
       retranqueoM, retranqueoIncremento,
       edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide,
-      poligonoRealCoords, clasificacionSuelo,
+      poligonoRealCoords, clasificacionSuelo, retranqueoPorLado,
       (msg) => setGenerateStatus(msg, 'loading'),
     );
     if(!result.ok){

@@ -3483,3 +3483,50 @@ que el código Python generado desde JS es válido.
 
 4 tests nuevos. Suite: 430 unitarios, mypy/pyflakes/vulture limpios.
 Bundle Pyodide regenerado.
+
+## [ARCH:retranqueo-variable] Retranqueo por lindero, segundo ítem del lote
+
+A petición del usuario: "el retranqueo (m) no se puede desplegar para
+indicar los diferentes retranqueos a cada colindante o vial" -- misma
+crítica que ya había señalado el arquitecto consultado antes.
+
+### Decisión de arquitectura corregida en el momento
+
+Implementé primero `retranqueo_variable_por_lado()` en
+`infrastructure/geometry/shapely_utils.py`, y solo al conectarlo a
+`Lot` (dominio) me di cuenta de que esto invertía la dirección de
+dependencia real de la arquitectura hexagonal (dominio no debe
+depender de infraestructura). `Lot` ya implementa TODA su geometría
+en línea con shapely directamente (`buildable_area`,
+`medianera_boundary_segments`), sin importar utilidades de
+infraestructura -- corregido moviendo la función completa al dominio
+(`lot.py`), manteniendo la disciplina de la propia sesión (revisar
+la propia arquitectura, no solo la ajena).
+
+### El algoritmo real
+
+Para cada lado del polígono, se calcula la línea desplazada hacia el
+interior por su propio retranqueo (según la dirección cardinal más
+cercana a la normal saliente de ESE lado, no asume alineación a
+ejes), extendida muy por fuera del polígono, y se recorta el
+resultado acumulado con el semiplano interior de esa línea --
+equivalente geométrico real de "todos los semiplanos a la vez".
+Funciona igual para el rectángulo manual (los 4 lados SON exactamente
+N/S/E/O) que para `poligono_real` importado (irregular).
+
+Verificado exhaustivamente: coincide EXACTAMENTE con `.buffer(-r)`
+uniforme cuando no hay entradas específicas (mismo comportamiento de
+siempre, sin cambios para quien no usa la función nueva), respeta
+medianera a retranqueo 0 aunque se especifique otra cosa para ese
+lado, colapsa a vacío ante retranqueo excesivo sin crashear, produce
+un polígono válido sobre la parcela real irregular. Probado de
+extremo a extremo vía `bridge.py` con un escenario real: generación
+exitosa con retranqueo distinto en los 4 lados.
+
+Dashboard: desplegable "Retranqueo distinto por lado ▾" con 4 campos
+(norte/sur/este/oeste), vacío por defecto usa el valor único de
+siempre. Verificado con `jsdom` + `ast.parse()` que el código Python
+generado es válido y ejecuta correctamente.
+
+12 tests nuevos. Suite: 442 unitarios, mypy/pyflakes/vulture limpios.
+Bundle Pyodide regenerado.

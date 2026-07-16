@@ -823,3 +823,19 @@ def test_clasificacion_suelo_reaches_generation_not_just_the_form():
     js = _read(JS_DIR / "06-pyodide.js")
     assert "clasificacion-suelo-check:checked" in js
     assert "clasificacion_suelo=${clasificacionSueloLiteral}" in js
+
+
+def test_retranqueo_por_lado_toggle_and_fields_exist():
+    # a peticion del usuario: "el retranqueo (m) no se puede desplegar
+    # para indicar los diferentes retranqueos a cada colindante o vial".
+    html = _read(HTML_PATH)
+    assert 'id="retranqueo-lado-toggle"' in html
+    assert 'id="retranqueo-lado-panel"' in html
+    for lado in ("north", "south", "east", "west"):
+        assert f'data-lado="{lado}"' in html
+
+
+def test_retranqueo_por_lado_reaches_generation_not_just_the_form():
+    js = _read(JS_DIR / "06-pyodide.js")
+    assert "retranqueo-lado-input" in js
+    assert "retranqueo_por_lado=${retranqueoPorLadoLiteral}" in js

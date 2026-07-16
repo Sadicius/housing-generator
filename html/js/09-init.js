@@ -187,3 +187,16 @@ document.getElementById('mirror-reset').addEventListener('click', () => {
   updateMirrorButtonStates();
 });
 document.getElementById('export-plano').addEventListener('click', exportarPlanoGenerado);
+
+// toggle del panel de retranqueo por lado -- a peticion del usuario
+// ("el retranqueo (m) no se puede desplegar para indicar los
+// diferentes retranqueos a cada colindante o vial").
+const retranqueoLadoToggle = document.getElementById('retranqueo-lado-toggle');
+const retranqueoLadoPanel = document.getElementById('retranqueo-lado-panel');
+if(retranqueoLadoToggle && retranqueoLadoPanel){
+  retranqueoLadoToggle.addEventListener('click', () => {
+    const abierto = !retranqueoLadoPanel.hidden;
+    retranqueoLadoPanel.hidden = abierto;
+    retranqueoLadoToggle.textContent = abierto ? 'Retranqueo distinto por lado ▾' : 'Retranqueo distinto por lado ▴';
+  });
+}

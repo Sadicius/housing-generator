@@ -113,6 +113,7 @@ def generar_edificio(
     vivienda_accesible: bool = False,
     retranqueo_m: Optional[float] = None,
     retranqueo_incremento_por_planta_m: Optional[float] = None,
+    retranqueo_por_lado: Optional[dict] = None,
     poligono_real_coords: Optional[list] = None,
     coeficiente_edificabilidad: Optional[float] = None,
     ocupacion_maxima_pct: Optional[float] = None,
@@ -176,12 +177,18 @@ def generar_edificio(
         return {"ok": False, "error": "La selección no tiene ninguna estancia -- añade al menos el programa mínimo.", "semillas_probadas": 0}
 
     poligono_real = Polygon(poligono_real_coords) if poligono_real_coords else None
+    LADOS_VALIDOS = {"north", "south", "east", "west"}
+    retranqueo_por_lado_valido = {
+        lado: float(valor) for lado, valor in (retranqueo_por_lado or {}).items()
+        if lado in LADOS_VALIDOS and valor is not None
+    }
     clasificacion_valida = frozenset(clasificacion_suelo or []) & CLASIFICACIONES_SUELO_VALIDAS
     lot = Lot(
         boundary=Boundary(polygon=box(0, 0, lot_width_m, lot_height_m)),
         medianera_sides=seleccion.medianera_sides,
         retranqueo_m=retranqueo_m,
         retranqueo_incremento_por_planta_m=retranqueo_incremento_por_planta_m,
+        retranqueo_por_lado=retranqueo_por_lado_valido,
         coeficiente_edificabilidad=coeficiente_edificabilidad,
         ocupacion_maxima_pct=ocupacion_maxima_pct,
         altura_maxima_plantas=altura_maxima_plantas,

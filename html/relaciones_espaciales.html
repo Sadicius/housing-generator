@@ -48,11 +48,21 @@
 <label>Parcela (m) <input id="gen-lot-w" min="4" step="0.5" type="number" value="14"/> × <input id="gen-lot-h" min="4" step="0.5" type="number" value="16"/></label>
 <label>Lado de calle <select id="gen-street-side"><option value="south" selected="">Sur</option><option value="north">Norte</option><option value="east">Este</option><option value="west">Oeste</option></select></label>
 <label>Retranqueo (m) <input id="gen-retranqueo" min="0" step="0.5" type="number" placeholder="sin retranqueo"/></label>
+<button class="retranqueo-lado-toggle" id="retranqueo-lado-toggle" type="button">Retranqueo distinto por lado ▾</button>
 <label>Retranqueo por planta (m) <input id="gen-retranqueo-incremento" min="0" step="0.1" type="number" placeholder="mismo contorno"/></label>
 <label>Edificabilidad (m²t/m²s) <input id="gen-edificabilidad" min="0" step="0.05" type="number" placeholder="sin restricción"/></label>
 <label>Ocupación máxima (%) <input id="gen-ocupacion-maxima" min="0" max="100" step="1" type="number" placeholder="sin restricción"/></label>
 <label>Altura máxima (plantas) <input id="gen-altura-maxima" min="1" step="1" type="number" placeholder="sin restricción"/></label>
 <label>Frente mínimo (m) <input id="gen-frente-minimo" min="0" step="0.5" type="number" placeholder="sin restricción"/></label>
+</div>
+<div class="retranqueo-lado-panel" id="retranqueo-lado-panel" hidden="">
+<span class="clasificacion-suelo-label">Retranqueo específico por lado (m) -- vacío usa el valor único de arriba. Norte/Sur/Este/Oeste son relativos a la parcela tal como se ve en la vista previa.</span>
+<div class="retranqueo-lado-fields">
+<label>Norte <input class="retranqueo-lado-input" data-lado="north" min="0" step="0.5" type="number" placeholder="usa el valor único"/></label>
+<label>Sur <input class="retranqueo-lado-input" data-lado="south" min="0" step="0.5" type="number" placeholder="usa el valor único"/></label>
+<label>Este <input class="retranqueo-lado-input" data-lado="east" min="0" step="0.5" type="number" placeholder="usa el valor único"/></label>
+<label>Oeste <input class="retranqueo-lado-input" data-lado="west" min="0" step="0.5" type="number" placeholder="usa el valor único"/></label>
+</div>
 </div>
 <div class="clasificacion-suelo-group">
 <span class="clasificacion-suelo-label">Clasificación del suelo (Ley 2/2016, puede haber más de una si la parcela linda con varias zonas del planeamiento)</span>

@@ -150,3 +150,50 @@ def test_clasificacion_suelo_defaults_to_empty_and_accepts_real_categories():
     )
     assert lot_con_dos.clasificacion_suelo == {"urbano_consolidado", "urbanizable"}
     assert lot_con_dos.clasificacion_suelo <= CLASIFICACIONES_SUELO_VALIDAS
+
+
+def test_buildable_area_uses_retranqueo_por_lado_for_manual_rectangle():
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 20)),
+        retranqueo_por_lado={"south": 5, "north": 1, "east": 2, "west": 3},
+    )
+    minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
+    assert (minx, miny, maxx, maxy) == pytest.approx((3.0, 5.0, 18.0, 19.0))
+
+
+def test_buildable_area_retranqueo_por_lado_respects_medianera_at_zero():
+    # una medianera siempre debe quedar a retranqueo 0, aunque
+    # retranqueo_por_lado diga otra cosa para ese lado -- mismo
+    # criterio que el caso uniforme de siempre.
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 20)),
+        retranqueo_por_lado={"south": 5, "east": 2},
+        medianera_sides=frozenset({"east"}),
+    )
+    minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
+    assert maxx == pytest.approx(20.0)  # sin retranqueo en el lado medianero
+
+
+def test_area_edificable_real_uses_retranqueo_por_lado_for_imported_polygon():
+    poligono_real = _poligono_real_de_fixture()
+    lot = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        retranqueo_por_lado={"south": 5},
+        retranqueo_m=1.0,
+    )
+    area_variable = lot.area_edificable_real.polygon.area
+    lot_uniforme = Lot(
+        boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=1.0,
+    )
+    area_uniforme = lot_uniforme.area_edificable_real.polygon.area
+    assert area_variable < area_uniforme  # el lado sur mas exigente reduce mas
+
+
+def test_empty_retranqueo_por_lado_does_not_change_existing_behavior():
+    # sin entradas (caso por defecto de siempre), debe coincidir
+    # EXACTAMENTE con el comportamiento uniforme -- ningun cambio para
+    # quien no use esta funcionalidad nueva.
+    lot_nuevo = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0, retranqueo_por_lado={})
+    lot_viejo = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0)
+    assert lot_nuevo.buildable_area.polygon.equals(lot_viejo.buildable_area.polygon)

@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import math
+from dataclasses import dataclass, field
 from typing import FrozenSet, List, Optional
 from shapely.geometry import box, LineString, Polygon
 from housing_generator.domain.value_objects.boundary import Boundary
@@ -71,6 +72,18 @@ class Lot:
     referencia del arquitecto, no para cálculo. Ver
     [ARCH:clasificacion-suelo].
 
+    `retranqueo_por_lado`: dict opcional con claves de
+    `{"north","south","east","west"}`, retranqueo específico en
+    metros para ESE lado -- lados sin entrada usan `retranqueo_m`
+    (el valor único de siempre). Hallazgo real del usuario: "el
+    retranqueo (m) no se puede desplegar para indicar los diferentes
+    retranqueos a cada colindante o vial" -- misma crítica que ya
+    había señalado el arquitecto consultado antes. Funciona igual
+    para el rectángulo manual que para `poligono_real` (cada lado se
+    clasifica por la dirección cardinal más cercana a su normal
+    saliente). Vacío (por defecto) = mismo comportamiento uniforme de
+    siempre, sin ningún cambio. Ver [ARCH:retranqueo-variable].
+
     Ver [ARCH:lot].
     """
     boundary: Boundary
@@ -85,6 +98,7 @@ class Lot:
     frente_minimo_m: Optional[float] = None
     poligono_real: Optional[Polygon] = None
     clasificacion_suelo: FrozenSet[str] = frozenset()
+    retranqueo_por_lado: dict = field(default_factory=dict)
 
     @property
     def area_edificable_real(self) -> Boundary:
@@ -94,9 +108,16 @@ class Lot:
         lindes reales) -- NO el rectángulo `box()` de `buildable_area`,
         que puede sobresalir del polígono real. Si no hay
         `poligono_real` (caso manual), coincide exactamente con
-        `buildable_area`. Ver [ARCH:parcela-real]."""
+        `buildable_area`. Si `retranqueo_por_lado` tiene entradas, usa
+        retranqueo variable por dirección cardinal en vez de uniforme.
+        Ver [ARCH:parcela-real], [ARCH:retranqueo-variable]."""
         if self.poligono_real is None:
             return self.buildable_area
+        if self.retranqueo_por_lado:
+            reducido_variable = retranqueo_variable_por_lado(
+                self.poligono_real, self.retranqueo_por_lado, self.retranqueo_m or 0.0,
+            )
+            return Boundary(polygon=reducido_variable)
         r = self.retranqueo_m or 0.0
         if r <= 0:
             return Boundary(polygon=self.poligono_real)
@@ -119,7 +140,22 @@ class Lot:
     @property
     def buildable_area(self) -> Boundary:
         """Área edificable real: parcela reducida por retranqueo,
-        excepto en lados de medianera. Ver [ARCH:lot]."""
+        excepto en lados de medianera. Si `retranqueo_por_lado` tiene
+        entradas, usa retranqueo variable por dirección cardinal en
+        vez del valor único `retranqueo_m`. Ver [ARCH:lot],
+        [ARCH:retranqueo-variable]."""
+        if self.retranqueo_por_lado:
+            # medianera siempre a retranqueo 0, sin importar lo que
+            # digan retranqueo_m/retranqueo_por_lado para ese lado --
+            # mismo criterio que el caso uniforme de abajo.
+            por_lado_efectivo = dict(self.retranqueo_por_lado)
+            for lado in self.medianera_sides:
+                por_lado_efectivo[lado] = 0.0
+            reducido_variable = retranqueo_variable_por_lado(
+                self.boundary.polygon, por_lado_efectivo, self.retranqueo_m or 0.0,
+            )
+            return Boundary(polygon=reducido_variable)
+
         if (self.retranqueo_m is None or self.retranqueo_m <= 0) and not self.medianera_sides:
             return self.boundary
 
@@ -149,3 +185,90 @@ class Lot:
         if "west" in self.medianera_sides:
             segments.append(LineString([(minx, miny), (minx, maxy)]))
         return segments
+
+
+
+def retranqueo_variable_por_lado(
+    poligono: Polygon, retranqueo_por_lado: dict, retranqueo_default_m: float = 0.0,
+) -> Polygon:
+    """Reduce `poligono` con un retranqueo DISTINTO por lado, en vez
+    del retranqueo único que aplica `.buffer(-r)`. Hallazgo real del
+    usuario: "el retranqueo (m) no se puede desplegar para indicar
+    los diferentes retranqueos a cada colindante o vial" -- misma
+    crítica que ya había señalado el arquitecto consultado antes.
+
+    `retranqueo_por_lado`: dict con claves de `{"north","south",
+    "east","west"}`, valores en metros. Lados sin entrada usan
+    `retranqueo_default_m`. Funciona igual para un rectángulo simple
+    (los 4 lados SON exactamente N/S/E/O) que para un polígono
+    importado irregular (cada lado se CLASIFICA por la dirección
+    cardinal más cercana a su normal saliente, no asume que el
+    polígono ya esté alineado a ejes).
+
+    Algoritmo: para cada lado, se calcula la línea desplazada hacia
+    el interior por su propio retranqueo, extendida muy por fuera del
+    polígono en ambas direcciones, y se recorta el resultado
+    acumulado con el semiplano interior de esa línea -- equivalente
+    geométrico real de "todos los semiplanos a la vez", no una
+    aproximación visual. Devuelve `Polygon()` vacío si el retranqueo
+    colapsa el área por completo (mismo criterio que
+    `Lot.area_edificable_real` con el retranqueo uniforme).
+
+    Ver [ARCH:retranqueo-variable].
+    """
+    coords = list(poligono.exterior.coords)[:-1]  # sin el punto de cierre repetido
+    if len(coords) < 3:
+        return Polygon()
+
+    centroide = poligono.centroid
+    extension = max(poligono.bounds[2] - poligono.bounds[0], poligono.bounds[3] - poligono.bounds[1]) * 20 + 100
+
+    resultado: Polygon = poligono
+    n = len(coords)
+    for i in range(n):
+        p1 = coords[i]
+        p2 = coords[(i + 1) % n]
+        dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+        longitud = math.hypot(dx, dy)
+        if longitud < 1e-9:
+            continue
+        dir_x, dir_y = dx / longitud, dy / longitud
+        # normal saliente candidata (dos opciones perpendiculares) --
+        # se queda con la que apunta LEJOS del centroide, esa es la
+        # exterior de verdad para un poligono simple.
+        normal_a = (-dir_y, dir_x)
+        punto_medio = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
+        hacia_centroide = (centroide.x - punto_medio[0], centroide.y - punto_medio[1])
+        normal_saliente = normal_a if (normal_a[0] * hacia_centroide[0] + normal_a[1] * hacia_centroide[1]) < 0 \
+            else (-normal_a[0], -normal_a[1])
+
+        angulo_deg = math.degrees(math.atan2(normal_saliente[1], normal_saliente[0])) % 360
+        if 45 <= angulo_deg < 135:
+            direccion = "north"
+        elif 135 <= angulo_deg < 225:
+            direccion = "west"
+        elif 225 <= angulo_deg < 315:
+            direccion = "south"
+        else:
+            direccion = "east"
+
+        retranqueo_lado = retranqueo_por_lado.get(direccion, retranqueo_default_m)
+        if retranqueo_lado <= 0:
+            continue
+
+        normal_interior = (-normal_saliente[0], -normal_saliente[1])
+        offset_p1 = (p1[0] + normal_interior[0] * retranqueo_lado, p1[1] + normal_interior[1] * retranqueo_lado)
+        offset_p2 = (p2[0] + normal_interior[0] * retranqueo_lado, p2[1] + normal_interior[1] * retranqueo_lado)
+        lejos_p1 = (offset_p1[0] - dir_x * extension, offset_p1[1] - dir_y * extension)
+        lejos_p2 = (offset_p2[0] + dir_x * extension, offset_p2[1] + dir_y * extension)
+        lejos_p2_interior = (lejos_p2[0] + normal_interior[0] * extension, lejos_p2[1] + normal_interior[1] * extension)
+        lejos_p1_interior = (lejos_p1[0] + normal_interior[0] * extension, lejos_p1[1] + normal_interior[1] * extension)
+        semiplano = Polygon([lejos_p1, lejos_p2, lejos_p2_interior, lejos_p1_interior])
+
+        resultado = resultado.intersection(semiplano)
+        if resultado.is_empty:
+            return Polygon()
+
+    if resultado.geom_type != "Polygon":
+        return Polygon()
+    return resultado
