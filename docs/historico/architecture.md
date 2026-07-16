@@ -3530,3 +3530,38 @@ generado es válido y ejecuta correctamente.
 
 12 tests nuevos. Suite: 442 unitarios, mypy/pyflakes/vulture limpios.
 Bundle Pyodide regenerado.
+
+## [ARCH:fondo-edificacion] Fondo de edificación, tercer ítem del lote
+
+A petición del usuario: "no existe apartado de fondo de edificación,
+tampoco está representado en el visor de la parcela" -- mismo
+concepto que ya había señalado el arquitecto consultado antes ("aunque
+tengas metros cuadrados de sobra, no puedes construir a más de 12 o
+15 metros de profundidad desde el vial").
+
+`Lot.fondo_edificacion_m`: profundidad máxima edificable medida desde
+el lindero de `street_side` hacia el interior -- se mide desde el
+lindero REAL de la parcela (antes de retranqueo), el convenio
+profesional habitual, no desde la línea ya retranqueada. Para
+`poligono_real` (parcela irregular), usa el lado del rectángulo
+envolvente en la dirección de `street_side` como referencia --
+aproximación simple documentada explícitamente, no sigue el contorno
+irregular exacto del lindero de calle real (eso requeriría el
+selector de lado de calle sobre el polígono real, un ítem aparte).
+
+Refactor limpio en el camino: `buildable_area`/`area_edificable_real`
+tenían varios puntos de retorno -- reestructurados para calcular el
+polígono primero y aplicar el recorte de fondo UNA sola vez al final
+(`_clip_fondo_edificacion`), en vez de repetir la llamada en cada
+punto de retorno (propenso a olvidar alguno).
+
+Verificado con datos reales en 4 orientaciones y combinado con
+retranqueo uniforme -- coincide exactamente con los bounds esperados
+a mano. Visor de Zona 0: línea discontinua terracota paralela al lado
+de calle, a la distancia del fondo edificable -- hallazgo real
+encontrado al verificar con `jsdom`: el campo no estaba en la lista
+de inputs que disparan el redibujado, corregido antes de dar la
+pieza por terminada.
+
+9 tests nuevos. Suite: 448 unitarios, pyflakes limpio. Bundle Pyodide
+regenerado.

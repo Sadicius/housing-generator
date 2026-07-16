@@ -839,3 +839,17 @@ def test_retranqueo_por_lado_reaches_generation_not_just_the_form():
     js = _read(JS_DIR / "06-pyodide.js")
     assert "retranqueo-lado-input" in js
     assert "retranqueo_por_lado=${retranqueoPorLadoLiteral}" in js
+
+
+def test_fondo_edificacion_field_and_preview_line_exist():
+    # a peticion del usuario: "no existe apartado de fondo de
+    # edificacion, tampoco esta representado en el visor de la
+    # parcela".
+    html = _read(HTML_PATH)
+    js_pyodide = _read(JS_DIR / "06-pyodide.js")
+    js_parcela = _read(JS_DIR / "00b-parcela.js")
+    assert 'id="gen-fondo-edificacion"' in html
+    assert "numOpcional('gen-fondo-edificacion')" in js_pyodide
+    assert "fondo_edificacion_m=${fondoEdificacionLiteral}" in js_pyodide
+    assert "function _lineaFondoEdificacion" in js_parcela
+    assert "'gen-fondo-edificacion'" in js_parcela  # dispara el redibujado

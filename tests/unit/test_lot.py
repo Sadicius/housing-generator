@@ -197,3 +197,39 @@ def test_empty_retranqueo_por_lado_does_not_change_existing_behavior():
     lot_nuevo = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0, retranqueo_por_lado={})
     lot_viejo = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0)
     assert lot_nuevo.buildable_area.polygon.equals(lot_viejo.buildable_area.polygon)
+
+
+def test_fondo_edificacion_clips_from_the_street_side_south():
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)), street_side="south", fondo_edificacion_m=10.0)
+    minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
+    assert (minx, miny, maxx, maxy) == pytest.approx((0.0, 0.0, 14.0, 10.0))
+
+
+def test_fondo_edificacion_combines_with_uniform_retranqueo():
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 14, 20)), street_side="south",
+        fondo_edificacion_m=10.0, retranqueo_m=1.0,
+    )
+    assert lot.buildable_area.polygon.bounds == pytest.approx((1.0, 1.0, 13.0, 10.0))
+
+
+def test_fondo_edificacion_respects_street_side_east():
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)), street_side="east", fondo_edificacion_m=8.0)
+    minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
+    assert (round(minx, 1), round(maxx, 1)) == (6.0, 14.0)
+
+
+def test_fondo_edificacion_none_does_not_change_existing_behavior():
+    lot_con_none = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)), fondo_edificacion_m=None)
+    lot_sin_campo = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)))
+    assert lot_con_none.buildable_area.polygon.equals(lot_sin_campo.buildable_area.polygon)
+
+
+def test_fondo_edificacion_applies_to_area_edificable_real_too():
+    poligono_real = _poligono_real_de_fixture()
+    lot_con_fondo = Lot(
+        boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real,
+        street_side="south", fondo_edificacion_m=8.0,
+    )
+    lot_sin_fondo = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="south")
+    assert lot_con_fondo.area_edificable_real.polygon.area < lot_sin_fondo.area_edificable_real.polygon.area

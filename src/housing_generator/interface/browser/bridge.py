@@ -114,6 +114,7 @@ def generar_edificio(
     retranqueo_m: Optional[float] = None,
     retranqueo_incremento_por_planta_m: Optional[float] = None,
     retranqueo_por_lado: Optional[dict] = None,
+    fondo_edificacion_m: Optional[float] = None,
     poligono_real_coords: Optional[list] = None,
     coeficiente_edificabilidad: Optional[float] = None,
     ocupacion_maxima_pct: Optional[float] = None,
@@ -196,6 +197,7 @@ def generar_edificio(
         street_side=street_side,
         poligono_real=poligono_real,
         clasificacion_suelo=clasificacion_valida,
+        fondo_edificacion_m=fondo_edificacion_m,
     )
 
     building = None

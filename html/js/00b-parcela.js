@@ -30,6 +30,7 @@ function leerParcelaForm(){
     ocupacionMaximaPct: num('gen-ocupacion-maxima'),
     alturaMaximaPlantas: num('gen-altura-maxima'),
     frenteMinimoM: num('gen-frente-minimo'),
+    fondoEdificacionM: num('gen-fondo-edificacion'),
   };
 }
 
@@ -81,6 +82,7 @@ function renderParcelaPreview(){
   }
 
   svgContent += _lineaFrente(datos, px, py);
+  svgContent += _lineaFondoEdificacion(datos, px, py);
   svg.innerHTML = svgContent;
 
   const superficieParcela = datos.anchoM * datos.fondoM;
@@ -126,6 +128,7 @@ function renderParcelaImportada(datos, svg, resumen){
   }
 
   svgContent += _lineaFrente(datos, px, py);
+  svgContent += _lineaFondoEdificacion(datos, px, py);
   svg.innerHTML = svgContent;
 
   const superficieAfeccion = (zonaAfeccion && zonaAfeccion.length > 0)
@@ -157,6 +160,21 @@ function _lineaFrente(datos, px, py){
     west: `M${px(0)},${py(0)} L${px(0)},${py(datos.fondoM)}`,
   }[datos.streetSide];
   return `<path d="${streetLine}" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round"/>`;
+}
+
+function _lineaFondoEdificacion(datos, px, py){
+  // linea discontinua paralela al lado de calle, a la distancia de
+  // fondo_edificacion_m -- a peticion del usuario ("tampoco esta
+  // representado en el visor"). Sin fondoEdificacionM, no dibuja nada.
+  if(datos.fondoEdificacionM === null || datos.fondoEdificacionM === undefined) return '';
+  const f = datos.fondoEdificacionM;
+  const linea = {
+    south: `M${px(0)},${py(f)} L${px(datos.anchoM)},${py(f)}`,
+    north: `M${px(0)},${py(datos.fondoM - f)} L${px(datos.anchoM)},${py(datos.fondoM - f)}`,
+    east: `M${px(datos.anchoM - f)},${py(0)} L${px(datos.anchoM - f)},${py(datos.fondoM)}`,
+    west: `M${px(f)},${py(0)} L${px(f)},${py(datos.fondoM)}`,
+  }[datos.streetSide];
+  return `<path d="${linea}" stroke="var(--terracota)" stroke-width="1.5" stroke-dasharray="6,4"/>`;
 }
 
 function _resumenHtml(datos, superficieParcela, superficieHuella, huellaColapsada, fuente){
@@ -257,7 +275,7 @@ async function reanalizarZonaAfeccionSiHayImportada(){
 function initParcelaPreview(){
   const ids = [
     'gen-lot-w', 'gen-lot-h', 'gen-street-side',
-    'gen-edificabilidad', 'gen-ocupacion-maxima', 'gen-altura-maxima', 'gen-frente-minimo',
+    'gen-edificabilidad', 'gen-ocupacion-maxima', 'gen-altura-maxima', 'gen-frente-minimo', 'gen-fondo-edificacion',
   ];
   ids.forEach(id => {
     const el = document.getElementById(id);

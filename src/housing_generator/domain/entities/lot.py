@@ -84,6 +84,21 @@ class Lot:
     saliente). Vacío (por defecto) = mismo comportamiento uniforme de
     siempre, sin ningún cambio. Ver [ARCH:retranqueo-variable].
 
+    `fondo_edificacion_m`: profundidad máxima edificable medida desde
+    el lindero de `street_side` (el vial) hacia el interior de la
+    parcela -- `None` = sin restricción de fondo. Hallazgo real del
+    usuario: "no existe apartado de fondo de edificación, tampoco
+    está representado en el visor" -- mismo concepto que ya había
+    señalado el arquitecto consultado antes ("aunque tengas metros
+    cuadrados de sobra, no puedes construir a más de 12 o 15 metros
+    de profundidad desde el vial"). Se mide desde el lindero real de
+    la parcela (antes de aplicar retranqueo), el convenio profesional
+    habitual. Para `poligono_real` (parcela irregular), se usa el
+    lado del rectángulo envolvente en la dirección de `street_side`
+    como referencia -- aproximación simple documentada, no sigue el
+    contorno irregular exacto del lindero de calle real. Ver
+    [ARCH:fondo-edificacion].
+
     Ver [ARCH:lot].
     """
     boundary: Boundary
@@ -99,6 +114,30 @@ class Lot:
     poligono_real: Optional[Polygon] = None
     clasificacion_suelo: FrozenSet[str] = frozenset()
     retranqueo_por_lado: dict = field(default_factory=dict)
+    fondo_edificacion_m: Optional[float] = None
+
+    def _clip_fondo_edificacion(self, poligono: Polygon, poligono_referencia: Polygon) -> Polygon:
+        """Recorta `poligono` para que no sobrepase `fondo_edificacion_m`
+        medido desde el lindero de `street_side` de `poligono_referencia`
+        (la parcela real, sin reducir por retranqueo -- el convenio
+        profesional habitual). Sin `fondo_edificacion_m`, no hace nada.
+        Ver [ARCH:fondo-edificacion]."""
+        if self.fondo_edificacion_m is None or self.fondo_edificacion_m <= 0:
+            return poligono
+        minx, miny, maxx, maxy = poligono_referencia.bounds
+        f = self.fondo_edificacion_m
+        if self.street_side == "south":
+            limite = box(minx - 1, miny, maxx + 1, miny + f)
+        elif self.street_side == "north":
+            limite = box(minx - 1, maxy - f, maxx + 1, maxy + 1)
+        elif self.street_side == "east":
+            limite = box(maxx - f, miny - 1, maxx + 1, maxy + 1)
+        else:  # west
+            limite = box(minx - 1, miny - 1, minx + f, maxy + 1)
+        recortado = poligono.intersection(limite)
+        if recortado.is_empty or recortado.geom_type != "Polygon":
+            return Polygon()
+        return recortado
 
     @property
     def area_edificable_real(self) -> Boundary:
@@ -110,21 +149,26 @@ class Lot:
         `poligono_real` (caso manual), coincide exactamente con
         `buildable_area`. Si `retranqueo_por_lado` tiene entradas, usa
         retranqueo variable por dirección cardinal en vez de uniforme.
-        Ver [ARCH:parcela-real], [ARCH:retranqueo-variable]."""
+        `fondo_edificacion_m`, si está presente, recorta el resultado
+        además. Ver [ARCH:parcela-real], [ARCH:retranqueo-variable],
+        [ARCH:fondo-edificacion]."""
         if self.poligono_real is None:
             return self.buildable_area
+
         if self.retranqueo_por_lado:
-            reducido_variable = retranqueo_variable_por_lado(
+            resultado = retranqueo_variable_por_lado(
                 self.poligono_real, self.retranqueo_por_lado, self.retranqueo_m or 0.0,
             )
-            return Boundary(polygon=reducido_variable)
-        r = self.retranqueo_m or 0.0
-        if r <= 0:
-            return Boundary(polygon=self.poligono_real)
-        reducido = self.poligono_real.buffer(-r)
-        if reducido.is_empty or reducido.geom_type != "Polygon":
-            return Boundary(polygon=Polygon())
-        return Boundary(polygon=reducido)
+        else:
+            r = self.retranqueo_m or 0.0
+            if r <= 0:
+                resultado = self.poligono_real
+            else:
+                reducido = self.poligono_real.buffer(-r)
+                resultado = reducido if not reducido.is_empty and reducido.geom_type == "Polygon" else Polygon()
+
+        resultado = self._clip_fondo_edificacion(resultado, self.poligono_real)
+        return Boundary(polygon=resultado)
 
     @property
     def frente_actual_m(self) -> float:
@@ -142,8 +186,9 @@ class Lot:
         """Área edificable real: parcela reducida por retranqueo,
         excepto en lados de medianera. Si `retranqueo_por_lado` tiene
         entradas, usa retranqueo variable por dirección cardinal en
-        vez del valor único `retranqueo_m`. Ver [ARCH:lot],
-        [ARCH:retranqueo-variable]."""
+        vez del valor único `retranqueo_m`. `fondo_edificacion_m`, si
+        está presente, recorta el resultado además. Ver [ARCH:lot],
+        [ARCH:retranqueo-variable], [ARCH:fondo-edificacion]."""
         if self.retranqueo_por_lado:
             # medianera siempre a retranqueo 0, sin importar lo que
             # digan retranqueo_m/retranqueo_por_lado para ese lado --
@@ -151,13 +196,15 @@ class Lot:
             por_lado_efectivo = dict(self.retranqueo_por_lado)
             for lado in self.medianera_sides:
                 por_lado_efectivo[lado] = 0.0
-            reducido_variable = retranqueo_variable_por_lado(
+            resultado = retranqueo_variable_por_lado(
                 self.boundary.polygon, por_lado_efectivo, self.retranqueo_m or 0.0,
             )
-            return Boundary(polygon=reducido_variable)
+            resultado = self._clip_fondo_edificacion(resultado, self.boundary.polygon)
+            return Boundary(polygon=resultado)
 
         if (self.retranqueo_m is None or self.retranqueo_m <= 0) and not self.medianera_sides:
-            return self.boundary
+            resultado = self._clip_fondo_edificacion(self.boundary.polygon, self.boundary.polygon)
+            return Boundary(polygon=resultado)
 
         minx, miny, maxx, maxy = self.boundary.polygon.bounds
         r = self.retranqueo_m or 0.0
@@ -169,7 +216,8 @@ class Lot:
         if new_minx >= new_maxx or new_miny >= new_maxy:
             # retranqueo excesivo: colapsa a vacio, no a rectangulo invertido
             return Boundary(polygon=Polygon())
-        return Boundary(polygon=box(new_minx, new_miny, new_maxx, new_maxy))
+        resultado = self._clip_fondo_edificacion(box(new_minx, new_miny, new_maxx, new_maxy), self.boundary.polygon)
+        return Boundary(polygon=resultado)
 
     def medianera_boundary_segments(self) -> List[LineString]:
         """Segmentos de linde en medianera (posición original de la
