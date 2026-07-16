@@ -13,11 +13,15 @@
 <body>
 <div class="wrap">
 <div class="titleblock">
-<div>
+<button class="titleblock-home" id="titleblock-home" title="Volver a Parcela">
 <div class="eyebrow">Herramienta de diseño residencial</div>
 <h1>housing_generator</h1>
-<div class="sub">De la parcela real a un plano generado y validado. Importa tu parcela desde el Catastro, define el programa de la vivienda, genera la distribución con un algoritmo real (árbol B*, Chang &amp; Chang 2000), y consulta en cada paso la normativa gallega aplicada (Decreto 29/2010, modificado por Decreto 128/2023).</div>
+</button>
+<div class="titleblock-nav">
+<a class="titleblock-nav-link" href="../docs/GUIA_USO.md" target="_blank" rel="noopener">Documentación</a>
+<a class="titleblock-nav-link" href="../docs/CONTINUIDAD.md" target="_blank" rel="noopener">Estado del proyecto</a>
 </div>
+<div class="sub">De la parcela real a un plano generado y validado. Importa tu parcela desde el Catastro, define el programa de la vivienda, genera la distribución con un algoritmo real (árbol B*, Chang &amp; Chang 2000), y consulta en cada paso la normativa gallega aplicada (Decreto 29/2010, modificado por Decreto 128/2023).</div>
 <div class="meta">
 <div><span>proyecto</span>housing_generator</div>
 <div><span>validadores</span>23</div>
@@ -46,6 +50,10 @@
 <label>Frente mínimo (m) <input id="gen-frente-minimo" min="0" step="0.5" type="number" placeholder="sin restricción"/></label>
 </div>
 <div class="parcela-preview-wrap"><svg class="parcela-preview" id="parcela-preview" viewBox="0 0 300 300"></svg><div class="parcela-resumen" id="parcela-resumen"></div></div>
+<div class="zona-confirmar-row">
+<button class="picker-btn primary" id="confirmar-parcela">Confirmar parcela y continuar a Diseño →</button>
+<span class="net-hint">Los datos de esta parcela ya se usan directamente al generar en Zona 1 -- este botón solo te lleva al siguiente paso.</span>
+</div>
 </div></div><div class="zona-panel" id="zona-diseno"><div class="flow-indicator"><button class="tab flow-step active" data-tab="section"><span class="step-num">1</span>Programa y generación</button><span class="flow-arrow">→</span><button class="tab flow-step" data-tab="plano"><span class="step-num">2</span>Resultado (visor de plano)</button></div><div class="panel active" id="panel-section">
 <button class="nota-indicador" data-nota="nota-ancho-practico">ⓘ ancho libre práctico (1.20m)</button>
 <div class="auto-config-box">

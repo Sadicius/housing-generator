@@ -750,3 +750,24 @@ def test_zona_done_marker_activates_after_real_success_not_just_css():
     js_pyodide = _read(JS_DIR / "06-pyodide.js")
     assert "zonaParcela.classList.add('done')" in js_parcela
     assert "zonaDiseno.classList.add('done')" in js_pyodide
+
+
+def test_header_has_real_navigation_not_just_a_fixed_sign():
+    # a peticion del usuario: "ni puedo volver al inicio, ni puedo ir a
+    # la parte de documentacion... unicamente tenemos este cartel fijo".
+    html = _read(HTML_PATH)
+    js = _read(JS_DIR / "09-init.js")
+    assert 'id="titleblock-home"' in html
+    assert 'href="../docs/GUIA_USO.md"' in html
+    assert "getElementById('titleblock-home')" in js
+    assert "dataset.zona" in js or "data-zona=\"parcela\"" in js
+
+
+def test_confirmar_parcela_button_connects_zona_0_to_zona_1():
+    # a peticion del usuario: "necesitaria un boton de conexion entre
+    # la zona 0 y la zona 1 para facilitar la conexion de los datos".
+    html = _read(HTML_PATH)
+    js = _read(JS_DIR / "09-init.js")
+    assert 'id="confirmar-parcela"' in html
+    assert "getElementById('confirmar-parcela')" in js
+    assert "data-zona=\"diseno\"" in js

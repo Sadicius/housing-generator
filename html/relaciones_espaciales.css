@@ -85,8 +85,17 @@ body{min-height:100vh;}
   border-radius:8px;
   display:grid;
   grid-template-columns: 1fr auto;
-  padding:28px 32px;
+  grid-template-areas:
+    "home nav"
+    "sub  meta";
+  column-gap:18px;
+  padding:24px 32px 28px;
   margin-bottom:24px;
+}
+.titleblock-home{
+  grid-area:home;
+  display:block; text-align:left; background:none; border:none; padding:0; margin:0;
+  cursor:pointer; width:fit-content;
 }
 .titleblock .eyebrow{
   font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:.12em;
@@ -95,13 +104,20 @@ body{min-height:100vh;}
 .titleblock h1{
   font-family:'Space Grotesk',sans-serif;
   font-size:28px; font-weight:600; letter-spacing:-.01em;
-  margin:0 0 10px; color:var(--ink); line-height:1.15;
+  margin:0; color:var(--ink); line-height:1.15;
 }
-.titleblock .sub{color:var(--ink-dim); font-size:14px; max-width:640px; line-height:1.6;}
+.titleblock-nav{grid-area:nav; display:flex; align-items:start; justify-content:flex-end; gap:18px; padding-top:2px;}
+.titleblock-nav-link{
+  font-family:'Space Mono',monospace; font-size:11px; color:var(--ink-faint);
+  text-decoration:none; border-bottom:1px solid transparent; transition:color .12s, border-color .12s;
+}
+.titleblock-nav-link:hover{color:var(--terracota); border-bottom-color:var(--terracota);}
+.titleblock .sub{grid-area:sub; color:var(--ink-dim); font-size:14px; max-width:640px; line-height:1.6; margin-top:14px;}
 .titleblock .meta{
+  grid-area:meta;
   font-family:'Space Mono',monospace;
   font-size:11px; color:var(--ink-faint); text-align:right; line-height:1.9;
-  border-left:1px solid var(--line); padding-left:18px;
+  border-left:1px solid var(--line); padding-left:18px; margin-top:14px;
 }
 .titleblock .meta div span{color:var(--ink-faint); margin-right:6px;}
 .titleblock .meta div b, .titleblock .meta div a{color:var(--ink);}
@@ -405,6 +421,7 @@ table.matrix th.dim{opacity:.3;}
 .parcela-import-status{margin-top:8px; font-family:'Archivo',sans-serif; font-size:12px; min-height:1.2em;}
 .parcela-import-status.ok{color:var(--ok);}
 .parcela-import-status.error{color:var(--bad);}
+.zona-confirmar-row{display:flex; align-items:center; gap:14px; margin-top:20px; padding-top:18px; border-top:1px solid var(--line); flex-wrap:wrap;}
 .parcela-fuente-tag{
   display:inline-block; padding:2px 8px; border-radius:5px; font-size:10px;
   font-family:'Space Mono',monospace; margin-left:8px; vertical-align:middle;

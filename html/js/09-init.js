@@ -50,6 +50,33 @@ document.querySelectorAll('.zona-btn').forEach(btn => {
   });
 });
 
+// boton "volver al inicio" en la cabecera -- a peticion del usuario
+// ("ni puedo volver al inicio... unicamente tenemos este cartel fijo").
+// Reutiliza el mismo mecanismo real de cambio de zona, no una copia
+// paralela de la logica.
+const tituloHome = document.getElementById('titleblock-home');
+if(tituloHome){
+  tituloHome.addEventListener('click', () => {
+    document.querySelector('[data-zona="parcela"]').dispatchEvent(new Event('click', {bubbles:true}));
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+}
+
+// boton "confirmar parcela y continuar a Diseño" -- a peticion del
+// usuario ("necesitaria un boton de conexion entre la zona 0 y la
+// zona 1 para facilitar la conexion de los datos"). Los campos ya
+// se comparten de verdad entre zonas (mismos id, leidos directamente
+// por 06-pyodide.js al generar) -- este boton es solo navegacion +
+// marca de progreso, no mueve datos por separado.
+const confirmarParcelaBtn = document.getElementById('confirmar-parcela');
+if(confirmarParcelaBtn){
+  confirmarParcelaBtn.addEventListener('click', () => {
+    document.querySelector('[data-zona="parcela"]').classList.add('done');
+    document.querySelector('[data-zona="diseno"]').dispatchEvent(new Event('click', {bubbles:true}));
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+}
+
 document.querySelectorAll('.view-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));

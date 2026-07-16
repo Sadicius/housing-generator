@@ -3349,3 +3349,48 @@ real con éxito -- verificado con `jsdom`, incluido el caso donde no
 hay estancias seleccionadas (no debe marcarse, y no se marca).
 
 4 tests nuevos de protección. Suite: 421 unitarios, pyflakes limpio.
+
+## Navegación real en la cabecera + botón de conexión Zona 0 → Zona 1
+
+A petición del usuario, tras compartir capturas reales del navegador
+por primera vez (confirman que el tercer rediseño sí se aplica como
+esperado). Dos hallazgos concretos atacados de este lote más grande
+de feedback:
+
+- **Cabecera sin función real**: "ni puedo volver al inicio, ni puedo
+  ir a la parte de documentación... únicamente tenemos este cartel
+  fijo". `titleblock` rediseñado con grid de áreas explícitas
+  (home/nav/sub/meta) -- el título es ahora un botón real que vuelve
+  a Zona 0 (reutiliza el mismo mecanismo de cambio de zona, no una
+  copia paralela), más enlaces reales a `GUIA_USO.md` y
+  `CONTINUIDAD.md` (rutas relativas verificadas, no rotas).
+- **Sin conexión entre Zona 0 y Zona 1**: pedido explícitamente antes
+  y de nuevo en este mensaje. Botón "Confirmar parcela y continuar a
+  Diseño" añadido al final de Zona 0 -- los campos de parcela ya se
+  comparten de verdad entre zonas (mismos id, leídos directamente por
+  `06-pyodide.js` al generar), así que el botón es solo navegación +
+  marca de progreso, no mueve datos por separado.
+
+Verificado con `jsdom`: volver al inicio desde cualquier zona, y
+confirmar parcela navega a Diseño y marca Zona 0 como completada.
+
+2 tests nuevos. Suite: 423 unitarios, pyflakes limpio.
+
+### Pendiente, del mismo lote de feedback (mayor alcance, sin empezar)
+
+- El polígono en la vista previa de Zona 0 aparece rotado (para
+  alinear el OBB al generador) -- pierde la orientación real respecto
+  al norte, confuso para interpretar. Necesita separar la versión
+  alineada (para el generador) de una versión con orientación real
+  (solo para mostrar).
+- Layout de dos columnas en Zona 0 (plano más grande a un lado,
+  formulario/datos al otro) -- pedido explícitamente.
+- Retranqueo único no permite valores distintos por lindero/vial --
+  mismo hallazgo que ya señaló el arquitecto consultado antes.
+- Selector de lado de calle limitado a N/S/E/O -- una parcela
+  irregular podría necesitar marcar directamente qué segmento del
+  polígono real es el vial.
+- Sin apartado de "fondo de edificación" (profundidad máxima desde
+  vial), ni representado en el visor.
+- Sin selección de tipos de suelo/clasificación urbanística (podría
+  haber más de uno afectando la misma parcela).
