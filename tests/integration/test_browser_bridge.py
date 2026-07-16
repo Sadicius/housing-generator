@@ -1,3 +1,5 @@
+from pathlib import Path
+import pytest
 from housing_generator.interface.browser.bridge import generar_edificio
 
 
@@ -171,3 +173,37 @@ def test_experimental_btree_flag_reaches_the_dashboard():
     assert result["ok"] is True, result.get("error")
     for floor in result["floors"].values():
         assert "vacio_shapes" in floor["metadata"]  # formato del arbol B*, no vacio_rings
+
+
+def test_analizar_parcela_catastro_with_real_gml_from_the_user(tmp_path):
+    # datos reales aportados por el usuario, mismo fixture que
+    # test_catastro_gml_importer.py. Verifica el puente completo, no
+    # solo el parser aislado -- incluida la serializacion a JSON, que
+    # es por donde viaja de verdad hacia el dashboard via Pyodide.
+    import json
+    from housing_generator.interface.browser.bridge import analizar_parcela_catastro
+
+    fixture_path = Path(__file__).parents[1] / "fixtures" / "catastro" / "parcela_sin_edificar.gml"
+    contenido = fixture_path.read_text(encoding="utf-8")
+
+    resultado = analizar_parcela_catastro(contenido)
+
+    assert resultado["ok"] is True
+    assert resultado["referencia_catastral"] == "4278011NG2947N"
+    assert resultado["area_declarada_m2"] == pytest.approx(349.0)
+    assert resultado["area_calculada_m2"] == pytest.approx(349.2, abs=0.5)
+    assert resultado["discrepancia_area_pct"] < 1.0
+    assert resultado["ancho_m"] > 0 and resultado["fondo_m"] > 0
+    assert len(resultado["poligono_real"]) >= 4
+    assert len(resultado["rectangulo_trabajo"]) == 5  # 4 esquinas + cierre
+
+    # serializa a JSON sin problemas -- es como viaja de verdad al dashboard
+    json.dumps(resultado)
+
+
+def test_analizar_parcela_catastro_rejects_invalid_content_gracefully():
+    from housing_generator.interface.browser.bridge import analizar_parcela_catastro
+
+    resultado = analizar_parcela_catastro("esto no es un GML valido")
+    assert resultado["ok"] is False
+    assert "error" in resultado

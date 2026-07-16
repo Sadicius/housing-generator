@@ -3,6 +3,7 @@ generador real (este mismo paquete Python), pensado para ejecutarse
 dentro de Pyodide -- no un servidor aparte. Solo cruza datos planos
 (dict/JSON), nunca objetos de dominio. Ver [ARCH:browser-bridge].
 """
+import math
 from typing import Optional
 from shapely.geometry import box
 
@@ -12,6 +13,52 @@ from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.exceptions import LayoutGenerationError
 from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
 from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
+from housing_generator.infrastructure.persistence.catastro_gml_importer import importar_parcela_gml
+
+
+def analizar_parcela_catastro(gml_content: str) -> dict:
+    """Analiza un GML de parcela catastral (Sede Electrónica del
+    Catastro, formato INSPIRE CadastralParcels) y devuelve los datos
+    que la Zona 0 del dashboard necesita para la vista previa: el
+    polígono real, el rectángulo de trabajo (OBB) y sus dimensiones
+    (para rellenar `gen-lot-w`/`gen-lot-h` automáticamente).
+
+    El generador sigue necesitando un rectángulo simple, sin rotación
+    -- por eso solo se extraen el ANCHO y el FONDO del rectángulo de
+    trabajo, no su orientación real respecto a la parcela. La
+    orientación SÍ se usa para dibujar la vista previa (polígono real
+    + rectángulo superpuesto, ambos en las mismas coordenadas locales).
+
+    Devuelve SIEMPRE un dict:
+      {"ok": True, "referencia_catastral": ..., "area_declarada_m2": ...,
+       "area_calculada_m2": ..., "discrepancia_area_pct": ...,
+       "poligono_real": [[x,y],...], "rectangulo_trabajo": [[x,y],...],
+       "ancho_m": ..., "fondo_m": ...}
+    o, si el archivo no es válido:
+      {"ok": False, "error": "mensaje legible"}
+
+    Ver [ARCH:catastro-gml-importer].
+    """
+    try:
+        resultado = importar_parcela_gml(gml_content)
+    except ValueError as e:
+        return {"ok": False, "error": str(e)}
+
+    coords_rect = list(resultado.rectangulo_trabajo.exterior.coords)[:-1]  # sin el punto de cierre repetido
+    ancho_m = math.hypot(coords_rect[1][0] - coords_rect[0][0], coords_rect[1][1] - coords_rect[0][1])
+    fondo_m = math.hypot(coords_rect[2][0] - coords_rect[1][0], coords_rect[2][1] - coords_rect[1][1])
+
+    return {
+        "ok": True,
+        "referencia_catastral": resultado.referencia_catastral,
+        "area_declarada_m2": resultado.area_declarada_m2,
+        "area_calculada_m2": round(resultado.area_calculada_m2, 1),
+        "discrepancia_area_pct": round(resultado.discrepancia_area_pct, 2),
+        "poligono_real": [list(c) for c in resultado.poligono.exterior.coords],
+        "rectangulo_trabajo": [list(c) for c in resultado.rectangulo_trabajo.exterior.coords],
+        "ancho_m": round(ancho_m, 2),
+        "fondo_m": round(fondo_m, 2),
+    }
 
 
 def generar_edificio(

@@ -2909,3 +2909,29 @@ archivos.
 Pendiente dentro de la Fase A: soporte DXF (formato alternativo),
 conexión al bridge.py/CLI, y el lado JS/dashboard (polígono real +
 OBB + zona de afección en la vista previa de Zona 0).
+
+## [ARCH:catastro-gml-importer] Fase A, segunda pieza: conexión al puente
+
+A petición del usuario, continuando la Fase A (DXF aparcado por
+ahora, según lo pedido). `analizar_parcela_catastro()` nuevo en
+`bridge.py`: recibe el contenido del GML, devuelve un dict JSON-listo
+con referencia catastral, área declarada/calculada/discrepancia,
+polígono real y rectángulo de trabajo (ambos como listas de
+coordenadas locales), y ancho/fondo del rectángulo de trabajo (para
+rellenar `gen-lot-w`/`gen-lot-h` automáticamente -- el generador
+sigue necesitando un rectángulo simple sin rotación, la orientación
+real solo se usa para dibujar la vista previa).
+
+Verificado con el mismo archivo real del usuario, incluida la
+serialización a JSON completa (es como viaja de verdad hacia el
+dashboard vía Pyodide). Whitelist de código muerto actualizado:
+`importar_parcela_gml` ya no necesita estar (conectado de verdad
+ahora vía el puente), `analizar_parcela_catastro` añadido
+temporalmente hasta conectar el lado JS.
+
+Suite: 432 unitarios + 2 integración nuevos, mypy y pyflakes limpios.
+Bundle Pyodide regenerado.
+
+Pendiente dentro de la Fase A: el lado JS/dashboard (subir/arrastrar
+el GML, mostrar polígono real + OBB + zona de afección en la vista
+previa de Zona 0).
