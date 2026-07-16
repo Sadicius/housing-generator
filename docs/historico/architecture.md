@@ -2988,3 +2988,51 @@ Pyodide regenerado.
 
 Pendiente dentro de la Fase A: soporte DXF (aparcado a petición del
 usuario). El resto de la Fase A está funcionalmente completo.
+
+## [ARCH:parcela-real] Fase 0: generación dentro del polígono real, campo nuevo + validador
+
+A petición del usuario, tras confirmar con captura real del navegador
+un hallazgo grave: `generar_edificio()` solo recibía `lot_width_m`/
+`lot_height_m` -- el generador SIEMPRE trabajaba sobre el rectángulo
+de trabajo (OBB), nunca sobre el polígono real importado, aunque el
+resumen de la Zona 0 mostrara números correctos del polígono real.
+Consecuencia real: una vivienda generada podía colocar estancias en
+las esquinas donde el rectángulo sobresale del polígono real (hasta
+49m² en un caso, confirmado en la investigación) -- técnicamente
+fuera del linde legal.
+
+Investigado antes de implementar (GFLAN, diciembre 2025; optimización
+genética + programación por restricciones): la técnica real y viable
+NO es reescribir el algoritmo de empaquetado para trabajar en un
+polígono irregular desde cero -- es seguir generando con rectángulos
+(como siempre) y AÑADIR una restricción dura que valide cada estancia
+contra el contorno real, rechazando/reintentando si sobresale. Reutiliza
+el 95% de la infraestructura ya existente (búsqueda, bloqueo
+progresivo, reintento), en vez de un generador nuevo.
+
+### Cambios reales
+
+- **`Lot.poligono_real`**: campo nuevo opcional, el polígono
+  irregular real (coordenadas locales, mismo sistema que
+  `boundary.polygon`). `None` en el caso manual de siempre.
+- **`Lot.area_edificable_real`**: si hay `poligono_real`, es ESE
+  polígono reducido por retranqueo vía `.buffer(-r)` (preciso para
+  forma irregular) -- NO el rectángulo `box()` de `buildable_area`.
+  Sin `poligono_real`, coincide exactamente con `buildable_area`
+  (verificado con test explícito, ningún cambio de comportamiento
+  para el caso manual).
+- **`ParcelaRealValidator`** (nuevo, conectado a
+  `build_per_floor_validators` en `container.py`): restricción dura,
+  cada estancia debe caer dentro de `poligono_real`. Si es `None`, no
+  hace nada. Verificado con el caso exacto que motivó todo esto: una
+  estancia en la esquina donde el rectángulo envolvente sobresale del
+  polígono real -- correctamente rechazada.
+
+Suite: 446 unitarios (10 nuevos: 5 en `test_lot.py`, 5 en
+`test_parcela_real_validator.py`), mypy y pyflakes limpios en 89
+archivos. Bundle Pyodide regenerado.
+
+Pendiente dentro de esta fase: conectar `bridge.py`/
+`GenerateBuildingUseCase` para que reciban y usen `poligono_real` de
+verdad (ahora mismo el campo existe y el validador lo comprobaría,
+pero nadie se lo pasa todavía desde la Zona 0 real).

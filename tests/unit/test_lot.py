@@ -80,3 +80,60 @@ def test_medianera_without_retranqueo_still_removes_that_side():
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 20, 15)), medianera_sides=frozenset({"north"}))
     assert lot.buildable_area.polygon.equals(lot.boundary.polygon)  # sin retranqueo, coincide igual
     assert len(lot.medianera_boundary_segments()) == 1
+
+
+def _poligono_real_de_fixture():
+    # misma parcela real usada en test_catastro_gml_importer.py --
+    # 349.2m2, genuinamente irregular (confirmado en la investigacion:
+    # solo 53.6% de su rectangulo alineado a ejes).
+    from pathlib import Path
+    from housing_generator.infrastructure.persistence.catastro_gml_importer import importar_parcela_gml
+    fixture = Path(__file__).parents[1] / "fixtures" / "catastro" / "parcela_sin_edificar.gml"
+    resultado = importar_parcela_gml(fixture.read_text(encoding="utf-8"))
+    return resultado.poligono
+
+
+def test_area_edificable_real_without_poligono_real_matches_buildable_area():
+    # caso manual de siempre -- sin poligono_real, coincide exactamente
+    # con buildable_area, ningun cambio de comportamiento.
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0)
+    assert lot.area_edificable_real.polygon.equals(lot.buildable_area.polygon)
+
+
+def test_area_edificable_real_uses_the_real_polygon_not_the_bounding_box():
+    poligono_real = _poligono_real_de_fixture()
+    minx, miny, maxx, maxy = poligono_real.bounds
+    lot = Lot(boundary=Boundary(polygon=box(minx, miny, maxx, maxy)), poligono_real=poligono_real)
+
+    # sin retranqueo: coincide con el poligono real (349.2m2), NO con
+    # el rectangulo envolvente (que seria mayor)
+    assert lot.area_edificable_real.polygon.area == pytest.approx(poligono_real.area)
+    assert lot.area_edificable_real.polygon.area < box(minx, miny, maxx, maxy).area
+
+
+def test_area_edificable_real_applies_retranqueo_via_buffer_on_real_polygon():
+    poligono_real = _poligono_real_de_fixture()
+    lot = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=3.0)
+
+    area_reducida = lot.area_edificable_real.polygon.area
+    assert area_reducida < poligono_real.area  # se redujo de verdad
+    assert area_reducida == pytest.approx(154.0, abs=5.0)  # verificado a mano en la investigacion
+
+
+def test_area_edificable_real_collapses_gracefully_on_excessive_retranqueo():
+    poligono_real = _poligono_real_de_fixture()
+    lot = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=15.0)
+
+    assert lot.area_edificable_real.polygon.is_empty
+
+
+def test_area_edificable_real_stays_within_the_true_legal_boundary():
+    # propiedad de seguridad central de toda esta pieza: el area
+    # edificable real NUNCA debe salirse del poligono real, a
+    # diferencia del rectangulo de trabajo (que si puede sobresalir,
+    # confirmado en la investigacion -- hasta 49m2 en un caso real).
+    poligono_real = _poligono_real_de_fixture()
+    lot = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=2.0)
+
+    interseccion = lot.area_edificable_real.polygon.intersection(poligono_real)
+    assert interseccion.area == pytest.approx(lot.area_edificable_real.polygon.area, abs=1e-6)

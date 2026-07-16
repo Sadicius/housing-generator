@@ -33,6 +33,16 @@ class Lot:
     `altura_maxima_plantas`: número máximo de plantas sobre rasante.
     `frente_minimo_m`: ancho mínimo de fachada al vial (`street_side`).
 
+    `poligono_real`: polígono IRREGULAR real de la parcela (mismo
+    sistema de coordenadas locales que `boundary.polygon`), cuando
+    procede de una importación real (Catastro) -- `None` en el caso
+    manual de siempre, donde `boundary.polygon` ya ES la parcela (un
+    rectángulo). Investigado con 2 parcelas reales de Galicia antes de
+    añadirlo: el rectángulo de trabajo (`boundary`) puede sobresalir
+    del polígono real hasta un 12-22% en las esquinas -- generar
+    dentro del rectángulo sin más podría colocar estancias fuera del
+    linde legal real. Ver [ARCH:parcela-real].
+
     Ver [ARCH:lot].
     """
     boundary: Boundary
@@ -45,6 +55,26 @@ class Lot:
     ocupacion_maxima_pct: Optional[float] = None
     altura_maxima_plantas: Optional[int] = None
     frente_minimo_m: Optional[float] = None
+    poligono_real: Optional[Polygon] = None
+
+    @property
+    def area_edificable_real(self) -> Boundary:
+        """Área edificable de verdad: si hay `poligono_real`
+        (importado), es ESE polígono reducido por retranqueo vía
+        `.buffer(-r)` (preciso para forma irregular, respeta los
+        lindes reales) -- NO el rectángulo `box()` de `buildable_area`,
+        que puede sobresalir del polígono real. Si no hay
+        `poligono_real` (caso manual), coincide exactamente con
+        `buildable_area`. Ver [ARCH:parcela-real]."""
+        if self.poligono_real is None:
+            return self.buildable_area
+        r = self.retranqueo_m or 0.0
+        if r <= 0:
+            return Boundary(polygon=self.poligono_real)
+        reducido = self.poligono_real.buffer(-r)
+        if reducido.is_empty or reducido.geom_type != "Polygon":
+            return Boundary(polygon=Polygon())
+        return Boundary(polygon=reducido)
 
     @property
     def frente_actual_m(self) -> float:

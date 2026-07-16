@@ -16,6 +16,9 @@ from housing_generator.infrastructure.algorithms.layout_generation.btree_layout_
 from housing_generator.infrastructure.algorithms.constraints.adjacency_validator import (
     AdjacencyConstraintValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.parcela_real_validator import (
+    ParcelaRealValidator,
+)
 from housing_generator.infrastructure.algorithms.constraints.composite_constraint_validator import (
     CompositeConstraintValidator,
 )
@@ -114,6 +117,7 @@ def build_per_floor_validators(
     """
     return [
         AdjacencyConstraintValidator(adjacency_requirements),
+        ParcelaRealValidator(),
         build_wet_core_validator(graph_builder),
         build_day_zone_grouping_validator(graph_builder),
         build_night_zone_grouping_validator(graph_builder),
