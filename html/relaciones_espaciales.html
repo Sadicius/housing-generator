@@ -28,6 +28,13 @@
 
 <button class="nota-indicador" data-nota="nota-relaciones">ⓘ nota de alcance</button><div class="zonas-bar"><button class="zona-btn active" data-zona="parcela"><span class="zona-num">ZONA 0</span>Parcela<span class="zona-desc">Datos de la parcela y viabilidad urbanística</span></button><button class="zona-btn" data-zona="diseno"><span class="zona-num">ZONA 1</span>Diseño<span class="zona-desc">Configurar y generar tu vivienda</span></button><button class="zona-btn" data-zona="consulta"><span class="zona-num">ZONA 2</span>Consulta<span class="zona-desc">Referencia normativa y de materiales</span></button><button class="zona-btn" data-zona="planificacion"><span class="zona-num">ZONA 3</span>Planificación<span class="zona-desc">Cronograma de ejecución de obra</span></button></div><div class="zona-panel active" id="zona-parcela"><div class="panel active" id="panel-parcela">
 <button class="nota-indicador" data-nota="nota-parcela">ⓘ nota de alcance</button>
+<div class="parcela-import">
+<label class="parcela-import-drop" id="parcela-drop-zone" for="parcela-gml-input">
+<input accept=".gml,.xml" id="parcela-gml-input" style="display:none" type="file"/>
+<span>📎 Arrastra o selecciona un GML de parcela catastral (Sede Electrónica del Catastro)</span>
+</label>
+<div class="parcela-import-status" id="parcela-import-status"></div>
+</div>
 <div class="parcela-form">
 <label>Parcela (m) <input id="gen-lot-w" min="4" step="0.5" type="number" value="14"/> × <input id="gen-lot-h" min="4" step="0.5" type="number" value="16"/></label>
 <label>Lado de calle <select id="gen-street-side"><option value="south" selected="">Sur</option><option value="north">Norte</option><option value="east">Este</option><option value="west">Oeste</option></select></label>

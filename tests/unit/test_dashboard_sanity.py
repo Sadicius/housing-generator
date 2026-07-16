@@ -572,3 +572,49 @@ def test_zona_parcela_preview_uses_the_same_null_safe_pattern_as_retranqueo():
     assert "ocupacionMaximaLiteral" in js
     assert "alturaMaximaLiteral" in js
     assert "frenteMinimoLiteral" in js
+
+
+def test_catastro_import_controls_exist_with_correct_ids():
+    # Fase A de importacion de Catastro, a peticion del usuario. Verifica
+    # que los controles de importacion existen con el id exacto que
+    # 00b-parcela.js espera.
+    html = _read(HTML_PATH)
+    assert 'id="parcela-drop-zone"' in html
+    assert 'id="parcela-gml-input"' in html
+    assert 'id="parcela-import-status"' in html
+    assert 'accept=".gml,.xml"' in html
+
+
+def test_catastro_import_js_is_loaded_and_wired_to_the_bridge():
+    js_parcela = _read(JS_DIR / "00b-parcela.js")
+    assert "function manejarArchivoCatastro" in js_parcela
+    assert "function renderParcelaImportada" in js_parcela
+    assert "PARCELA_IMPORTADA" in js_parcela
+
+    # eslabon real: el archivo llega hasta analizarParcelaCatastroReal,
+    # no solo se lee y se descarta
+    assert "analizarParcelaCatastroReal(contenido" in js_parcela
+
+    # eslabon real: la funcion existe en 06-pyodide.js y llega hasta
+    # Python de verdad (mismo patron que generarEdificioReal)
+    js_pyodide = _read(JS_DIR / "06-pyodide.js")
+    assert "async function analizarParcelaCatastroReal" in js_pyodide
+    assert "analizar_parcela_catastro(gml_content_js" in js_pyodide
+
+
+def test_catastro_import_retranqueo_uses_the_same_null_safe_pattern():
+    # mismo patron anti-JsNull ya probado (bug real encontrado en el
+    # navegador) aplicado tambien aqui -- retranqueoM puede ser null,
+    # se construye como literal Python directo, no via variable global.
+    js = _read(JS_DIR / "06-pyodide.js")
+    assert "retranqueoLiteral" in js
+    assert "retranqueo_m=${retranqueoLiteral}" in js
+
+
+def test_zona_afeccion_recalculates_on_retranqueo_change_after_import():
+    # hallazgo real de diseno: cambiar el retranqueo DESPUES de
+    # importar debe recalcular la zona de afeccion de verdad (via
+    # Pyodide), no quedarse con el valor de la primera importacion.
+    js = _read(JS_DIR / "00b-parcela.js")
+    assert "function reanalizarZonaAfeccionSiHayImportada" in js
+    assert "reanalizarZonaAfeccionSiHayImportada()" in js

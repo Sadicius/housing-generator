@@ -16,7 +16,7 @@ from housing_generator.infrastructure.persistence.seleccion_plantas_importer imp
 from housing_generator.infrastructure.persistence.catastro_gml_importer import importar_parcela_gml
 
 
-def analizar_parcela_catastro(gml_content: str) -> dict:
+def analizar_parcela_catastro(gml_content: str, retranqueo_m: Optional[float] = None) -> dict:
     """Analiza un GML de parcela catastral (Sede Electrónica del
     Catastro, formato INSPIRE CadastralParcels) y devuelve los datos
     que la Zona 0 del dashboard necesita para la vista previa: el
@@ -29,11 +29,20 @@ def analizar_parcela_catastro(gml_content: str) -> dict:
     orientación SÍ se usa para dibujar la vista previa (polígono real
     + rectángulo superpuesto, ambos en las mismas coordenadas locales).
 
+    `retranqueo_m` (opcional): si se da, calcula también la "zona de
+    afección" -- el polígono real reducido por retranqueo mediante
+    `.buffer(-retranqueo_m)` de shapely, no el rectángulo simple. Un
+    recorte de polígono correcto es genuinamente difícil de hacer bien
+    en JS puro (por eso se reutiliza Pyodide/shapely, que ya está
+    cargado, en vez de añadir una librería de geometría nueva al
+    dashboard). Si el retranqueo colapsa el polígono a un área vacía,
+    `zona_afeccion` es una lista vacía, no un error.
+
     Devuelve SIEMPRE un dict:
       {"ok": True, "referencia_catastral": ..., "area_declarada_m2": ...,
        "area_calculada_m2": ..., "discrepancia_area_pct": ...,
        "poligono_real": [[x,y],...], "rectangulo_trabajo": [[x,y],...],
-       "ancho_m": ..., "fondo_m": ...}
+       "ancho_m": ..., "fondo_m": ..., "zona_afeccion": [[x,y],...] o None}
     o, si el archivo no es válido:
       {"ok": False, "error": "mensaje legible"}
 
@@ -48,6 +57,14 @@ def analizar_parcela_catastro(gml_content: str) -> dict:
     ancho_m = math.hypot(coords_rect[1][0] - coords_rect[0][0], coords_rect[1][1] - coords_rect[0][1])
     fondo_m = math.hypot(coords_rect[2][0] - coords_rect[1][0], coords_rect[2][1] - coords_rect[1][1])
 
+    zona_afeccion = None
+    if retranqueo_m is not None and retranqueo_m > 0:
+        afeccion_poly = resultado.poligono.buffer(-retranqueo_m)
+        if not afeccion_poly.is_empty and afeccion_poly.geom_type == "Polygon":
+            zona_afeccion = [list(c) for c in afeccion_poly.exterior.coords]
+        else:
+            zona_afeccion = []  # retranqueo excesivo, colapsa a vacio -- no es un error
+
     return {
         "ok": True,
         "referencia_catastral": resultado.referencia_catastral,
@@ -58,6 +75,7 @@ def analizar_parcela_catastro(gml_content: str) -> dict:
         "rectangulo_trabajo": [list(c) for c in resultado.rectangulo_trabajo.exterior.coords],
         "ancho_m": round(ancho_m, 2),
         "fondo_m": round(fondo_m, 2),
+        "zona_afeccion": zona_afeccion,
     }
 
 

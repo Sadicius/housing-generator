@@ -40,13 +40,4 @@ INDIFFERENT  # unused variable (src/housing_generator/domain/enums.py:43)
 # bridge.py, invocada por nombre desde py_bundle.js) -- invisible para
 # el analisis estatico de Python, pero es el puente real en uso.
 generar_edificio  # unused function (src/housing_generator/interface/browser/bridge.py:17)
-
-# Fase A de importacion de Catastro, en construccion -- puente real
-# (interface/browser/bridge.py:analizar_parcela_catastro), con tests
-# propios (tests/integration/test_browser_bridge.py), todavia no
-# conectado al lado JS del dashboard (falta esa pieza). El parser
-# subyacente (importar_parcela_gml) ya esta conectado de verdad --
-# entradas antiguas eliminadas del whitelist, ya no hacen falta. Ver
-# docs/CONTINUIDAD.md, entrada "Importacion de parcela real desde
-# Catastro (Fase A)".
-analizar_parcela_catastro  # unused function (src/housing_generator/interface/browser/bridge.py:19)
+analizar_parcela_catastro  # unused function (src/housing_generator/interface/browser/bridge.py:19) -- Fase A de importacion de Catastro, mismo patron: llamada dinamicamente desde JS (00b-parcela.js) via Pyodide

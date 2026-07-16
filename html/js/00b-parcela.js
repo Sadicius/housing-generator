@@ -5,6 +5,16 @@
 // esperar una llamada a Python para algo que es geometria simple de
 // rectangulos. A peticion del usuario: "estaria bien poder ver la
 // huella resultante antes de ir al programa".
+//
+// Fase A (importacion de Catastro): cuando hay una parcela importada
+// (GML real), el dibujo cambia -- poligono real + rectangulo de
+// trabajo (OBB) superpuesto + zona de afeccion calculada con
+// shapely.buffer() via Pyodide (un recorte de poligono correcto es
+// dificil de hacer bien en JS puro, se reutiliza la infraestructura
+// que ya esta cargada en vez de anadir una libreria de geometria
+// nueva). Ver [ARCH:catastro-gml-importer].
+
+let PARCELA_IMPORTADA = null;  // null = manual; si no, {referencia_catastral, poligono_real, rectangulo_trabajo, area_calculada_m2, area_declarada_m2, discrepancia_area_pct, zona_afeccion, _gmlOriginal}
 
 function leerParcelaForm(){
   const num = (id) => {
@@ -26,7 +36,8 @@ function leerParcelaForm(){
 function calcularHuella(datos){
   // mismo calculo que Lot.buildable_area (Python) -- parcela reducida
   // por retranqueo en los 4 lados (sin medianeras aqui, la Zona 0 no
-  // gestiona ese dato todavia).
+  // gestiona ese dato todavia). Solo se usa en el caso MANUAL -- con
+  // parcela importada, la zona de afeccion real viene de Pyodide.
   const r = datos.retranqueoM || 0;
   const huella = {
     x0: r, y0: r,
@@ -37,14 +48,23 @@ function calcularHuella(datos){
   return huella;
 }
 
+function _puntosSvg(coords, px, py){
+  return coords.map(c => `${px(c[0])},${py(c[1])}`).join(' ');
+}
+
 function renderParcelaPreview(){
   const datos = leerParcelaForm();
-  const huella = calcularHuella(datos);
   const svg = document.getElementById('parcela-preview');
   const resumen = document.getElementById('parcela-resumen');
   if(!svg || !resumen) return;
 
-  // encajar la parcela en un viewBox fijo de 300x300, con margen
+  if(PARCELA_IMPORTADA){
+    renderParcelaImportada(datos, svg, resumen);
+    return;
+  }
+
+  // ---- caso MANUAL: rectangulo simple, calculo instantaneo en JS ----
+  const huella = calcularHuella(datos);
   const margen = 20;
   const escala = Math.min((300 - 2 * margen) / datos.anchoM, (300 - 2 * margen) / datos.fondoM);
   const px = (x) => margen + x * escala;
@@ -60,26 +80,96 @@ function renderParcelaPreview(){
             fill="var(--pa)" fill-opacity="0.35" stroke="var(--pa)" stroke-width="2"/>`;
   }
 
-  // indicador del lado de calle
+  svgContent += _lineaFrente(datos, px, py);
+  svg.innerHTML = svgContent;
+
+  const superficieParcela = datos.anchoM * datos.fondoM;
+  const superficieHuella = huella.colapsada ? 0 : (huella.x1 - huella.x0) * (huella.y1 - huella.y0);
+  resumen.innerHTML = _resumenHtml(datos, superficieParcela, superficieHuella, huella.colapsada, 'manual');
+}
+
+function renderParcelaImportada(datos, svg, resumen){
+  // ---- caso IMPORTADO: poligono real + OBB + zona de afeccion ----
+  const p = PARCELA_IMPORTADA;
+  const todosLosPuntos = p.poligono_real.concat(p.rectangulo_trabajo);
+  const xs = todosLosPuntos.map(c => c[0]), ys = todosLosPuntos.map(c => c[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const margen = 20;
+  const escala = Math.min((300 - 2 * margen) / (maxX - minX || 1), (300 - 2 * margen) / (maxY - minY || 1));
+  const px = (x) => margen + (x - minX) * escala;
+  const py = (y) => 300 - margen - (y - minY) * escala;
+
+  let svgContent = `<polygon points="${_puntosSvg(p.poligono_real, px, py)}"
+      fill="var(--ink-faint)" fill-opacity="0.5" stroke="var(--ink-dim)" stroke-width="1.5"/>`;
+  svgContent += `<polygon points="${_puntosSvg(p.rectangulo_trabajo, px, py)}"
+      fill="none" stroke="var(--ink-faint)" stroke-width="1.5" stroke-dasharray="5,4"/>`;
+
+  const afeccionColapsada = p.zona_afeccion !== null && p.zona_afeccion !== undefined && p.zona_afeccion.length === 0;
+  if(p.zona_afeccion && p.zona_afeccion.length > 0){
+    svgContent += `<polygon points="${_puntosSvg(p.zona_afeccion, px, py)}"
+        fill="var(--pa)" fill-opacity="0.4" stroke="var(--pa)" stroke-width="2"/>`;
+  } else if(!p.zona_afeccion){
+    // sin retranqueo pedido -- la huella util es el propio poligono real
+    svgContent += `<polygon points="${_puntosSvg(p.poligono_real, px, py)}"
+        fill="var(--pa)" fill-opacity="0.25" stroke="none"/>`;
+  }
+
+  svgContent += _lineaFrente(datos, px, py);
+  svg.innerHTML = svgContent;
+
+  const superficieAfeccion = (p.zona_afeccion && p.zona_afeccion.length > 0)
+    ? _areaPoligono(p.zona_afeccion)
+    : (afeccionColapsada ? 0 : p.area_calculada_m2);
+  resumen.innerHTML = _resumenHtml(datos, p.area_calculada_m2, superficieAfeccion, afeccionColapsada, 'importado');
+}
+
+function _areaPoligono(coords){
+  // formula del "shoelace" -- area de un poligono simple a partir de
+  // sus vertices, sin depender de shapely para algo que ya tenemos
+  // calculado en el propio array de puntos.
+  let area = 0;
+  for(let i = 0; i < coords.length - 1; i++){
+    area += coords[i][0] * coords[i+1][1] - coords[i+1][0] * coords[i][1];
+  }
+  return Math.abs(area / 2);
+}
+
+function _lineaFrente(datos, px, py){
+  // resalta el lado de calle -- misma logica en ambos casos (manual/
+  // importado), usando el ancho/fondo del formulario (que en el caso
+  // importado ya viene relleno con las dimensiones del rectangulo de
+  // trabajo tras la importacion).
   const streetLine = {
     south: `M${px(0)},${py(0)} L${px(datos.anchoM)},${py(0)}`,
     north: `M${px(0)},${py(datos.fondoM)} L${px(datos.anchoM)},${py(datos.fondoM)}`,
     east: `M${px(datos.anchoM)},${py(0)} L${px(datos.anchoM)},${py(datos.fondoM)}`,
     west: `M${px(0)},${py(0)} L${px(0)},${py(datos.fondoM)}`,
   }[datos.streetSide];
-  svgContent += `<path d="${streetLine}" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round"/>`;
+  return `<path d="${streetLine}" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round"/>`;
+}
 
-  svg.innerHTML = svgContent;
-
-  // resumen numerico -- mismas formulas que ViabilidadUrbanisticaValidator
-  // (Python), aqui en JS para respuesta instantanea sin llamar a Pyodide.
-  const superficieParcela = datos.anchoM * datos.fondoM;
-  const superficieHuella = huella.colapsada ? 0 : (huella.x1 - huella.x0) * (huella.y1 - huella.y0);
+function _resumenHtml(datos, superficieParcela, superficieHuella, huellaColapsada, fuente){
+  // mismas formulas que ViabilidadUrbanisticaValidator (Python), aqui
+  // en JS para respuesta instantanea sin llamar a Pyodide en el caso
+  // manual -- en el caso importado, superficieParcela/superficieHuella
+  // ya vienen calculadas del poligono real, no del rectangulo.
   const frenteActual = (datos.streetSide === 'north' || datos.streetSide === 'south') ? datos.anchoM : datos.fondoM;
+  const etiquetaFuente = fuente === 'importado'
+    ? `<span class="parcela-fuente-tag importado">Importado (Catastro)</span>`
+    : `<span class="parcela-fuente-tag manual">Manual</span>`;
 
-  const lineas = [];
-  lineas.push(`<span class="stat">Parcela: <b>${superficieParcela.toFixed(1)}m²</b></span>`);
-  lineas.push(huella.colapsada
+  const lineas = [`<span class="stat">Parcela: <b>${superficieParcela.toFixed(1)}m²</b>${etiquetaFuente}</span>`];
+
+  if(fuente === 'importado' && PARCELA_IMPORTADA){
+    const p = PARCELA_IMPORTADA;
+    lineas.push(`<span class="stat">Referencia catastral: <b>${p.referencia_catastral}</b></span>`);
+    if(p.discrepancia_area_pct > 1.0){
+      lineas.push(`<span class="stat parcela-error">✗ el área declarada (${p.area_declarada_m2}m²) difiere ${p.discrepancia_area_pct}% de la calculada del polígono</span>`);
+    }
+  }
+
+  lineas.push(huellaColapsada
     ? `<span class="stat parcela-error">✗ retranqueo excesivo: no queda área edificable</span>`
     : `<span class="stat">Área edificable tras retranqueo: <b>${superficieHuella.toFixed(1)}m²</b></span>`);
 
@@ -89,7 +179,8 @@ function renderParcelaPreview(){
   }
   if(datos.ocupacionMaximaPct !== null){
     const huellaMax = (datos.ocupacionMaximaPct / 100) * superficieParcela;
-    lineas.push(`<span class="stat">Ocupación máxima permite hasta <b>${huellaMax.toFixed(1)}m²</b> de huella en planta</span>`);
+    const cumpleOcupacion = superficieHuella <= huellaMax || huellaColapsada;
+    lineas.push(`<span class="stat ${cumpleOcupacion ? '' : 'parcela-error'}">${cumpleOcupacion ? '' : '✗ '}Ocupación máxima permite hasta <b>${huellaMax.toFixed(1)}m²</b> de huella en planta</span>`);
   }
   if(datos.alturaMaximaPlantas !== null){
     lineas.push(`<span class="stat">Altura máxima: <b>${datos.alturaMaximaPlantas}</b> planta(s)</span>`);
@@ -99,17 +190,95 @@ function renderParcelaPreview(){
     lineas.push(`<span class="stat ${cumple ? '' : 'parcela-error'}">${cumple ? '✓' : '✗'} Frente actual ${frenteActual.toFixed(1)}m (mínimo ${datos.frenteMinimoM.toFixed(1)}m)</span>`);
   }
 
-  resumen.innerHTML = lineas.join('');
+  return lineas.join('');
+}
+
+async function manejarArchivoCatastro(file){
+  const statusEl = document.getElementById('parcela-import-status');
+  statusEl.className = 'parcela-import-status';
+  statusEl.textContent = 'Leyendo archivo...';
+
+  try{
+    const contenido = await file.text();
+    const retranqueoM = leerParcelaForm().retranqueoM;
+    const resultado = await analizarParcelaCatastroReal(contenido, retranqueoM, (msg) => { statusEl.textContent = msg; });
+
+    if(!resultado.ok){
+      statusEl.className = 'parcela-import-status error';
+      statusEl.textContent = '✗ ' + resultado.error;
+      return;
+    }
+
+    resultado._gmlOriginal = contenido;
+    PARCELA_IMPORTADA = resultado;
+    document.getElementById('gen-lot-w').value = resultado.ancho_m;
+    document.getElementById('gen-lot-h').value = resultado.fondo_m;
+
+    statusEl.className = 'parcela-import-status ok';
+    statusEl.textContent = `✓ Parcela ${resultado.referencia_catastral} importada (${resultado.area_calculada_m2}m²)`;
+    renderParcelaPreview();
+  } catch(err){
+    statusEl.className = 'parcela-import-status error';
+    statusEl.textContent = '✗ No se pudo leer el archivo: ' + err.message;
+  }
+}
+
+async function reanalizarZonaAfeccionSiHayImportada(){
+  // el retranqueo cambio DESPUES de importar -- recalcular la zona de
+  // afeccion real (via Pyodide, no instantaneo como el caso manual,
+  // pero necesario para que el recorte del poligono siga siendo
+  // correcto). Se vuelve a llamar a analizar_parcela_catastro entero
+  // -- mas simple que mantener el estado a medias.
+  if(!PARCELA_IMPORTADA || !PARCELA_IMPORTADA._gmlOriginal) return;
+  const retranqueoM = leerParcelaForm().retranqueoM;
+  const resultado = await analizarParcelaCatastroReal(PARCELA_IMPORTADA._gmlOriginal, retranqueoM, () => {});
+  if(resultado.ok){
+    resultado._gmlOriginal = PARCELA_IMPORTADA._gmlOriginal;
+    PARCELA_IMPORTADA = resultado;
+    renderParcelaPreview();
+  }
 }
 
 function initParcelaPreview(){
   const ids = [
-    'gen-lot-w', 'gen-lot-h', 'gen-street-side', 'gen-retranqueo',
+    'gen-lot-w', 'gen-lot-h', 'gen-street-side',
     'gen-edificabilidad', 'gen-ocupacion-maxima', 'gen-altura-maxima', 'gen-frente-minimo',
   ];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if(el) el.addEventListener('input', renderParcelaPreview);
   });
+  const retranqueoEl = document.getElementById('gen-retranqueo');
+  if(retranqueoEl){
+    retranqueoEl.addEventListener('input', () => {
+      renderParcelaPreview();  // caso manual: instantaneo
+      reanalizarZonaAfeccionSiHayImportada();  // caso importado: recalculo real via Pyodide
+    });
+  }
+
+  const dropZone = document.getElementById('parcela-drop-zone');
+  const fileInput = document.getElementById('parcela-gml-input');
+  if(fileInput){
+    fileInput.addEventListener('change', async (e) => {
+      if(e.target.files && e.target.files[0]){
+        await manejarArchivoCatastro(e.target.files[0]);
+      }
+    });
+  }
+  if(dropZone){
+    ['dragover', 'dragenter'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+      e.preventDefault(); dropZone.classList.add('dragover');
+    }));
+    ['dragleave', 'drop'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+      e.preventDefault(); dropZone.classList.remove('dragover');
+    }));
+    dropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      if(e.dataTransfer.files && e.dataTransfer.files[0]){
+        await manejarArchivoCatastro(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
   renderParcelaPreview();
 }

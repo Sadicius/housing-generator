@@ -116,6 +116,30 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   return JSON.parse(resultStr);
 }
 
+async function analizarParcelaCatastroReal(gmlContent, retranqueoM, onProgress){
+  // Zona 0, Fase A de importacion de Catastro: analiza un GML real
+  // (Sede Electronica del Catastro) via Pyodide -- mismo patron que
+  // generarEdificioReal, pero el contenido del GML es un string
+  // plano, sin riesgo del bug de JsNull (eso solo afecta a valores
+  // NULL, no a strings). retranqueoM SI puede ser null (campo
+  // opcional) -- mismo patron anti-JsNull ya probado: literal Python
+  // directo, no pyodide.globals.set() con null. Ver [ARCH:catastro-gml-importer].
+  const pyodide = await ensurePyodideReady(onProgress);
+  onProgress('Analizando el archivo catastral...');
+
+  pyodide.globals.set('gml_content_js', gmlContent);
+  const retranqueoLiteral = (retranqueoM !== null && retranqueoM !== undefined && !isNaN(retranqueoM))
+    ? `float(${JSON.stringify(retranqueoM)})` : 'None';
+  const pyCode = [
+    'import json',
+    'from housing_generator.interface.browser.bridge import analizar_parcela_catastro',
+    `resultado = analizar_parcela_catastro(gml_content_js, retranqueo_m=${retranqueoLiteral})`,
+    'json.dumps(resultado)',
+  ].join('\n');
+  const resultStr = await pyodide.runPythonAsync(pyCode);
+  return JSON.parse(resultStr);
+}
+
 async function handleGenerateNow(){
   const btn = document.getElementById('generate-now');
   const payload = buildSeleccionPayload();

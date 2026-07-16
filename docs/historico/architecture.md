@@ -2935,3 +2935,56 @@ Bundle Pyodide regenerado.
 Pendiente dentro de la Fase A: el lado JS/dashboard (subir/arrastrar
 el GML, mostrar polígono real + OBB + zona de afección en la vista
 previa de Zona 0).
+
+## [ARCH:catastro-gml-importer] Fase A, tercera pieza: lado JS del dashboard
+
+A petición del usuario, completando la Fase A (DXF sigue aparcado).
+Zona 0 ahora tiene una zona real de arrastrar-y-soltar (o clic para
+explorar) un GML de parcela catastral.
+
+### `zona_afeccion` en el puente -- por qué vía Pyodide, no JS puro
+
+`analizar_parcela_catastro()` extendido con `retranqueo_m` opcional:
+si se da, calcula la zona de afección real con
+`poligono.buffer(-retranqueo_m)` (shapely) -- un recorte de polígono
+correcto es genuinamente difícil de hacer bien en JS puro (offset de
+polígono con esquinas cóncavas no es una simple resta de coordenadas).
+Decisión deliberada: reutilizar Pyodide/shapely, que ya está cargado
+para el generador, en vez de añadir una librería de geometría nueva
+al dashboard solo para esto.
+
+### `00b-parcela.js` reescrito
+
+`PARCELA_IMPORTADA` (estado a nivel de módulo, `null` = manual).
+`renderParcelaPreview` ahora se ramifica: caso manual (rectángulo
+simple, instantáneo, sin cambios) vs. caso importado
+(`renderParcelaImportada`: polígono real relleno + rectángulo de
+trabajo en línea discontinua + zona de afección real superpuesta).
+`manejarArchivoCatastro`: lee el archivo, llama al puente, rellena
+`gen-lot-w`/`gen-lot-h` automáticamente con las dimensiones del
+rectángulo de trabajo. `reanalizarZonaAfeccionSiHayImportada`:
+si el retranqueo cambia DESPUÉS de importar, recalcula la zona de
+afección real (no se queda con el valor de la primera importación) --
+hallazgo real de diseño, verificado explícitamente con un test.
+
+Etiqueta de origen ("Manual" vs "Importado (Catastro)") y aviso
+visual si el área declarada difiere de la calculada -- ambos
+sugeridos por el usuario en la ronda de feedback técnico.
+
+### Verificado con `jsdom`, interceptando Pyodide (CDN bloqueado aquí)
+
+Caso manual sin cambios, importación rellena los campos y dibuja el
+polígono real, y el recálculo reactivo al cambiar retranqueo después
+de importar -- los tres flujos confirmados funcionando, no solo
+código que "debería" funcionar.
+
+4 tests nuevos en `test_dashboard_sanity.py`. Whitelist actualizado:
+`analizar_parcela_catastro` es una entrada PERMANENTE (como
+`generar_edificio`), llamada dinámicamente desde JS, invisible para
+el análisis estático -- no un "todavía sin conectar".
+
+Suite: 436 unitarios, mypy y pyflakes limpios en 88 archivos. Bundle
+Pyodide regenerado.
+
+Pendiente dentro de la Fase A: soporte DXF (aparcado a petición del
+usuario). El resto de la Fase A está funcionalmente completo.

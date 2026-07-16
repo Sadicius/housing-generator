@@ -196,9 +196,42 @@ def test_analizar_parcela_catastro_with_real_gml_from_the_user(tmp_path):
     assert resultado["ancho_m"] > 0 and resultado["fondo_m"] > 0
     assert len(resultado["poligono_real"]) >= 4
     assert len(resultado["rectangulo_trabajo"]) == 5  # 4 esquinas + cierre
+    assert resultado["zona_afeccion"] is None  # sin retranqueo pedido, no se calcula
 
     # serializa a JSON sin problemas -- es como viaja de verdad al dashboard
     json.dumps(resultado)
+
+
+def test_analizar_parcela_catastro_computes_zona_afeccion_from_real_polygon(tmp_path):
+    # la "zona de afeccion" (retranqueo aplicado) usa el POLIGONO REAL,
+    # via shapely.buffer(-retranqueo) -- no el rectangulo de trabajo
+    # simplificado. Confirma que reduce el area de forma realista, no
+    # solo un numero inventado.
+    from housing_generator.interface.browser.bridge import analizar_parcela_catastro
+    from shapely.geometry import Polygon
+
+    fixture_path = Path(__file__).parents[1] / "fixtures" / "catastro" / "parcela_sin_edificar.gml"
+    contenido = fixture_path.read_text(encoding="utf-8")
+
+    resultado = analizar_parcela_catastro(contenido, retranqueo_m=3.0)
+    assert resultado["zona_afeccion"] is not None
+    assert len(resultado["zona_afeccion"]) > 0
+    poly_afeccion = Polygon(resultado["zona_afeccion"])
+    assert poly_afeccion.area < resultado["area_calculada_m2"]  # se reduce de verdad
+    assert poly_afeccion.area == pytest.approx(154.0, abs=5.0)  # verificado a mano
+
+
+def test_analizar_parcela_catastro_handles_excessive_retranqueo_gracefully():
+    # retranqueo tan grande que colapsa el poligono -- lista vacia,
+    # no una excepcion ni un poligono invalido.
+    from housing_generator.interface.browser.bridge import analizar_parcela_catastro
+
+    fixture_path = Path(__file__).parents[1] / "fixtures" / "catastro" / "parcela_sin_edificar.gml"
+    contenido = fixture_path.read_text(encoding="utf-8")
+
+    resultado = analizar_parcela_catastro(contenido, retranqueo_m=15.0)
+    assert resultado["ok"] is True
+    assert resultado["zona_afeccion"] == []
 
 
 def test_analizar_parcela_catastro_rejects_invalid_content_gracefully():
