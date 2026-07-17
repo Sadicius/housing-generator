@@ -440,6 +440,22 @@ en el CLI** y **[RESUELTO] `AnchoLibrePracticoValidator` mencionado en
 el dashboard** -- ver `[ARCH:cli-retranqueo]` y
 `[ARCH:ancho-practico-dashboard]`. Quedan estos:
 
+- **Contacto exterior no garantizado por construcción -- causa raíz de
+  fondo, pendiente de DECISIÓN antes de más código**: ver
+  `docs/referencia/generador/contacto-exterior-y-envolvente.md`
+  (`[ARCH:contacto-exterior-arquitectura]`). El generador empaqueta
+  las estancias "de dentro hacia fuera" (origen abstracto (0,0)) y
+  solo comprueba el contacto exterior DESPUÉS, sin gradiente que guíe
+  la búsqueda hacia él -- confirmado con datos reales (30 semillas de
+  un escenario de 2 plantas, mismo fallo exacto siempre). La escalera
+  compartida entre plantas (`[ARCH:escalera-compartida]`, ya
+  implementada) y una preferencia de esquina mitigan, pero no
+  resuelven. La alternativa real, confirmada contra la literatura de
+  "space allocation problem": asignar primero las estancias que
+  necesitan fachada a lo largo del perímetro del solar ("periferia
+  hacia el centro"), en vez de empaquetar y validar después -- cambio
+  de arquitectura mayor, no otro parche puntual. Decisión pendiente
+  con el usuario.
 - **El panel de generación automática de "Sección vertical" solo cubre
   1-2 plantas** (planta baja/superior) -- sótano, semisótano y bajo
   cubierta quedan fuera de la generación automática (sí accesibles a
