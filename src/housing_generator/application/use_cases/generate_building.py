@@ -91,8 +91,22 @@ class GenerateBuildingUseCase:
         # proposito -- una rotacion complicaria el sistema de
         # coordenadas que usa el resto del pipeline (anclaje,
         # entrance_side). Ver [ARCH:parcela-real].
+        # current_real_boundary: el poligono real EXACTO, ya reducido por
+        # retranqueo/retranqueo_por_lado/fondo_edificacion_m/linea_edificacion_m
+        # (a diferencia de current_buildable_polygon, que es solo su rectangulo
+        # envolvente -- la aproximacion que el generador necesita para colocar,
+        # pero que puede sobresalir del poligono real reducido en las esquinas).
+        # Bug real corregido: floor_lot pasaba lot.poligono_real SIN reducir a
+        # ParcelaRealValidator, perdiendo por completo el retranqueo/fondo/linea
+        # de edificacion declarados para toda parcela importada -- confirmado
+        # reproduciendo con la fixture real (154m2 esperados vs 349.2m2, el
+        # poligono crudo, validados de verdad). El test de integracion existente
+        # no lo detectaba porque solo comprobaba contencion contra el poligono
+        # CRUDO, nunca contra el reducido. Ver [ARCH:parcela-real].
+        current_real_boundary: Optional[BaseGeometry] = None
         if lot.poligono_real is not None:
             area_real = lot.area_edificable_real.polygon
+            current_real_boundary = area_real
             if area_real.is_empty:
                 # mismo comportamiento que buildable_area colapsada (caja):
                 # un poligono vacio real, no un box con NaN -- el resto del
@@ -118,17 +132,24 @@ class GenerateBuildingUseCase:
             floor_below_exists = previous_layout is not None
 
             # encogimiento progresivo del contorno, solo desde la 2a
-            # planta. Ver [ARCH:generate-building].
+            # planta -- se aplica IGUAL al rectangulo de trabajo y al
+            # poligono real exacto, para que ParcelaRealValidator siga
+            # comprobando contra la forma real ya encogida, no contra
+            # una version desactualizada. Ver [ARCH:generate-building].
             if floor_below_exists:
                 current_buildable_polygon = self._shrink_for_next_floor(
                     current_buildable_polygon, lot.retranqueo_incremento_por_planta_m, level_rooms,
                 )
+                if current_real_boundary is not None:
+                    current_real_boundary = self._shrink_for_next_floor(
+                        current_real_boundary, lot.retranqueo_incremento_por_planta_m, level_rooms,
+                    )
             floor_lot = Lot(
                 boundary=Boundary(polygon=current_buildable_polygon),
                 entrance_side=lot.entrance_side,
                 street_side=lot.street_side,
-                retranqueo_m=None,  # ya aplicado al construir current_buildable_polygon
-                poligono_real=lot.poligono_real,  # para que ParcelaRealValidator compruebe cada planta
+                retranqueo_m=None,  # ya aplicado al construir current_buildable_polygon/current_real_boundary
+                poligono_real=current_real_boundary,  # YA reducido -- para que ParcelaRealValidator compruebe el area real, no la parcela en bruto
             )
 
             composite = self._per_floor_validators_factory(

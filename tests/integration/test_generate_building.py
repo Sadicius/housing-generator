@@ -374,11 +374,19 @@ def test_generation_with_real_imported_polygon_never_places_rooms_outside_it():
             continue
 
     assert building is not None, "ninguna de 10 semillas convergio"
-    poligono_real_con_tolerancia = poligono_real.buffer(0.06)  # margen minimo, mismo que usa el validador
     planta = list(building.floors.values())[0]
+    # area edificable real reducida por el retranqueo declarado (1m) --
+    # NO el poligono crudo. Bug real corregido: floor_lot perdia el
+    # retranqueo/fondo/linea_edificacion al reconstruirse por planta,
+    # dejando a ParcelaRealValidator comprobar contra la parcela en
+    # bruto; este assert habria pasado igual con ese bug presente
+    # (contencion contra el crudo es mas laxa), por eso se comprueba
+    # tambien contra el area YA reducida. Ver [ARCH:parcela-real].
+    area_edificable_real_con_tolerancia = planta.lot.area_edificable_real.polygon.buffer(0.06)
+    assert planta.lot.area_edificable_real.polygon.area < poligono_real.area
     for room in planta.rooms:
         if room.is_placed:
-            assert poligono_real_con_tolerancia.contains(room.boundary.polygon), (
-                f"'{room.id}' quedo fuera del poligono real de la parcela -- "
-                f"esto es exactamente el bug real que este test protege"
+            assert area_edificable_real_con_tolerancia.contains(room.boundary.polygon), (
+                f"'{room.id}' quedo fuera del area edificable real (parcela reducida por "
+                f"retranqueo) -- esto es exactamente el bug real que este test protege"
             )
