@@ -52,7 +52,7 @@ async function ensurePyodideReady(onProgress){
   return PYODIDE_LOADING;
 }
 
-async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, clasificacionSuelo, retranqueoPorLado, fondoEdificacion, onProgress){
+async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, clasificacionSuelo, retranqueoPorLado, fondoEdificacion, lineaEdificacion, onProgress){
   const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Buscando una distribucion valida (puede reintentar varias semillas)...');
 
@@ -92,6 +92,7 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
   const alturaMaximaLiteral = literalOpcional(alturaMaxima, 'int');
   const frenteMinimoLiteral = literalOpcional(frenteMinimo, 'float');
   const fondoEdificacionLiteral = literalOpcional(fondoEdificacion, 'float');
+  const lineaEdificacionLiteral = literalOpcional(lineaEdificacion, 'float');
   // poligonoRealCoords: array anidado (lista de [x,y]), no un numero
   // simple -- se pasa como JSON embebido directamente en el codigo
   // Python (mismo patron "literal directo, no variable global" que
@@ -127,6 +128,7 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     `    clasificacion_suelo=${clasificacionSueloLiteral},`,
     `    retranqueo_por_lado=${retranqueoPorLadoLiteral},`,
     `    fondo_edificacion_m=${fondoEdificacionLiteral},`,
+    `    linea_edificacion_m=${lineaEdificacionLiteral},`,
     ')',
     'json.dumps(resultado)',
   ].join('\n');
@@ -197,6 +199,7 @@ async function handleGenerateNow(){
   const alturaMaxima = numOpcional('gen-altura-maxima');
   const frenteMinimo = numOpcional('gen-frente-minimo');
   const fondoEdificacion = numOpcional('gen-fondo-edificacion');
+  const lineaEdificacion = numOpcional('gen-linea-edificacion');
   const streetSideEl = document.getElementById('gen-street-side');
   const streetSide = streetSideEl ? streetSideEl.value : 'south';
   // si hay una parcela importada de Catastro, pasar su poligono real
@@ -227,7 +230,7 @@ async function handleGenerateNow(){
       payload, lotW, lotH, seed, maxIterations, 10, accesible,
       retranqueoM, retranqueoIncremento,
       edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide,
-      poligonoRealCoords, clasificacionSuelo, retranqueoPorLado, fondoEdificacion,
+      poligonoRealCoords, clasificacionSuelo, retranqueoPorLado, fondoEdificacion, lineaEdificacion,
       (msg) => setGenerateStatus(msg, 'loading'),
     );
     if(!result.ok){

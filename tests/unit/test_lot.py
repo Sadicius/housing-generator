@@ -270,3 +270,52 @@ def test_fondo_edificacion_applies_to_area_edificable_real_too():
     )
     lot_sin_fondo = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="south")
     assert lot_con_fondo.area_edificable_real.polygon.area < lot_sin_fondo.area_edificable_real.polygon.area
+
+
+def test_linea_edificacion_none_does_not_change_existing_behavior():
+    lot_con_none = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0, linea_edificacion_m=None)
+    lot_sin_campo = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0)
+    assert lot_con_none.buildable_area.polygon.equals(lot_sin_campo.buildable_area.polygon)
+
+
+def test_linea_edificacion_pushes_back_only_the_street_side_when_larger():
+    # sin retranqueo declarado (0) en un solar 20x20, street_side=south --
+    # la reserva municipal de 5m debe recortar SOLO el lado sur, el resto
+    # de lados quedan intactos (sin retranqueo propio).
+    lot = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), street_side="south", linea_edificacion_m=5.0)
+    minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
+    assert (minx, miny, maxx, maxy) == pytest.approx((0.0, 5.0, 20.0, 20.0))
+
+
+def test_linea_edificacion_does_not_reduce_a_larger_declared_retranqueo():
+    # el arquitecto ya declaro 6m de retranqueo uniforme -- una reserva
+    # municipal de 3m no debe reducirlo, el minimo obligatorio ya esta
+    # superado.
+    lot_con_linea = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 20)), street_side="south",
+        retranqueo_m=6.0, linea_edificacion_m=3.0,
+    )
+    lot_sin_linea = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), street_side="south", retranqueo_m=6.0)
+    assert lot_con_linea.buildable_area.polygon.equals(lot_sin_linea.buildable_area.polygon)
+
+
+def test_linea_edificacion_combines_with_retranqueo_por_lado():
+    # retranqueo_por_lado ya declara 2m en el lado de calle (sur) --
+    # menor que la reserva municipal de 5m, debe prevalecer la reserva
+    # SOLO en ese lado, el resto de entradas del dict quedan intactas.
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 20)), street_side="south",
+        retranqueo_por_lado={"south": 2.0, "east": 1.0}, linea_edificacion_m=5.0,
+    )
+    minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
+    assert (minx, miny, maxx, maxy) == pytest.approx((0.0, 5.0, 19.0, 20.0))
+
+
+def test_linea_edificacion_applies_to_area_edificable_real_too():
+    poligono_real = _poligono_real_de_fixture()
+    lot_con_linea = Lot(
+        boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real,
+        street_side="south", linea_edificacion_m=8.0,
+    )
+    lot_sin_linea = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="south")
+    assert lot_con_linea.area_edificable_real.polygon.area < lot_sin_linea.area_edificable_real.polygon.area

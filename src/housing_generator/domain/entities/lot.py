@@ -99,6 +99,20 @@ class Lot:
     contorno irregular exacto del lindero de calle real. Ver
     [ARCH:fondo-edificacion].
 
+    `linea_edificacion_m`: retranqueo MÍNIMO obligatorio desde el
+    lindero de `street_side` (reserva municipal, p.ej. ensanche futuro
+    de la vía) -- `None` = sin esa reserva. A diferencia de
+    `retranqueo_m`/`retranqueo_por_lado` (elección del arquitecto para
+    separarse de los linderos), este valor lo fija el PXOM del
+    ayuntamiento y es un MÍNIMO: si el retranqueo que el arquitecto ya
+    declaró en el lado de calle es mayor, no cambia nada; si es menor
+    (o no declaró ninguno), se usa este valor en su lugar SOLO en ese
+    lado -- el resto de lados conservan su propio retranqueo. Nunca se
+    asume un valor por defecto (mismo principio que el resto de
+    parámetros urbanísticos): siempre lo aporta el usuario desde su
+    ficha urbanística real, nunca se infiere del catastro. Ver
+    [ARCH:linea-edificacion].
+
     Ver [ARCH:lot].
     """
     boundary: Boundary
@@ -115,6 +129,7 @@ class Lot:
     clasificacion_suelo: FrozenSet[str] = frozenset()
     retranqueo_por_lado: dict = field(default_factory=dict)
     fondo_edificacion_m: Optional[float] = None
+    linea_edificacion_m: Optional[float] = None
 
     def _clip_fondo_edificacion(self, poligono: Polygon, poligono_referencia: Polygon) -> Polygon:
         """Recorta `poligono` para que no sobrepase `fondo_edificacion_m`
@@ -139,6 +154,20 @@ class Lot:
             return Polygon()
         return recortado
 
+    def _por_lado_efectivo(self) -> dict:
+        """`retranqueo_por_lado` fusionado con `linea_edificacion_m` --
+        el lado de `street_side` usa el MAYOR de los dos (la reserva
+        municipal nunca reduce un retranqueo que el arquitecto ya
+        declaró más generoso), el resto de lados quedan sin tocar.
+        Vacío si ninguno de los dos está en uso -- mismo resultado que
+        antes de introducir `linea_edificacion_m`. Ver
+        [ARCH:linea-edificacion], [ARCH:retranqueo-variable]."""
+        por_lado = dict(self.retranqueo_por_lado)
+        if self.linea_edificacion_m is not None and self.linea_edificacion_m > 0:
+            actual = por_lado.get(self.street_side, self.retranqueo_m or 0.0)
+            por_lado[self.street_side] = max(actual, self.linea_edificacion_m)
+        return por_lado
+
     @property
     def area_edificable_real(self) -> Boundary:
         """Área edificable de verdad: si hay `poligono_real`
@@ -147,17 +176,20 @@ class Lot:
         lindes reales) -- NO el rectángulo `box()` de `buildable_area`,
         que puede sobresalir del polígono real. Si no hay
         `poligono_real` (caso manual), coincide exactamente con
-        `buildable_area`. Si `retranqueo_por_lado` tiene entradas, usa
-        retranqueo variable por dirección cardinal en vez de uniforme.
-        `fondo_edificacion_m`, si está presente, recorta el resultado
-        además. Ver [ARCH:parcela-real], [ARCH:retranqueo-variable],
-        [ARCH:fondo-edificacion]."""
+        `buildable_area`. Si `retranqueo_por_lado` tiene entradas, o
+        hay `linea_edificacion_m`, usa retranqueo variable por
+        dirección cardinal en vez de uniforme (ver
+        `_por_lado_efectivo`). `fondo_edificacion_m`, si está
+        presente, recorta el resultado además. Ver [ARCH:parcela-real],
+        [ARCH:retranqueo-variable], [ARCH:fondo-edificacion],
+        [ARCH:linea-edificacion]."""
         if self.poligono_real is None:
             return self.buildable_area
 
-        if self.retranqueo_por_lado:
+        por_lado_efectivo = self._por_lado_efectivo()
+        if por_lado_efectivo:
             resultado = retranqueo_variable_por_lado(
-                self.poligono_real, self.retranqueo_por_lado, self.retranqueo_m or 0.0,
+                self.poligono_real, por_lado_efectivo, self.retranqueo_m or 0.0,
             )
         else:
             r = self.retranqueo_m or 0.0
@@ -208,15 +240,17 @@ class Lot:
     def buildable_area(self) -> Boundary:
         """Área edificable real: parcela reducida por retranqueo,
         excepto en lados de medianera. Si `retranqueo_por_lado` tiene
-        entradas, usa retranqueo variable por dirección cardinal en
-        vez del valor único `retranqueo_m`. `fondo_edificacion_m`, si
-        está presente, recorta el resultado además. Ver [ARCH:lot],
-        [ARCH:retranqueo-variable], [ARCH:fondo-edificacion]."""
-        if self.retranqueo_por_lado:
+        entradas, o hay `linea_edificacion_m`, usa retranqueo variable
+        por dirección cardinal en vez del valor único `retranqueo_m`
+        (ver `_por_lado_efectivo`). `fondo_edificacion_m`, si está
+        presente, recorta el resultado además. Ver [ARCH:lot],
+        [ARCH:retranqueo-variable], [ARCH:fondo-edificacion],
+        [ARCH:linea-edificacion]."""
+        por_lado_efectivo = self._por_lado_efectivo()
+        if por_lado_efectivo:
             # medianera siempre a retranqueo 0, sin importar lo que
             # digan retranqueo_m/retranqueo_por_lado para ese lado --
             # mismo criterio que el caso uniforme de abajo.
-            por_lado_efectivo = dict(self.retranqueo_por_lado)
             for lado in self.medianera_sides:
                 por_lado_efectivo[lado] = 0.0
             resultado = retranqueo_variable_por_lado(

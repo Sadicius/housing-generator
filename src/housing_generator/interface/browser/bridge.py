@@ -115,6 +115,7 @@ def generar_edificio(
     retranqueo_incremento_por_planta_m: Optional[float] = None,
     retranqueo_por_lado: Optional[dict] = None,
     fondo_edificacion_m: Optional[float] = None,
+    linea_edificacion_m: Optional[float] = None,
     poligono_real_coords: Optional[list] = None,
     coeficiente_edificabilidad: Optional[float] = None,
     ocupacion_maxima_pct: Optional[float] = None,
@@ -146,6 +147,13 @@ def generar_edificio(
     nada (ver [ARCH:viabilidad-urbanistica]) -- el error llega aquí
     igual que cualquier otro `LayoutGenerationError`, sin tratamiento
     especial.
+
+    `linea_edificacion_m`: retranqueo mínimo obligatorio desde
+    `street_side` (reserva municipal del PXOM, p.ej. ensanche futuro
+    de la vía) -- distinto de `retranqueo_m`/`retranqueo_por_lado`
+    (elección del arquitecto): si el retranqueo ya declarado en ese
+    lado es menor, se usa este valor en su lugar SOLO ahí, nunca
+    reduce lo ya declarado. Ver [ARCH:linea-edificacion].
 
     `poligono_real_coords`: lista de [x,y] del polígono REAL de la
     parcela (importado de Catastro, mismas coordenadas locales que
@@ -198,6 +206,7 @@ def generar_edificio(
         poligono_real=poligono_real,
         clasificacion_suelo=clasificacion_valida,
         fondo_edificacion_m=fondo_edificacion_m,
+        linea_edificacion_m=linea_edificacion_m,
     )
 
     building = None

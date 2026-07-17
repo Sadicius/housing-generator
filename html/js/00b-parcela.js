@@ -31,6 +31,7 @@ function leerParcelaForm(){
     alturaMaximaPlantas: num('gen-altura-maxima'),
     frenteMinimoM: num('gen-frente-minimo'),
     fondoEdificacionM: num('gen-fondo-edificacion'),
+    lineaEdificacionM: num('gen-linea-edificacion'),
   };
 }
 
@@ -83,6 +84,7 @@ function renderParcelaPreview(){
 
   svgContent += _lineaFrente(datos, px, py);
   svgContent += _lineaFondoEdificacion(datos, px, py);
+  svgContent += _lineaEdificacionOficial(datos, px, py);
   svg.innerHTML = svgContent;
 
   const superficieParcela = datos.anchoM * datos.fondoM;
@@ -186,6 +188,7 @@ function renderParcelaImportada(datos, svg, resumen){
 
   svgContent += _lineaFrente(datos, px, py);
   svgContent += _lineaFondoEdificacion(datos, px, py);
+  svgContent += _lineaEdificacionOficial(datos, px, py);
   svgContent += _ladosClicables(poligono, px, py);
   svg.innerHTML = svgContent;
   svg.querySelectorAll('.parcela-lado-clicable').forEach(el => {
@@ -242,6 +245,23 @@ function _lineaFondoEdificacion(datos, px, py){
     west: `M${px(f)},${py(0)} L${px(f)},${py(datos.fondoM)}`,
   }[datos.streetSide];
   return `<path d="${linea}" stroke="var(--terracota)" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+}
+
+function _lineaEdificacionOficial(datos, px, py){
+  // linea discontinua paralela al lado de calle, a la distancia de
+  // linea_edificacion_m -- reserva municipal (retranqueo minimo
+  // obligatorio), mismo patron visual que _lineaFondoEdificacion pero
+  // en color distinto para no confundir ambos conceptos. Sin
+  // lineaEdificacionM, no dibuja nada.
+  if(datos.lineaEdificacionM === null || datos.lineaEdificacionM === undefined) return '';
+  const f = datos.lineaEdificacionM;
+  const linea = {
+    south: `M${px(0)},${py(f)} L${px(datos.anchoM)},${py(f)}`,
+    north: `M${px(0)},${py(datos.fondoM - f)} L${px(datos.anchoM)},${py(datos.fondoM - f)}`,
+    east: `M${px(datos.anchoM - f)},${py(0)} L${px(datos.anchoM - f)},${py(datos.fondoM)}`,
+    west: `M${px(f)},${py(0)} L${px(f)},${py(datos.fondoM)}`,
+  }[datos.streetSide];
+  return `<path d="${linea}" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="2,3"/>`;
 }
 
 function _frenteActualPoligonoReal(poligono, streetSide){
@@ -366,6 +386,7 @@ function initParcelaPreview(){
   const ids = [
     'gen-lot-w', 'gen-lot-h', 'gen-street-side',
     'gen-edificabilidad', 'gen-ocupacion-maxima', 'gen-altura-maxima', 'gen-frente-minimo', 'gen-fondo-edificacion',
+    'gen-linea-edificacion',
   ];
   ids.forEach(id => {
     const el = document.getElementById(id);
