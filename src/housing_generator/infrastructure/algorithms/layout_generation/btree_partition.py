@@ -251,6 +251,21 @@ def reset_aspect_ratio(root: BStarNode, room_id: str) -> BStarNode:
     return nuevo
 
 
+def force_aspect_ratio(root: BStarNode, room_id: str, aspect_ratio: float) -> BStarNode:
+    """Fuerza la proporción de una estancia a un valor EXACTO, sea cual
+    sea su valor actual -- a diferencia de `resize_module` (perturbación
+    aleatoria) o `reset_aspect_ratio` (siempre 1:1 fijo). Usado para
+    anclar la escalera de una planta a la FORMA ya resuelta en la planta
+    de referencia (misma área declarada, pero el árbol B* puede darle
+    una proporción distinta en cada planta si se deja libre) -- se
+    reaplica tras CUALQUIER mutación del árbol (swap/move/resize/etc.),
+    en vez de excluir la escalera de cada tipo de movimiento por
+    separado. Ver [ARCH:escalera-compartida]."""
+    nuevo = copy.deepcopy(root)
+    _find_node(nuevo, room_id).aspect_ratio = aspect_ratio
+    return nuevo
+
+
 def swap_children(root: BStarNode, room_id: str) -> BStarNode:
     """Intercambia los hijos `left`/`right` de una estancia -- lo que
     antes iba "pegado a la derecha" pasa a ir "encima", y viceversa.

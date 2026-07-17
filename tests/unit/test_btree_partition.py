@@ -220,6 +220,36 @@ def test_reset_aspect_ratio_returns_to_square():
     assert restablecido.aspect_ratio == 1.0
 
 
+def test_force_aspect_ratio_sets_an_exact_value():
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import force_aspect_ratio
+    tree = BStarNode("a", aspect_ratio=1.0)
+    forzado = force_aspect_ratio(tree, "a", 3.5)
+    assert forzado.aspect_ratio == 3.5
+    assert tree.aspect_ratio == 1.0  # no muta el original, mismo convenio que el resto de movimientos
+
+
+def test_force_aspect_ratio_survives_being_reapplied_after_any_mutation():
+    # mismo patron que usa BTreeLayoutGenerator: tras CUALQUIER mutacion
+    # (incluido un swap, que puede mover la identidad de la estancia
+    # anclada a un nodo con otra proporcion), reaplicar force_aspect_ratio
+    # debe devolver siempre la proporcion objetivo, sin importar que
+    # movimiento ocurrio ni que nodo represente ahora esa estancia.
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        force_aspect_ratio, random_neighbor,
+    )
+    tree = BStarNode("stair", aspect_ratio=2.0)
+    tree.left = BStarNode("bed", aspect_ratio=1.0)
+    tree.right = BStarNode("bath", aspect_ratio=1.0)
+    areas = {"stair": 4.0, "bed": 10.0, "bath": 5.0}
+    rng = random.Random(0)
+
+    for _ in range(50):
+        tree = random_neighbor(tree, rng, areas)
+        tree = force_aspect_ratio(tree, "stair", 2.0)
+        nodo_escalera = next(n for n in tree.nodes() if n.room_id == "stair")
+        assert nodo_escalera.aspect_ratio == 2.0
+
+
 def test_swap_children_exchanges_left_and_right():
     from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import swap_children
     salon = BStarNode("salon")

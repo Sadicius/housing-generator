@@ -218,13 +218,14 @@ def build_generate_building_use_case(
         ]
         return CompositeConstraintValidator(validators)
 
-    def layout_generator_factory(composite, level_adjacency):
+    def layout_generator_factory(composite, level_adjacency, reference_stair):
         soft_scorer = SoftConstraintScorer(level_adjacency, graph_builder)
         return BTreeLayoutGenerator(
             constraint_validator=composite,
             max_iterations=max_iterations,
             seed=seed,
             soft_constraint_scorer=soft_scorer,
+            reference_stair=reference_stair,
         )
 
     return GenerateBuildingUseCase(

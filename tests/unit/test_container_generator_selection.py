@@ -21,7 +21,7 @@ from housing_generator.infrastructure.algorithms.constraints.composite_constrain
 def test_btree_is_the_only_generator_for_building_use_case():
     use_case = build_generate_building_use_case(seed=1, max_iterations=1000)
     composite = CompositeConstraintValidator([])
-    generator = use_case._layout_generator_factory(composite, [])
+    generator = use_case._layout_generator_factory(composite, [], None)
     assert isinstance(generator, BTreeLayoutGenerator)
 
 
