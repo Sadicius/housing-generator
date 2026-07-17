@@ -225,6 +225,43 @@ def test_fondo_edificacion_none_does_not_change_existing_behavior():
     assert lot_con_none.buildable_area.polygon.equals(lot_sin_campo.buildable_area.polygon)
 
 
+def test_frente_actual_m_without_poligono_real_matches_rectangle_side():
+    # caso manual de siempre -- sin poligono_real, coincide exactamente
+    # con el ancho/fondo del rectangulo, ningun cambio de comportamiento.
+    lot_sur = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)), street_side="south")
+    assert lot_sur.frente_actual_m == pytest.approx(14.0)  # ancho en X
+
+    lot_este = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)), street_side="east")
+    assert lot_este.frente_actual_m == pytest.approx(20.0)  # fondo en Y
+
+
+def test_frente_actual_m_uses_the_real_polygon_side_not_the_bounding_box():
+    # propiedad central de esta pieza: el frente real de una parcela
+    # irregular puede ser mayor O menor que el ancho del rectangulo
+    # envolvente en esa misma direccion -- nunca debe coincidir con el
+    # rectangulo por casualidad. Valores verificados a mano sobre la
+    # parcela real de la fixture (25.74m de ancho en X, 15.47m en Y).
+    poligono_real = _poligono_real_de_fixture()
+    bbox_ancho_x = poligono_real.bounds[2] - poligono_real.bounds[0]
+    bbox_ancho_y = poligono_real.bounds[3] - poligono_real.bounds[1]
+
+    lot_sur = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="south")
+    assert lot_sur.frente_actual_m == pytest.approx(27.80, abs=0.01)
+    assert lot_sur.frente_actual_m != pytest.approx(bbox_ancho_x)  # NO el rectangulo envolvente
+
+    lot_norte = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="north")
+    assert lot_norte.frente_actual_m == pytest.approx(23.80, abs=0.01)
+    assert lot_norte.frente_actual_m != pytest.approx(bbox_ancho_x)
+
+    lot_este = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="east")
+    assert lot_este.frente_actual_m == pytest.approx(15.50, abs=0.01)
+    assert lot_este.frente_actual_m != pytest.approx(bbox_ancho_y)
+
+    lot_oeste = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="west")
+    assert lot_oeste.frente_actual_m == pytest.approx(10.40, abs=0.01)
+    assert lot_oeste.frente_actual_m != pytest.approx(bbox_ancho_y)
+
+
 def test_fondo_edificacion_applies_to_area_edificable_real_too():
     poligono_real = _poligono_real_de_fixture()
     lot_con_fondo = Lot(

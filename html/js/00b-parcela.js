@@ -244,12 +244,35 @@ function _lineaFondoEdificacion(datos, px, py){
   return `<path d="${linea}" stroke="var(--terracota)" stroke-width="1.5" stroke-dasharray="6,4"/>`;
 }
 
+function _frenteActualPoligonoReal(poligono, streetSide){
+  // suma la longitud de los lados del poligono real clasificados como
+  // streetSide -- mismo criterio que Lot.frente_actual_m (Python,
+  // lot.py), NUNCA el rectangulo envolvente (ancho/fondo del
+  // formulario). Hallazgo real del arquitecto consultado: "el frente
+  // actual... esta calculado sobre un rectangulo supuesto. Debe
+  // calcularse sobre el segmento real que toca el vial". Ver
+  // [ARCH:parcela-real].
+  const centroide = _centroidePoligono(poligono);
+  let total = 0;
+  for(let i = 0; i < poligono.length - 1; i++){
+    const p1 = poligono[i], p2 = poligono[i + 1];
+    if(_clasificarLadoCardinal(p1, p2, centroide) === streetSide){
+      total += Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+    }
+  }
+  return total;
+}
+
 function _resumenHtml(datos, superficieParcela, superficieHuella, huellaColapsada, fuente){
   // mismas formulas que ViabilidadUrbanisticaValidator (Python), aqui
   // en JS para respuesta instantanea sin llamar a Pyodide en el caso
   // manual -- en el caso importado, superficieParcela/superficieHuella
-  // ya vienen calculadas del poligono real, no del rectangulo.
-  const frenteActual = (datos.streetSide === 'north' || datos.streetSide === 'south') ? datos.anchoM : datos.fondoM;
+  // ya vienen calculadas del poligono real, no del rectangulo, y el
+  // frente actual se calcula sobre el segmento real de ese poligono,
+  // no sobre ancho/fondo del rectangulo de trabajo.
+  const frenteActual = (fuente === 'importado' && PARCELA_IMPORTADA)
+    ? _frenteActualPoligonoReal(PARCELA_IMPORTADA.poligono_orientacion_real, datos.streetSide)
+    : ((datos.streetSide === 'north' || datos.streetSide === 'south') ? datos.anchoM : datos.fondoM);
   const etiquetaFuente = fuente === 'importado'
     ? `<span class="parcela-fuente-tag importado">Importado (Catastro)</span>`
     : `<span class="parcela-fuente-tag manual">Manual</span>`;

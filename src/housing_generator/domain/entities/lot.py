@@ -173,9 +173,32 @@ class Lot:
     @property
     def frente_actual_m(self) -> float:
         """Ancho real de la parcela en el lado que da a la calle
-        (`street_side`) -- para parcela rectangular simple, el lado
-        norte/sur mide lo mismo que el ancho en X; el lado este/oeste,
-        lo mismo que el fondo en Y. Ver [ARCH:lot]."""
+        (`street_side`). Con `poligono_real` (importado, irregular):
+        suma la longitud de los lados del polígono real clasificados
+        como `street_side` -- NUNCA el rectángulo envolvente, que
+        puede sobre/subestimar el frente real. Hallazgo real del
+        arquitecto consultado: "el frente actual... está calculado
+        sobre un rectángulo supuesto. Debe calcularse sobre el
+        segmento real que toca el vial" -- confirmado como cierto:
+        antes de esto, `frente_actual_m` ignoraba `poligono_real` por
+        completo, incluso cuando existía, con el riesgo de que
+        `ViabilidadUrbanisticaValidator` (frente mínimo) validara un
+        valor que no corresponde a la parcela real. Sin
+        `poligono_real` (caso manual, rectángulo), el lado norte/sur
+        mide el ancho en X, este/oeste el fondo en Y -- equivalente
+        exacto para un rectángulo simple. Ver [ARCH:lot],
+        [ARCH:parcela-real]."""
+        if self.poligono_real is not None:
+            coords = list(self.poligono_real.exterior.coords)[:-1]
+            centroide = self.poligono_real.centroid
+            n = len(coords)
+            total = 0.0
+            for i in range(n):
+                p1, p2 = coords[i], coords[(i + 1) % n]
+                if _clasificar_lado_cardinal(p1, p2, centroide) == self.street_side:
+                    total += math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+            return total
+
         minx, miny, maxx, maxy = self.boundary.polygon.bounds
         if self.street_side in ("north", "south"):
             return maxx - minx
@@ -236,6 +259,35 @@ class Lot:
 
 
 
+def _clasificar_lado_cardinal(p1, p2, centroide) -> str:
+    """Clasifica el lado p1->p2 por la dirección cardinal más cercana
+    a su normal saliente (la que apunta lejos del centroide) -- no
+    asume que el polígono ya esté alineado a ejes. Compartida por
+    `retranqueo_variable_por_lado` y `Lot.frente_actual_m` (antes
+    duplicada inline solo en la primera). Ver
+    [ARCH:retranqueo-variable]."""
+    dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+    longitud = math.hypot(dx, dy)
+    if longitud < 1e-9:
+        return "north"  # lado degenerado (longitud ~0): direccion arbitraria, sin efecto real
+    dir_x, dir_y = dx / longitud, dy / longitud
+    normal_a = (-dir_y, dir_x)
+    punto_medio = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
+    cx = centroide.x if hasattr(centroide, "x") else centroide[0]
+    cy = centroide.y if hasattr(centroide, "y") else centroide[1]
+    hacia_centroide = (cx - punto_medio[0], cy - punto_medio[1])
+    normal_saliente = normal_a if (normal_a[0] * hacia_centroide[0] + normal_a[1] * hacia_centroide[1]) < 0 \
+        else (-normal_a[0], -normal_a[1])
+    angulo_deg = math.degrees(math.atan2(normal_saliente[1], normal_saliente[0])) % 360
+    if 45 <= angulo_deg < 135:
+        return "north"
+    elif 135 <= angulo_deg < 225:
+        return "west"
+    elif 225 <= angulo_deg < 315:
+        return "south"
+    return "east"
+
+
 def retranqueo_variable_por_lado(
     poligono: Polygon, retranqueo_por_lado: dict, retranqueo_default_m: float = 0.0,
 ) -> Polygon:
@@ -290,16 +342,7 @@ def retranqueo_variable_por_lado(
         normal_saliente = normal_a if (normal_a[0] * hacia_centroide[0] + normal_a[1] * hacia_centroide[1]) < 0 \
             else (-normal_a[0], -normal_a[1])
 
-        angulo_deg = math.degrees(math.atan2(normal_saliente[1], normal_saliente[0])) % 360
-        if 45 <= angulo_deg < 135:
-            direccion = "north"
-        elif 135 <= angulo_deg < 225:
-            direccion = "west"
-        elif 225 <= angulo_deg < 315:
-            direccion = "south"
-        else:
-            direccion = "east"
-
+        direccion = _clasificar_lado_cardinal(p1, p2, centroide)
         retranqueo_lado = retranqueo_por_lado.get(direccion, retranqueo_default_m)
         if retranqueo_lado <= 0:
             continue
