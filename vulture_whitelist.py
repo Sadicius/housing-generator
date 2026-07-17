@@ -36,6 +36,40 @@ max_aspect_ratio  # unused variable (src/housing_generator/domain/value_objects/
 # mantiene por completitud del modelo clasico de 5 niveles.
 INDIFFERENT  # unused variable (src/housing_generator/domain/enums.py:43)
 
+# Fase 1 del rediseno "periferia hacia el centro" (ver
+# docs/referencia/generador/contacto-exterior-y-envolvente.md):
+# geometria de tallado perimetral aislada, con tests propios
+# (tests/unit/test_perimeter_carving.py), aun NO conectada al pipeline
+# de generacion real -- eso es una fase posterior (Fase 2-3), con
+# revision del usuario entre cada una. Mismo trato que
+# GraphBasedLayoutGenerator arriba: pieza intencionada, no descuido.
+carve_perimeter  # unused function (src/housing_generator/infrastructure/algorithms/layout_generation/perimeter_carving.py:97)
+
+# Fase 2 del mismo rediseno: estado mutable + mutaciones perimetrales
+# + integracion con el nucleo (btree_partition.py) + materializacion
+# pura. Con tests propios (tests/unit/test_perimeter_core_partition.py),
+# aun NO conectada al pipeline real -- eso es la Fase 3 (recocido
+# simulado + wiring a container.py), con revision del usuario entre
+# cada fase. Mismo trato que carve_perimeter arriba.
+find_entrance_hall_id  # unused function (src/housing_generator/infrastructure/algorithms/layout_generation/perimeter_core_partition.py:70)
+build_initial_perimeter_core_state  # unused function (src/housing_generator/infrastructure/algorithms/layout_generation/perimeter_core_partition.py:76)
+random_neighbor_perimeter_core  # unused function (src/housing_generator/infrastructure/algorithms/layout_generation/perimeter_core_partition.py:207)
+materialize_perimeter_core  # unused function (src/housing_generator/infrastructure/algorithms/layout_generation/perimeter_core_partition.py:255)
+
+# Fase 3 del mismo rediseno: LayoutGeneratorPort completo (recocido
+# simulado) sobre las piezas de la Fase 2. Con smoke-test propio
+# (converge hard=0 en <0.3s en el escenario de prueba), aun NO
+# conectada a container.py -- la sustitucion real exige antes
+# confirmar contra los 5 tests xfail reales. Mismo trato que las
+# piezas anteriores.
+PerimeterCoreLayoutGenerator  # unused class (src/housing_generator/infrastructure/algorithms/layout_generation/perimeter_core_layout_generator.py:34)
+
+# Fabrica PROVISIONAL (ver su propio docstring) que conecta
+# PerimeterCoreLayoutGenerator -- usada solo desde
+# tests/integration/test_generate_layout_use_case_v2.py (vulture solo
+# escanea src/), no desde el wiring de produccion todavia.
+build_generate_layout_use_case_v2  # unused function (src/housing_generator/config/container.py:191)
+
 # Llamada dinamicamente desde JavaScript via Pyodide (interface/browser/
 # bridge.py, invocada por nombre desde py_bundle.js) -- invisible para
 # el analisis estatico de Python, pero es el puente real en uso.

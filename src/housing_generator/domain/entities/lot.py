@@ -227,7 +227,7 @@ class Lot:
             total = 0.0
             for i in range(n):
                 p1, p2 = coords[i], coords[(i + 1) % n]
-                if _clasificar_lado_cardinal(p1, p2, centroide) == self.street_side:
+                if clasificar_lado_cardinal(p1, p2, centroide) == self.street_side:
                     total += math.hypot(p2[0] - p1[0], p2[1] - p1[1])
             return total
 
@@ -293,13 +293,14 @@ class Lot:
 
 
 
-def _clasificar_lado_cardinal(p1, p2, centroide) -> str:
+def clasificar_lado_cardinal(p1, p2, centroide) -> str:
     """Clasifica el lado p1->p2 por la dirección cardinal más cercana
     a su normal saliente (la que apunta lejos del centroide) -- no
     asume que el polígono ya esté alineado a ejes. Compartida por
-    `retranqueo_variable_por_lado` y `Lot.frente_actual_m` (antes
-    duplicada inline solo en la primera). Ver
-    [ARCH:retranqueo-variable]."""
+    `retranqueo_variable_por_lado`, `Lot.frente_actual_m` (antes
+    duplicada inline solo en la primera) y `perimeter_carving.py`
+    (tallado perimetral del generador). Pública porque se reutiliza
+    fuera de este módulo -- ver [ARCH:retranqueo-variable]."""
     dx, dy = p2[0] - p1[0], p2[1] - p1[1]
     longitud = math.hypot(dx, dy)
     if longitud < 1e-9:
@@ -376,7 +377,7 @@ def retranqueo_variable_por_lado(
         normal_saliente = normal_a if (normal_a[0] * hacia_centroide[0] + normal_a[1] * hacia_centroide[1]) < 0 \
             else (-normal_a[0], -normal_a[1])
 
-        direccion = _clasificar_lado_cardinal(p1, p2, centroide)
+        direccion = clasificar_lado_cardinal(p1, p2, centroide)
         retranqueo_lado = retranqueo_por_lado.get(direccion, retranqueo_default_m)
         if retranqueo_lado <= 0:
             continue

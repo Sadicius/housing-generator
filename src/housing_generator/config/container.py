@@ -63,6 +63,9 @@ from housing_generator.infrastructure.algorithms.constraints.altura_libre_valida
 from housing_generator.infrastructure.algorithms.constraints.exterior_contact_validator import (
     ExteriorContactValidator,
 )
+from housing_generator.infrastructure.algorithms.constraints.room_overlap_validator import (
+    RoomOverlapValidator,
+)
 from housing_generator.infrastructure.algorithms.constraints.cocina_integrada_validator import (
     CocinaIntegradaValidator,
 )
@@ -92,6 +95,9 @@ from housing_generator.infrastructure.algorithms.constraints.nucleo_humedo_verti
 )
 from housing_generator.infrastructure.algorithms.layout_generation.soft_constraint_scorer import (
     SoftConstraintScorer,
+)
+from housing_generator.infrastructure.algorithms.layout_generation.perimeter_core_layout_generator import (
+    PerimeterCoreLayoutGenerator,
 )
 from housing_generator.application.use_cases.generate_building import GenerateBuildingUseCase
 from housing_generator.infrastructure.algorithms.adjacency.geometry_adjacency_graph_builder import (
@@ -130,6 +136,7 @@ def build_per_floor_validators(
         AnchoLibrePasilloValidator(),
         AlturaLibreValidator(),
         ExteriorContactValidator(),
+        RoomOverlapValidator(),
         CocinaIntegradaValidator(total_num_estancias_override=total_num_estancias),
         EspacioAccesoValidator(),
         EscaleraAnchoLibreValidator(),
@@ -168,6 +175,50 @@ def build_generate_layout_use_case(
     soft_scorer = SoftConstraintScorer(adjacency_requirements or [], graph_builder)
 
     layout_generator = BTreeLayoutGenerator(
+        constraint_validator=composite,
+        max_iterations=max_iterations,
+        seed=seed,
+        soft_constraint_scorer=soft_scorer,
+    )
+
+    return GenerateLayoutUseCase(
+        zoning_strategy=TreemapZoningStrategy(),
+        layout_generator=layout_generator,
+        constraint_validator=composite,
+    )
+
+
+def build_generate_layout_use_case_v2(
+    adjacency_requirements: Optional[List] = None,
+    max_iterations: int = 2000,
+    seed: Optional[int] = None,
+    vivienda_accesible: bool = False,
+) -> GenerateLayoutUseCase:
+    """Fábrica PROVISIONAL (nombre `_v2` a fusionar con
+    `build_generate_layout_use_case` tras la Fase 6 de
+    docs/referencia/generador/contacto-exterior-y-envolvente.md, solo
+    si el usuario aprueba la sustitución) del generador "periferia
+    hacia el centro" (`PerimeterCoreLayoutGenerator`) -- EN PARALELO a
+    `BTreeLayoutGenerator`, mismo patrón de migración que ya se usó
+    para introducir el árbol B* (ver docstring de
+    `build_generate_layout_use_case`). Mismos validadores exactos
+    (`build_per_floor_validators`, sin cambios) -- solo cambia el
+    generador. Solo una planta (`GenerateLayoutUseCase`); multi-planta
+    (`reference_stair`, escalera compartida) es la Fase 4, todavía sin
+    construir. Ver [ARCH:container], [ARCH:perimeter-core-layout-generator].
+    """
+    graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
+
+    validators = build_per_floor_validators(
+        adjacency_requirements, graph_builder, vivienda_accesible=vivienda_accesible,
+    ) + [
+        ViviendaMinimaValidator(),
+        BanoAccesoGeneralValidator(graph_builder),
+    ]
+    composite = CompositeConstraintValidator(validators)
+    soft_scorer = SoftConstraintScorer(adjacency_requirements or [], graph_builder)
+
+    layout_generator = PerimeterCoreLayoutGenerator(
         constraint_validator=composite,
         max_iterations=max_iterations,
         seed=seed,
