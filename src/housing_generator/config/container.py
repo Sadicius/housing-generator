@@ -223,6 +223,7 @@ def build_generate_layout_use_case_v2(
         max_iterations=max_iterations,
         seed=seed,
         soft_constraint_scorer=soft_scorer,
+        graph_builder=graph_builder,
     )
 
     return GenerateLayoutUseCase(

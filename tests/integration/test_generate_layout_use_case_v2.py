@@ -16,20 +16,46 @@ todavía fallan, `xfail(strict=False)` -- el smoke-test aislado de esta
 Fase 3 SÍ converge (hard=0 en <0.3s), pero en los 5 escenarios reales
 el reparto del núcleo en piezas separadas (pedido explícitamente por
 el usuario tras la revisión visual anterior -- mejora medida: severidad
-de solape de hasta 5.7m² a 0.07-1.8m² por par) tiene un coste no
-anticipado: las estancias de núcleo quedan geométricamente
-DESCONECTADAS entre sí con mucha frecuencia (cada pieza del residuo es
-un fragmento separado, sin garantía de tocarse), lo que rompe en
-cascada `NucleoHumedoVerticalValidator`/agrupación de zonas día-noche-
-servicio/`PasilloTopologiaValidator` (docenas de "paso obligado")/
-`BanoAccesoGeneralValidator` -- presente en los 5 casos, dominante
-sobre cualquier otro motivo. Un segundo hallazgo, más puntual (2 de 5
-casos): `_solve_room_depth` (perimeter_carving.py) calibra solo por
+de solape de hasta 5.7m² a 0.07-1.8m² por par) tenía un coste no
+anticipado: las estancias de núcleo quedaban geométricamente
+DESCONECTADAS entre sí con mucha frecuencia.
+
+**[RESUELTO, no era suficiente por sí solo]** Incentivo de proximidad
+(`PerimeterCoreLayoutGenerator._grouping_proximity_penalty`, gradiente
+real por distancia -- árbol generador mínimo sobre el hueco entre
+componentes conexos, mismo patrón que `_stair_corner_penalty` de
+`btree_layout_generator.py`), generalizado a los 4 grupos que antes
+rompían en cascada (piezas de núcleo por `min_exterior_sides==0`,
+núcleo húmedo, zona día/noche/servicio -- `GROUPING_PREDICATES`).
+Verificado con datos reales: las piezas de núcleo SÍ terminan formando
+un único componente conectado en los 5 escenarios (confirmado
+inspeccionando el grafo de adyacencia real del estado final, no solo
+el smoke-test).
+
+**Hallazgo real, más preciso, tras verificar con el incentivo ya
+puesto**: lo que sigue bloqueando los 5 escenarios NO es distancia/
+proximidad -- es que `PasilloTopologiaValidator` sigue señalando
+docenas de "paso obligado" (puntos de corte/articulación del grafo de
+circulación). Confirmado ESTRUCTURAL, no de búsqueda: el mismo
+escenario 1 con 5 semillas distintas Y 20000 iteraciones (6-7x el
+presupuesto real de estos tests) converge SIEMPRE al mismo número
+exacto de violaciones "paso obligado" (25) -- ninguna semilla ni
+presupuesto de iteraciones adicional lo reduce ni un poco, la firma
+de un óptimo estructural, no de una búsqueda insuficiente. Causa
+probable: el tallado perimetral confina el núcleo a UNA sola bolsa del
+residuo, que por construcción solo puede tocar 1-2 estancias
+perimetrales -- esas quedan como punto de corte inevitable hacia todo
+el resto del núcleo, sin que ninguna mutación actual (`move_to_side`/
+`swap_sides`/`swap_modules`/`move_module`) cree una segunda vía de
+conexión independiente. Un gradiente de distancia no ataca esto: dos
+piezas ya en contacto (distancia 0) siguen siendo el único punto de
+corte. Pendiente para una sesión futura, con el usuario: una mutación o
+incentivo distinto (redundancia de contacto núcleo-perímetro, no
+proximidad) -- decisión de arquitectura, no un ajuste más del mismo
+tipo. Un segundo hallazgo, más puntual (2 de 5 casos), SIN investigar
+todavía: `_solve_room_depth` (perimeter_carving.py) calibra solo por
 ÁREA, sin acotar por `max_aspect_ratio` -- en un hueco muy comprimido
-puede producir una estancia de 0.80x14.00m (ratio 17.5:1). Pendiente
-para una sesión futura: incentivo de proximidad entre piezas de núcleo
-(soft, o mutación de "acercar piezas") + acotar la bisección de
-profundidad por `max_aspect_ratio`, no solo por área.
+puede producir una estancia de 0.80x14.00m (ratio 17.5:1).
 """
 import pytest
 from shapely.geometry import box
@@ -43,18 +69,24 @@ from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
 
-_MOTIVO_XFAIL_NUCLEO_FRAGMENTADO = (
-    "El reparto del nucleo entre piezas separadas del residuo (Fase 2, para reducir "
-    "la severidad del solape) deja con frecuencia las estancias de nucleo geometricamente "
-    "desconectadas entre si -- rompe NucleoHumedoVerticalValidator/agrupacion de zonas/"
-    "PasilloTopologiaValidator/BanoAccesoGeneralValidator. El smoke-test aislado de esta "
-    "Fase 3 SI converge (hard=0); estos 5 escenarios reales confirman que hace falta un "
-    "incentivo de proximidad entre piezas de nucleo (o una mutacion que las acerque) antes "
-    "de poder quitar este xfail. Ver docstring del modulo."
+_MOTIVO_XFAIL_PASO_OBLIGADO = (
+    "El incentivo de proximidad entre piezas de nucleo (PerimeterCoreLayoutGenerator."
+    "_grouping_proximity_penalty, gradiente real por distancia, generalizado a nucleo/"
+    "nucleo humedo/zona dia/zona noche/zona servicio) ya funciona -- las piezas de nucleo "
+    "SI terminan conectadas entre si en los 5 escenarios, verificado con el grafo de "
+    "adyacencia real del estado final. Lo que sigue bloqueando la convergencia es distinto "
+    "y mas amplio: PasilloTopologiaValidator sigue senalando docenas de 'paso obligado' "
+    "(puntos de corte del grafo de circulacion). Confirmado ESTRUCTURAL, no de busqueda: "
+    "el mismo escenario con 5 semillas y 20000 iteraciones (6-7x el presupuesto real) "
+    "converge siempre al mismo numero exacto de violaciones -- ninguna semilla ni "
+    "presupuesto adicional lo reduce. Un gradiente de distancia no ataca esto (dos piezas "
+    "ya en contacto siguen siendo el unico punto de corte); hace falta una mutacion o "
+    "incentivo de REDUNDANCIA de contacto nucleo-perimetro, no de proximidad -- decision "
+    "de arquitectura pendiente con el usuario. Ver docstring del modulo."
 )
 
 
-@pytest.mark.xfail(reason=_MOTIVO_XFAIL_NUCLEO_FRAGMENTADO, strict=False)
+@pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_generate_layout_places_all_rooms_within_lot():
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20)),
@@ -82,7 +114,7 @@ def test_generate_layout_places_all_rooms_within_lot():
         assert lot.boundary.polygon.buffer(0.05).contains(room.boundary.polygon)
 
 
-@pytest.mark.xfail(reason=_MOTIVO_XFAIL_NUCLEO_FRAGMENTADO, strict=False)
+@pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_generate_layout_respects_retranqueo_vivienda_aislada():
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20)),
@@ -107,7 +139,7 @@ def test_generate_layout_respects_retranqueo_vivienda_aislada():
         assert buildable.contains(room.boundary.polygon), f"'{room.id}' invade la franja de retranqueo"
 
 
-@pytest.mark.xfail(reason=_MOTIVO_XFAIL_NUCLEO_FRAGMENTADO, strict=False)
+@pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_soft_constraint_should_be_near_is_actually_satisfied_by_the_search():
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20)),
@@ -133,7 +165,7 @@ def test_soft_constraint_should_be_near_is_actually_satisfied_by_the_search():
     assert layout.metadata["soft_penalty"] == 0.0
 
 
-@pytest.mark.xfail(reason=_MOTIVO_XFAIL_NUCLEO_FRAGMENTADO, strict=False)
+@pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_hard_constraint_never_loses_to_soft_even_when_tempting():
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
@@ -162,7 +194,7 @@ def test_hard_constraint_never_loses_to_soft_even_when_tempting():
     assert living.boundary.polygon.distance(garage.boundary.polygon) > 0
 
 
-@pytest.mark.xfail(reason=_MOTIVO_XFAIL_NUCLEO_FRAGMENTADO, strict=False)
+@pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_vivienda_adosada_respects_medianera_sides_end_to_end():
     rooms = [
         Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=22)),

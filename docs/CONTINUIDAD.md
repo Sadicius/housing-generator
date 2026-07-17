@@ -440,22 +440,44 @@ en el CLI** y **[RESUELTO] `AnchoLibrePracticoValidator` mencionado en
 el dashboard** -- ver `[ARCH:cli-retranqueo]` y
 `[ARCH:ancho-practico-dashboard]`. Quedan estos:
 
-- **Contacto exterior no garantizado por construcción -- causa raíz de
-  fondo, pendiente de DECISIÓN antes de más código**: ver
+- **Contacto exterior no garantizado por construcción -- rediseño
+  "periferia hacia el centro" EN CURSO (Fases 0-3 implementadas, en
+  paralelo, todavía no sustituye al generador por defecto)**: ver
   `docs/referencia/generador/contacto-exterior-y-envolvente.md`
-  (`[ARCH:contacto-exterior-arquitectura]`). El generador empaqueta
-  las estancias "de dentro hacia fuera" (origen abstracto (0,0)) y
-  solo comprueba el contacto exterior DESPUÉS, sin gradiente que guíe
-  la búsqueda hacia él -- confirmado con datos reales (30 semillas de
-  un escenario de 2 plantas, mismo fallo exacto siempre). La escalera
-  compartida entre plantas (`[ARCH:escalera-compartida]`, ya
-  implementada) y una preferencia de esquina mitigan, pero no
-  resuelven. La alternativa real, confirmada contra la literatura de
-  "space allocation problem": asignar primero las estancias que
-  necesitan fachada a lo largo del perímetro del solar ("periferia
-  hacia el centro"), en vez de empaquetar y validar después -- cambio
-  de arquitectura mayor, no otro parche puntual. Decisión pendiente
-  con el usuario.
+  (`[ARCH:contacto-exterior-arquitectura]`, `[ARCH:perimeter-core-layout-generator]`).
+  `PerimeterCoreLayoutGenerator` (`build_generate_layout_use_case_v2`,
+  nombre `_v2` provisional) talla el perímetro contra el borde real del
+  solar y reparte el núcleo (estancias sin necesidad de fachada) entre
+  las piezas del residuo -- confirmado con datos reales que el
+  contacto exterior en sí ya no es el problema. Lo que SÍ sigue
+  bloqueando los 5 escenarios reales usados como criterio de
+  aceptación (`test_generate_layout_use_case_v2.py`, xfail):
+  repartir el núcleo en piezas separadas del residuo (pedido
+  explícitamente por el usuario para reducir severidad de solape) las
+  dejaba a veces geométricamente DESCONECTADAS entre sí. **Resuelto**
+  con un incentivo de proximidad (`_grouping_proximity_penalty`,
+  gradiente real por distancia -- árbol generador mínimo sobre el
+  hueco entre componentes conexos, mismo patrón que
+  `_stair_corner_penalty` de `btree_layout_generator.py`),
+  generalizado a los 4 grupos que rompían en cascada (piezas de
+  núcleo, núcleo húmedo, zona día/noche/servicio) -- verificado con
+  datos reales que las piezas SÍ terminan conectadas entre sí en los 5
+  escenarios. **Hallazgo más preciso, sin resolver todavía**: lo que
+  sigue bloqueando la convergencia no es proximidad -- es que
+  `PasilloTopologiaValidator` sigue señalando docenas de "paso
+  obligado" (puntos de corte del grafo de circulación). Confirmado
+  ESTRUCTURAL, no de búsqueda: el mismo escenario con 5 semillas y
+  20000 iteraciones (6-7x el presupuesto real de los tests) converge
+  siempre al mismo número exacto de violaciones. Causa probable: el
+  tallado perimetral confina el núcleo a una sola bolsa del residuo,
+  que por construcción solo puede tocar 1-2 estancias perimetrales --
+  esas quedan como punto de corte inevitable, sin que ninguna mutación
+  actual cree una segunda vía de conexión independiente. Un gradiente
+  de distancia no ataca esto (dos piezas ya en contacto siguen siendo
+  el único punto de corte); hace falta una mutación o incentivo de
+  REDUNDANCIA de contacto núcleo-perímetro, decisión de arquitectura
+  pendiente con el usuario. Ver docstring de
+  `test_generate_layout_use_case_v2.py` para el detalle completo.
 - **El panel de generación automática de "Sección vertical" solo cubre
   1-2 plantas** (planta baja/superior) -- sótano, semisótano y bajo
   cubierta quedan fuera de la generación automática (sí accesibles a

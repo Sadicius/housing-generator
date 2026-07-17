@@ -8,15 +8,22 @@ docs/referencia/generador/contacto-exterior-y-envolvente.md,
 """
 import math
 import random
-from typing import List, Optional, Set, Tuple
+from typing import Callable, List, Optional, Set, Tuple
+
+import networkx as nx
 
 from housing_generator.application.ports.layout_generator_port import LayoutGeneratorPort
 from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.lot import Lot
+from housing_generator.domain.entities.room import Room
 from housing_generator.domain.entities.zone import Zone
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.exceptions import LayoutGenerationError
+from housing_generator.infrastructure.algorithms.constraints.day_night_zoning_validator import (
+    zone_grouping_predicates,
+)
 from housing_generator.infrastructure.algorithms.layout_generation.perimeter_carving import (
     tallable_length_per_side,
 )
@@ -29,6 +36,29 @@ from housing_generator.infrastructure.algorithms.layout_generation.perimeter_cor
 from housing_generator.infrastructure.algorithms.layout_generation.soft_constraint_scorer import (
     SoftConstraintScorer,
 )
+
+CORE_PROXIMITY_WEIGHT = 1.0  # NO normativo, mismo tipo de decision de
+# ingenieria que STAIR_CORNER_PREFERENCE_WEIGHT (btree_layout_generator.py):
+# magnitud comparable a una preferencia blanda no satisfecha
+# (PESO_CERCA_NO_SATISFECHO=1.0 en soft_constraint_scorer.py) para que el
+# hueco entre piezas de nucleo pese de forma similar en la comparacion
+# lexicografica. Ver [ARCH:perimeter-core-layout-generator].
+
+# Grupos de estancias que deben quedar geometricamente cerca (o
+# CONECTADAS) entre si -- mismos predicados EXACTOS que los 4
+# validadores duros (`build_wet_core_validator`/`zone_grouping_predicates`)
+# que solo saben "conectado/no conectado" o "a distancia <=N", sin
+# ninguna senal de "cuanto falta". `min_exterior_sides==0` (piezas de
+# nucleo repartidas por `_assign_core_rooms_to_pieces`, sin validador
+# duro propio -- son la causa geometrica de fondo del resto) se suma a
+# los 3 agrupamientos de zona + el nucleo humedo, para que el gradiente
+# cubra exactamente las 4 categorias de violacion medidas en los 5
+# escenarios reales de `test_generate_layout_use_case_v2.py`. Ver
+# [ARCH:perimeter-core-layout-generator].
+GROUPING_PREDICATES: List[Tuple[Callable[[Room], bool], str]] = [
+    (lambda r: r.min_exterior_sides == 0, "piezas de nucleo"),
+    (lambda r: r.is_wet, "nucleo humedo"),
+] + zone_grouping_predicates()
 
 
 class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
@@ -63,6 +93,7 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
         cooling_rate: float = 0.995,
         seed: Optional[int] = None,
         soft_constraint_scorer: Optional[SoftConstraintScorer] = None,
+        graph_builder: Optional[AdjacencyGraphBuilderPort] = None,
     ):
         self._constraint_validator = constraint_validator
         self._max_iterations = max_iterations
@@ -70,6 +101,7 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
         self._cooling_rate = cooling_rate
         self._seed = seed
         self._soft_scorer = soft_constraint_scorer
+        self._graph_builder = graph_builder
 
     def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout:
         rng = random.Random(self._seed)  # recreado en cada llamada, seed reproducible siempre
@@ -137,9 +169,70 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
         violations = self._constraint_validator.validate(layout).violations
         hard = len(violations)
         soft = self._soft_scorer.score(layout) if self._soft_scorer else 0.0
+        soft += self._grouping_proximity_penalty(layout)
         violating_ids = {
             room_id for room_id in all_room_ids
             if any(f"'{room_id}'" in v for v in violations)
         }
         locked = set(all_room_ids) - violating_ids
         return hard, soft, locked
+
+    def _grouping_proximity_penalty(self, layout: Layout) -> float:
+        """Incentivo BLANDO (gradiente real por distancia, no conteo
+        binario) para que cada grupo de `GROUPING_PREDICATES` termine
+        formando un único bloque geométricamente conectado --
+        `_assign_core_rooms_to_pieces` (perimeter_core_partition.py)
+        puede repartir el núcleo entre piezas del residuo DESCONECTADAS
+        entre sí (hallazgo real de la Fase 3, ver docstring de
+        `test_generate_layout_use_case_v2.py`), lo que además deja
+        estancias húmedas/de zona perimetrales (p.ej. `KITCHEN`) sin
+        conexión real con el resto de su grupo. Los validadores que
+        detectan esto (`NucleoHumedoValidator`/agrupación de zonas
+        día-noche-servicio/`PasilloTopologiaValidator`/
+        `BanoAccesoGeneralValidator`) solo saben "conectado o no", sin
+        ninguna señal de "cuánto falta" -- mismo problema de fondo que
+        motivó `_stair_corner_penalty` en `btree_layout_generator.py`,
+        mismo remedio aquí, generalizado a los 4 grupos relevantes en
+        vez de solo al núcleo. Sin `graph_builder` (no conectado en
+        `container.py`), no hay nada que penalizar. Ver
+        [ARCH:perimeter-core-layout-generator]."""
+        if self._graph_builder is None:
+            return 0.0
+        graph = self._graph_builder.build(layout)
+        return sum(
+            self._component_gap_penalty(graph, [r for r in layout.rooms if r.is_placed and predicate(r)])
+            for predicate, _label in GROUPING_PREDICATES
+        ) * CORE_PROXIMITY_WEIGHT
+
+    @staticmethod
+    def _component_gap_penalty(graph: nx.Graph, members: List[Room]) -> float:
+        """Suma de huecos geométricos mínimos necesarios para unir,
+        mediante un árbol generador mínimo (Prim) sobre la distancia
+        entre componentes, todos los componentes conexos de `members`
+        dentro de `graph` en uno solo -- 0.0 si ya hay un único
+        componente (o menos de 2 miembros). Ver
+        [ARCH:perimeter-core-layout-generator]."""
+        if len(members) < 2:
+            return 0.0
+        subgraph = graph.subgraph([r.id for r in members])
+        components = list(nx.connected_components(subgraph))
+        if len(components) <= 1:
+            return 0.0
+
+        polygons_by_id = {r.id: r.boundary.polygon for r in members}
+
+        def component_gap(a: Set[str], b: Set[str]) -> float:
+            return min(polygons_by_id[i].distance(polygons_by_id[j]) for i in a for j in b)
+
+        connected = [components[0]]
+        remaining = components[1:]
+        total_gap = 0.0
+        while remaining:
+            best_idx, best_gap = None, None
+            for idx, comp in enumerate(remaining):
+                gap = min(component_gap(c, comp) for c in connected)
+                if best_gap is None or gap < best_gap:
+                    best_idx, best_gap = idx, gap
+            total_gap += best_gap
+            connected.append(remaining.pop(best_idx))
+        return total_gap
