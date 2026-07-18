@@ -50,7 +50,7 @@ Ancho de exterior es asunto de urbanismo (A.2.1), no de habitabilidad
 por estancia. Override disponible por proyecto si hace falta.
 
 **`DISPLAY_NAMES`**: debe coincidir EXACTAMENTE con el mapeo `DISPLAY`
-del dashboard (`docs/visualizador/js/00-shared.js`) -- si uno cambia,
+del dashboard (`html/js/00-shared.js`) -- si uno cambia,
 cambiar el otro. Bug real encontrado en su momento: el nombre técnico
 del tipo se usaba como `Room.name`, visible en el plano final.
 

@@ -106,7 +106,7 @@ docs/                                # Ver docs/README.md como índice completo
 ├── referencia/                       # Referencia técnica consolidada por tema
 └── fuentes/relaciones_espaciales.md  # Catálogo de 120 relaciones entre tipos de estancia
 
-html/relaciones_espaciales.html  # Dashboard interactivo (3 zonas: Diseño, Consulta, Planificación)
+html/relaciones_espaciales.html  # Dashboard interactivo (4 zonas: Parcela, Diseño, Consulta, Planificación)
 INICIO.html                      # Punto de entrada único del proyecto
 examples/sample_program.json     # Programa de ejemplo en formato de datos
 ```

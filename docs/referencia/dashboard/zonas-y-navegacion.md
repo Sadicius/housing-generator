@@ -1,6 +1,14 @@
 # Dashboard -- zonas y navegación
 
 > Referencia técnica por componente -- extraído de `docs/historico/architecture.md` el 2026-07-14 al reorganizar la documentación por temas. El histórico cronológico completo (por qué se tomó cada decisión, en qué sesión) sigue en `docs/historico/architecture.md`; aquí solo vive la referencia consolidada, agrupada por tema.
+>
+> **El dashboard tiene hoy 4 zonas, no 3**: se añadió después una Zona 0
+> "Parcela" (datos de parcela + viabilidad urbanística, importación real
+> desde Catastro) delante de las 3 zonas descritas abajo -- ver
+> `docs/historico/architecture.md`, `[ARCH:viabilidad-urbanistica]`.
+> Esta reorganización de 3 zonas sigue siendo la referencia correcta
+> para el diseño de Diseño/Consulta/Planificación en sí, solo falta la
+> zona añadida después.
 
 ## [ARCH:zonas] Reestructuración de navegación por zonas
 

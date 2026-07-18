@@ -5,7 +5,7 @@ Generador procedural de viviendas por zonificación día/noche/servicio, con val
 ## Requisitos exactos
 
 - **Python 3.10 o superior** (comprobado con 3.12). Sin Node/npm — la parte JS (dashboard) corre en el navegador con `<script>` clásicos, sin build ni instalación.
-- Dependencias: `shapely`, `networkx`, `scipy` (se instalan solas, ver abajo).
+- Dependencias: `shapely`, `networkx` (se instalan solas, ver abajo).
 
 ## Instalación
 

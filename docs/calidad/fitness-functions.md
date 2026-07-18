@@ -19,7 +19,7 @@ se sigue cumpliendo, no solo que quedó documentada una vez.
   varias rondas de refactorización sin que nadie lo notara.
 - **[RESUELTO] `tests/unit/test_no_dead_code.py`**: ejecuta `vulture`
   contra `vulture_whitelist.py` en cada pase de la suite normal, no
-  como auditoría ocasional. `vulture_whitelist.py` contiene los 12
+  como auditoría ocasional. `vulture_whitelist.py` contiene los 13
   elementos ya revisados y confirmados como intencionados (piezas
   alternativas de arquitectura hexagonal con tests propios, API usada
   solo en tests/, `INDIFFERENT` como decisión de diseño, `generar_edificio`

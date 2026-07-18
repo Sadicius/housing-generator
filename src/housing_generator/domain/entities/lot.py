@@ -112,8 +112,7 @@ class Lot:
     lado -- el resto de lados conservan su propio retranqueo. Nunca se
     asume un valor por defecto (mismo principio que el resto de
     parámetros urbanísticos): siempre lo aporta el usuario desde su
-    ficha urbanística real, nunca se infiere del catastro. Ver
-    [ARCH:linea-edificacion].
+    ficha urbanística real, nunca se infiere del catastro.
 
     Ver [ARCH:lot].
     """
@@ -166,7 +165,7 @@ class Lot:
         declaró más generoso), el resto de lados quedan sin tocar.
         Vacío si ninguno de los dos está en uso -- mismo resultado que
         antes de introducir `linea_edificacion_m`. Ver
-        [ARCH:linea-edificacion], [ARCH:retranqueo-variable]."""
+        [ARCH:retranqueo-variable]."""
         por_lado = dict(self.retranqueo_por_lado)
         if self.linea_edificacion_m is not None and self.linea_edificacion_m > 0:
             actual = por_lado.get(self.street_side, self.retranqueo_m or 0.0)
@@ -186,8 +185,7 @@ class Lot:
         dirección cardinal en vez de uniforme (ver
         `_por_lado_efectivo`). `fondo_edificacion_m`, si está
         presente, recorta el resultado además. Ver [ARCH:parcela-real],
-        [ARCH:retranqueo-variable], [ARCH:fondo-edificacion],
-        [ARCH:linea-edificacion]."""
+        [ARCH:retranqueo-variable], [ARCH:fondo-edificacion]."""
         if self.poligono_real is None:
             return self.buildable_area
 
@@ -255,8 +253,7 @@ class Lot:
         por dirección cardinal en vez del valor único `retranqueo_m`
         (ver `_por_lado_efectivo`). `fondo_edificacion_m`, si está
         presente, recorta el resultado además. Ver [ARCH:lot],
-        [ARCH:retranqueo-variable], [ARCH:fondo-edificacion],
-        [ARCH:linea-edificacion]."""
+        [ARCH:retranqueo-variable], [ARCH:fondo-edificacion]."""
         por_lado_efectivo = self._por_lado_efectivo()
         if por_lado_efectivo:
             # medianera siempre a retranqueo 0, sin importar lo que
@@ -315,9 +312,8 @@ def clasificar_lado_cardinal(p1, p2, centroide) -> str:
     """Clasifica el lado p1->p2 por la dirección cardinal más cercana
     a su normal saliente (la que apunta lejos del centroide) -- no
     asume que el polígono ya esté alineado a ejes. Compartida por
-    `retranqueo_variable_por_lado`, `Lot.frente_actual_m` (antes
-    duplicada inline solo en la primera) y `perimeter_carving.py`
-    (tallado perimetral del generador). Pública porque se reutiliza
+    `retranqueo_variable_por_lado` y `Lot.frente_actual_m` (antes
+    duplicada inline solo en la primera). Pública porque se reutiliza
     fuera de este módulo -- ver [ARCH:retranqueo-variable]."""
     dx, dy = p2[0] - p1[0], p2[1] - p1[1]
     longitud = math.hypot(dx, dy)

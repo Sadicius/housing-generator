@@ -1,19 +1,20 @@
 """Árbol B* (Chang & Chang, 2000) para distribuir TODAS las estancias
-de un programa en un solar de una sola vez -- representación NO-guillotina
-alternativa a `partition_tree.py`, que solo puede representar particiones
-donde cada corte divide el rectángulo entero de lado a lado. Formas en L,
-en U, o con patio interior son, por definición, imposibles con guillotina
-pura, sin importar cuánto se mejore la búsqueda.
+de un programa en un solar de una sola vez -- representación NO-guillotina,
+único generador del proyecto desde que el árbol de partición/guillotina
+(donde cada corte dividía el rectángulo entero de lado a lado) se
+eliminó por completo. Formas en L, en U, o con patio interior son, por
+definición, imposibles con guillotina pura, sin importar cuánto se
+mejore la búsqueda.
 
-A diferencia de `PartitionNode` (donde las hojas son estancias y los
-nodos internos son cortes), aquí CADA nodo representa una estancia
-directamente. Las coordenadas X las decide la propia estructura del
-árbol; las coordenadas Y requieren una estructura de contorno (perfil
-tipo "skyline" de lo ya ocupado) -- ver `compute_positions`.
+Aquí CADA nodo representa una estancia directamente (a diferencia del
+árbol de partición eliminado, donde las hojas eran estancias y los
+nodos internos eran cortes). Las coordenadas X las decide la propia
+estructura del árbol; las coordenadas Y requieren una estructura de
+contorno (perfil tipo "skyline" de lo ya ocupado) -- ver `compute_positions`.
 
-Migración planificada a fondo, con las decisiones de diseño y el
-prototipo verificado, en `docs/referencia/generador/prototipo-btree/`.
-Ver [ARCH:btree-partition].
+Migración completa, decisiones de diseño en `docs/historico/architecture.md`
+bajo `[ARCH:migracion-btree]`/`[ARCH:btree-generador-por-defecto]`. Ver
+[ARCH:btree-partition].
 """
 
 import copy

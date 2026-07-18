@@ -8,8 +8,8 @@ Generador alternativo, deliberadamente simple (franjas por zona,
 luego cajas por estancia dentro de cada franja) -- para ser fácil de
 testear/entender, y sustituible por CSP/genético sin tocar el resto
 del sistema. No conectado al pipeline principal (`container.py` usa
-`SimulatedAnnealingLayoutGenerator`), pero mantenido con tests propios
-como pieza intercambiable de la arquitectura hexagonal.
+`BTreeLayoutGenerator`), pero mantenido con tests propios como pieza
+intercambiable de la arquitectura hexagonal.
 
 Heurística de núcleo húmedo: coloca estancias húmedas primero
 (extremo izquierdo) dentro de su zona, para alinearlas en columna con

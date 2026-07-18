@@ -9,10 +9,9 @@ from housing_generator.infrastructure.algorithms.layout_generation.btree_partiti
 
 
 def test_compute_positions_matches_hand_calculation():
-    # caso de prueba verificado a mano en el prototipo aislado
-    # (docs/referencia/generador/prototipo-btree/) antes de escribir
-    # este modulo de produccion -- misma verificacion, ahora contra el
-    # codigo real. A(4x2) raiz, B hijo izquierdo (pegado a la derecha),
+    # caso de prueba verificado a mano en el prototipo aislado antes de
+    # escribir este modulo de produccion -- misma verificacion, ahora
+    # contra el codigo real. A(4x2) raiz, B hijo izquierdo (pegado a la derecha),
     # C hijo derecho (misma X, encima).
     A = BStarNode(room_id="A", aspect_ratio=2.0)  # area 8, ratio 2 -> w=4,h=2
     B = BStarNode(room_id="B", aspect_ratio=1.0)  # area 9, ratio 1 -> w=3,h=3

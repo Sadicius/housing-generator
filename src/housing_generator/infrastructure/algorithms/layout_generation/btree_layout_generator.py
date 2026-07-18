@@ -47,18 +47,19 @@ STAIR_CORNER_PREFERENCE_WEIGHT = 0.1  # NO normativo, mismo tipo de
 
 
 class BTreeLayoutGenerator(LayoutGeneratorPort):
-    """Genera el layout con un árbol B* (Chang & Chang 2000) en vez del
-    árbol de partición (`SimulatedAnnealingLayoutGenerator`) -- pieza
-    intercambiable vía `LayoutGeneratorPort`, en paralelo al sistema
-    actual, no en sustitución (Fase 4 de la migración planificada en
-    `docs/referencia/generador/prototipo-btree/`).
+    """Genera el layout con un árbol B* (Chang & Chang 2000) -- único
+    generador del proyecto, pieza intercambiable vía `LayoutGeneratorPort`
+    (el árbol de partición/guillotina anterior, `SimulatedAnnealingLayoutGenerator`,
+    se eliminó por completo tras confirmar mejor convergencia en todos
+    los casos difíciles probados -- ver `docs/historico/architecture.md`,
+    `[ARCH:btree-generador-por-defecto]`).
 
-    Misma función objetivo que el generador actual (comparación
-    lexicográfica duro/blando, duro siempre dominante) y mismo bucle
-    de recocido -- lo que cambia es la representación geométrica: en
-    vez de particionar un rectángulo, se empaquetan las estancias
-    directamente, lo que permite siluetas no rectangulares (en L, en
-    U, con patio interior) que el árbol de partición no puede
+    Misma función objetivo que el generador clásico eliminado
+    (comparación lexicográfica duro/blando, duro siempre dominante) y
+    mismo bucle de recocido -- lo que cambió es la representación
+    geométrica: en vez de particionar un rectángulo, se empaquetan las
+    estancias directamente, lo que permite siluetas no rectangulares
+    (en L, en U, con patio interior) que el árbol de partición no podía
     representar por definición. Ver [ARCH:btree-partition].
     """
 
@@ -154,8 +155,9 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
             )
 
             # comparacion lexicografica: si lo duro cambia, decide solo
-            # el delta duro; lo blando solo cuenta si empata. Ver
-            # [ARCH:simulated-annealing].
+            # el delta duro; lo blando solo cuenta si empata -- por que
+            # no suma ponderada, ver docs/CONTINUIDAD.md, "Cosas
+            # aprendidas por las malas".
             delta: float
             if candidate_hard != current_hard:
                 delta = candidate_hard - current_hard

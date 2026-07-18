@@ -2,11 +2,15 @@
 
 Catálogo de la planta preferente/obligatoria por cada `RoomType`,
 construido tipo a tipo con el mismo método que
-`relaciones_espaciales.md`. **No implementado en código todavía** — el
-generador actual (`SimulatedAnnealingLayoutGenerator`) y las entidades
-`Lot`/`Layout` asumen un único plano 2D; no existe generación
-multi-planta real. Este documento es la base para cuando se aborde esa
-extensión.
+`relaciones_espaciales.md`. La generación multi-planta real SÍ está
+implementada (`Building`, `GenerateBuildingUseCase`, `RoomType.STAIRCASE`
+conectando plantas -- ver secciones "[RESUELTO]" más abajo y
+`docs/CONTINUIDAD.md`). Lo que **no** está implementado es que el
+catálogo de este documento (preferencia de nivel por tipo) se use para
+GUIAR la generación -- hoy `Room.level` (`NivelPlanta`) lo asigna el
+programa de entrada, no una preferencia automática derivada de
+`RoomType`. Este documento sigue siendo la base para esa extensión, si
+se retoma.
 
 ## Estructura del modelo
 

@@ -1,9 +1,12 @@
 # Guía de uso — housing_generator
 
-## Estructura de navegación (3 zonas)
+## Estructura de navegación (4 zonas)
 
-El dashboard se organiza en 3 zonas, no en una fila plana de pestañas:
+El dashboard se organiza en 4 zonas, no en una fila plana de pestañas:
 
+- **Zona 0 — Parcela**: datos de la parcela y viabilidad urbanística --
+  dimensiones o importación real desde Catastro (GML), retranqueo
+  (uniforme o por lado), lado de calle.
 - **Zona 1 — Diseño**: el flujo real de generación, en 2 pasos
   explícitos -- *1. Programa y generación* (selección de estancias +
   botón "generar plano ahora") → *2. Resultado* (visor de plano, modo
@@ -26,11 +29,11 @@ cd housing_generator
 pip install -e .
 ```
 
-Dependencias: `shapely>=2.0`, `networkx>=3.0`, `scipy>=1.10`, `pytest` (desarrollo).
+Dependencias: `shapely>=2.0`, `networkx>=3.0`, `pytest` (desarrollo).
 
 Comprobar que todo funciona:
 ```bash
-pytest -q            # deberia dar 295 passed
+pytest -q            # ver docs/CONTINUIDAD.md para la cifra actual -- cambia con cada incremento
 python -m housing_generator.interface.cli.main --output /tmp/prueba.json
 ```
 
@@ -308,7 +311,7 @@ otra variante, basta con cambiar la semilla y volver a pulsar -- sin
 repetir la selección de estancias.
 
 La primera vez que se pulsa, Pyodide descarga el intérprete de Python
-y los paquetes necesarios (shapely, numpy, scipy, networkx) -- tarda
+y los paquetes necesarios (shapely, numpy, networkx) -- tarda
 unos segundos, con el progreso visible en pantalla. Las veces
 siguientes es inmediato, ya está todo cargado en la pestaña.
 
@@ -350,16 +353,17 @@ python -m housing_generator.interface.cli.main --import-seleccion seleccion_plan
 
 Por defecto usa una parcela de ejemplo (14x16m) — `--lot-size ANCHOxFONDO`
 (p.ej. `--lot-size 12x18`) permite ajustarla a una parcela real. Si la
-primera semilla no converge, el CLI reintenta solas hasta 5 semillas
+primera semilla no converge, el CLI reintenta solas hasta 20 semillas
 consecutivas antes de rendirse (`--retry-seeds`, ver más abajo).
 
-## Estructura del dashboard (13 archivos, no 1)
+## Estructura del dashboard (14 archivos, no 1)
 
 `html/` tiene: `relaciones_espaciales.html` (estructura),
 `.css` (estilos), `py_bundle.js` (código Python embebido para
-Pyodide), y `js/` con 10 archivos, uno por pestaña/concepto
-(`00-shared.js` con los datos y utilidades comunes, `01-matriz.js`...
-`09-init.js`, que arranca todo al final). Separados a petición del
+Pyodide), y `js/` con 11 archivos, uno por pestaña/concepto
+(`00-shared.js` con los datos y utilidades comunes, `00b-parcela.js`
+para Zona 0, `01-matriz.js`... `09-init.js`, que arranca todo al
+final). Separados a petición del
 usuario -- **sigue abriéndose igual, con doble clic sobre el
 `.html`, sin servidor**: todos se cargan con `<link>`/`<script
 src="">` clásicos, en el orden correcto (`00-shared` primero,
@@ -473,10 +477,11 @@ a veces con la misma configuración**
 → Probablemente dificultad de búsqueda, no un problema de datos —
 aumentar `max_iterations` o probar otra `seed`. Esto es especialmente
 común con `--auto-adjacency` (ver aviso más arriba) o con parcelas muy
-ajustadas de tamaño. Con `--import-seleccion` esto ya se maneja solo
-(`--retry-seeds`, 5 intentos por defecto, informa qué semilla funcionó)
--- confirmado con un caso real donde la semilla 1 no convergía y la 4
-sí, sin que hiciera falta buscarla a mano.
+ajustadas de tamaño. Esto ya se maneja solo (`--retry-seeds`, 20
+intentos por defecto -- subido de 5 tras medir la tasa de fallo real
+en multi-planta, informa qué semilla funcionó) -- confirmado con un
+caso real donde la semilla 1 no convergía y la 4 sí, sin que hiciera
+falta buscarla a mano.
 
 [ACTUALIZADO] El árbol B* (Chang & Chang 2000, representación
 geométrica distinta a la guillotina) es el ÚNICO generador desde que

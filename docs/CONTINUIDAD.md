@@ -19,13 +19,15 @@
 Sistema generativo de plantas residenciales en Python, cumplimiento del
 Decreto 29/2010 de Galicia (habitabilidad, modificado por Decreto 128/2023).
 Arquitectura hexagonal estricta. Generación por recocido simulado sobre un
-árbol de partición (con heurística de "cortar por el lado más largo",
-Marson & Musse 2010). 19 validadores normativos/prácticos + 1 combinador,
-multi-planta con escalera y contorno progresivo, vivienda aislada y
+árbol B* (Chang & Chang 2000, heurística de "cortar por el lado más largo"
+de Marson & Musse 2010 heredada del árbol de partición anterior).
+24 validadores normativos/prácticos + 1 combinador, multi-planta con
+escalera compartida y contorno progresivo, vivienda aislada y
 pareada/adosada, dashboard con visor de plano y generación automática.
 
-**Estado en el momento de escribir esto**: 422/422 tests unitarios,
-más los de integración (117 commits).
+**Estado en el momento de escribir esto**: 504 passed, 27 xfailed
+(`pytest -q`, 2026-07-18, tras retirar el generador experimental
+"periferia hacia el centro" -- ver "Decisiones de arquitectura tomadas").
 Estas cifras quedarán obsoletas en cuanto se añada algo más -- si no
 coinciden con `git log --oneline | wc -l` y `pytest -q`, confiar en el
 comando, no en este número.
@@ -150,8 +152,8 @@ docs/
   CONTINUIDAD.md              este archivo -- pendientes reales
   historico/architecture.md   decisiones + auditorías, en orden cronológico (append-only)
   referencia/                 la misma info que architecture.md, pero consolidada por TEMA
-    generador/                 partición, huella construible, área objetivo, bloqueo progresivo
-    validadores/                los 20+ validadores, agrupados por que exigencia comparten
+    generador/                 decisiones de arquitectura vigentes (contacto exterior, multi-planta)
+    validadores/                los 24 validadores, agrupados por que exigencia comparten
     infraestructura/            composition root, enums, geometría, persistencia
     dashboard/                  zonas, cronograma, catálogo constructivo, lanzador
   fuentes/
@@ -171,42 +173,21 @@ grande. Para buscar una decisión CONCRETA rápido sin leer todo el histórico,
 `docs/referencia/` tiene la misma información consolidada por tema -- busca la
 etiqueta `[ARCH:tag]` con `grep -rn "ARCH:tag" docs/`.
 
-## Los 21 validadores normativos/prácticos + 1 combinador (todos en `infrastructure/algorithms/constraints/`)
+## Los validadores normativos/prácticos
 
-Por planta (`build_per_floor_validators` en `container.py`, 17 clases,
-20 instancias contando las 4 de `GroupingConstraintValidator`): Adjacency,
-NucleoHumedo, zonificación día/noche/servicio, EstanciaMinimumArea (Tabla 1),
-ServicioMinimumArea (Tabla 2), DormitorioArmario, TrasteroMinimumArea,
-AnchoLibreEstancia, AnchoLibrePractico (NO normativo, 1.20m confirmado
-explícitamente, ver sección de aprendizajes), AnchoLibrePasillo, AlturaLibre,
-ExteriorContact, CocinaIntegrada, EspacioAcceso, EscaleraAnchoLibre,
-PasilloTopologia, ViviendaAccesible (**opt-in**, `vivienda_accesible=True` --
-inactivo por defecto, círculo de giro Ø1.50m + pasillo 1.20m, DB-SUA/Base
-5.4, retomado de un proyecto Lua anterior del usuario -- ver architecture.md),
-ProporcionMaxima (NO normativo, 2.5:1 confirmado explícitamente, siempre
-activo -- red de seguridad contra estancias tipo "tira fina" que cumplen
-el ancho mínimo pero son absurdas en proporción, encontrado con una batería
-de casos reales, ver architecture.md).
-
-De ámbito EDIFICIO (no por planta, se comprueban aparte en
-`GenerateBuildingUseCase`): ViviendaMinima (programa mínimo, une todas las
-plantas), BanoAccesoGeneral (al menos un baño con acceso general en ALGUNA
-planta).
-
-Entre plantas consecutivas (parametrizados con la planta ya resuelta):
-EscaleraAlineacion (huella ≥90% de solape), NucleoHumedoVertical (bajantes).
-
-`CompositeConstraintValidator` agrupa todos los anteriores tras la misma
-interfaz -- no es una regla normativa en sí, es el combinador (17+2+2=21
-reglas). Detalle completo con tabla resumen en `docs/COMO_FUNCIONA.md`.
-
-**`ViabilidadUrbanisticaValidator`** (añadido después, Zona 0): distinto
-de los 21 anteriores -- implementa `ViabilidadUrbanisticaValidatorPort`,
-no `ConstraintValidatorPort` (recibe `Program`+`Lot`+`num_plantas`
-declarados, no un `Layout` ya colocado). Se ejecuta ANTES de generar
-nada, no después -- comprueba edificabilidad, ocupación, altura y
-frente de fachada contra los parámetros urbanísticos reales que aporta
-el usuario. Ver [ARCH:viabilidad-urbanistica].
+La lista completa (qué clase, por planta/edificio/entre-plantas, qué
+tabla o artículo normativo respalda cada una) vive en el propio código
+(`container.py::build_per_floor_validators`/`build_generate_building_use_case`,
+un docstring por validador con su cita normativa) y en
+`docs/COMO_FUNCIONA.md` (tabla resumen) -- no se duplica aquí para no
+tener dos sitios que puedan desincronizarse. Dos casos que SÍ conviene
+recordar al leer el código porque no son obvios por el nombre de la
+clase: `AnchoLibrePractico`/`ProporcionMaxima` son restricciones de
+ingeniería NO normativas (confirmadas explícitamente como tal, no una
+mala lectura del decreto), y `ViabilidadUrbanisticaValidator` es
+distinto de los demás -- se ejecuta ANTES de generar nada (recibe
+`Program`+`Lot`+`num_plantas` declarados, no un `Layout` ya colocado).
+Ver [ARCH:viabilidad-urbanistica].
 
 ## Multi-planta — cómo funciona
 
@@ -234,12 +215,12 @@ todas). Ver `docs/historico/architecture.md`.
 ## Restricciones blandas — RESUELTO
 
 `SoftConstraintScorer` + `AdjacencyStrength.SHOULD_BE_AWAY` (nuevo;
-`SHOULD_BE_NEAR` ya existía en el enum sin usar). Conectado al recocido
-simulado con comparación LEXICOGRÁFICA `(duro, blando)` — no suma
-ponderada (esa primera versión rompía la dinámica de aceptación del
-recocido, ver architecture.md). Confirmado con tests: la preferencia
-blanda se satisface cuando no hay tensión con lo duro, y lo duro nunca
-cede aunque haya tensión directa para el mismo par.
+`SHOULD_BE_NEAR` ya existía en el enum sin usar), conectado al recocido
+simulado con comparación lexicográfica `(duro, blando)` -- por qué no
+suma ponderada, ver "Cosas aprendidas por las malas" más abajo.
+Confirmado con tests: la preferencia blanda se satisface cuando no hay
+tensión con lo duro, y lo duro nunca cede aunque haya tensión directa
+para el mismo par.
 
 ## Catálogo de 120 pares formalizado — RESUELTO
 
@@ -278,157 +259,58 @@ mano, necesitan más margen de búsqueda de forma habitual, confirmado
 con un caso real donde la semilla 1 no convergía). Confirmado con
 generación real de extremo a extremo repetidamente.
 
-## Pendiente real, si se retoma
+## Historial de investigación reciente (resumen -- detalle completo en architecture.md)
 
-**[CORREGIDO -- era una falsa alarma] "No-determinismo" descartado**
-([ARCH:no-determinismo-descartado]): la entrada anterior aquí
-sospechaba que el mismo comando con la misma semilla podía dar
-resultados distintos entre ejecuciones. Investigado a fondo:
-ejecutado el mismo comando exacto 6 veces (3 con semilla 1, 3 con
-semilla 7, un escenario que SÍ requiere búsqueda real, no
-convergencia inmediata) -- resultado **idéntico letra por letra en
-las 6**, incluidas las cifras decimales exactas de las violaciones.
-El generador SÍ es determinista de forma robusta. La sospecha
-original casi seguro venía de comparar ejecuciones con parámetros
-distintos entre sí (`--retry-seeds`/`--max-iterations` diferentes),
-no el mismo comando repetido -- documentado aquí como corrección, no
-borrado en silencio, para que quede claro que se investigó y se
-descartó con evidencia real.
+Todo lo de esta sección ya está resuelto/cerrado. El razonamiento
+completo (números, seeds, diagnóstico paso a paso) vive en
+`docs/historico/architecture.md` bajo la etiqueta `[ARCH:tag]` indicada
+-- no se repite aquí para no tener dos copias que puedan divergir.
+Solo se detalla en prosa lo que NO tiene una entrada equivalente en
+architecture.md.
 
-**Programa de ejemplo del CLI reducido de 11 a 6 estancias**
-([ARCH:cli-programa-reducido]): a petición del usuario, para que la
-demo por defecto genere de forma fiable. 4 tests de integración que
-usaban escenarios propios (no el programa reducido) quedaron en
-`xfail` documentado -- mismo problema de fondo
-([ARCH:locking-progresivo]), no resuelto para ellos, solo
-documentado honestamente en vez de ocultado.
+- **"No-determinismo" descartado, era falsa alarma**: mismo comando,
+  misma semilla, 6 ejecuciones idénticas letra por letra. `[ARCH:no-determinismo-descartado]`
+- **Programa de ejemplo del CLI reducido de 11 a 6 estancias** para
+  que la demo por defecto genere de forma fiable. `[ARCH:cli-programa-reducido]`
+- **Migración al árbol B* (Chang & Chang 2000)**: comparación empírica
+  confirmó mejor convergencia en todos los casos difíciles probados;
+  el generador clásico (partición/guillotina) se eliminó del todo a
+  petición del usuario, junto con sus tests dedicados.
+  `[ARCH:migracion-btree]`, `[ARCH:btree-generador-por-defecto]`
+- **Bloqueo progresivo (min-conflicts, calibración de temperatura)**
+  investigado a fondo para el escenario complejo (9-11 estancias) del
+  CLI; resuelto al final por otra vía más simple (reducir el
+  programa). El aprendizaje sobre sus límites se reaplicó después en
+  la migración al árbol B*. `[ARCH:locking-progresivo]`
+- **Pyodide probado en un navegador real**: confirmó que funciona;
+  aparecieron 2 bugs invisibles en este entorno de desarrollo
+  (`JsNull` de Pyodide no convertía a `None`; aseo/tendedero al mínimo
+  legal exacto quedaba casi imposible de colocar con el ancho libre
+  práctico). `[ARCH:btree-partition]`, `[ARCH:ancho-libre-practico]`
 
-**[ACTUALIZADO] 3 de esos 4 xfail, ya resueltos -- por dos vías
-distintas** ([ARCH:migracion-btree], [ARCH:relaciones-obligatorias-revisadas]):
-`test_cli_with_auto_adjacency` se resolvió al relajar las relaciones
-obligatorias del catálogo (sesión aparte, sin tocar el generador).
-Tras confirmar que el árbol B* resuelve el escenario de la Fase 5, se
-probó `--experimental-btree` contra los otros 2 xfail restantes --
-ambos convergen (parcela 12x11 ajustada, semilla 4; escenario
-multi-planta de 2 niveles, semilla 8), xfail retirado en ambos,
-verificado con el CLI real, no una reconstrucción. El único que
-queda (parcela 12x10, 9 estancias con `DINING_ROOM`-`KITCHEN`
-obligatorio) se resiste con ambos generadores -- probado hasta 10
-semillas con el árbol B*, sigue sin converger.
-
-**[ACTUALIZADO -- decisión de fondo, luego eliminación completa] El
-árbol B* es el ÚNICO generador** ([ARCH:btree-generador-por-defecto]):
-tras un tercer caso real (2 dormitorios, 6 estancias pequeñas) que
-necesitaba 21 intentos con el generador clásico y solo 7 con el árbol
-B*, el usuario primero confirmó hacerlo el generador por defecto, y
-después pidió eliminar el generador clásico por completo ("no me
-interesa conservar el generador clásico, podemos eliminarlo"). Archivos
-borrados: `simulated_annealing_generator.py`, `partition_tree.py`,
-`footprint.py` -- junto con sus tests dedicados. Al eliminarlo
-aparecieron 2 bugs reales en el árbol B*, nunca antes ejercitados:
-(1) el movimiento "swap" crasheaba con `IndexError` en programas de 1
-sola estancia (sin otra estancia con la que intercambiar) -- corregido
-excluyendo "swap" dinámicamente cuando hay menos de 2 nodos; (2)
-`BTreeLayoutGenerator` no exponía `metadata["hard_violations"]`/
-`["soft_penalty"]` (que sí exponía el clásico) -- un test dependía de
-ese campo, `KeyError` sin él, corregido añadiendo los mismos campos.
-
-**Hallazgo estructural real, no solo bugs**: varios tests
-curados a mano para el generador clásico (`test_generate_layout_use_case.py`,
-`test_type_adjacency_catalog_integration.py`, uno en `test_cli.py`)
-dejaron de converger con el árbol B* -- diagnosticado antes de marcar
-xfail, no asumido: el empaquetado del árbol B* produce una huella
-mucho más pequeña que el lote cuando el lote es generoso respecto al
-programa (9.8×12.6m dentro de un lote de 17×18m en un caso medido).
-El anclaje solo garantiza que UN lado de la huella toque el linde
-real; los otros tres quedan flotando en el "vacío" (jardín), sin
-contacto exterior real -- confirmado con 15000 iteraciones y varias
-semillas, no una cuestión de búsqueda. Marcados `xfail` con el motivo
-completo. Pendiente real si se retoma: hacer que el empaquetado tienda
-a ocupar el lote completo, o anclarlo a más de un lado. Los escenarios
-de producción reales (dashboard, CLI con `--import-seleccion`) NO se
-ven afectados -- el hallazgo es específico de lotes mucho más
-generosos que el programa, como estos tests antiguos.
-
-También a petición del usuario:
-`gen-seed`/`gen-iterations` eliminados como campos manuales del
-dashboard -- la semilla siempre es 1 (el reintento automático ya
-explora desde ahí) y las iteraciones se escalan según el número real
-de estancias del programa (`max(1500, num_estancias * 300)`).
-
-**[ACTUALIZADO -- resuelto por otra vía] Escenario complejo (9-11
-estancias) del programa de ejemplo del CLI**
-([ARCH:locking-progresivo]): investigación profunda con técnicas
-reales (min-conflicts, calibración de temperatura, bloqueo
-progresivo) redujo las violaciones simultáneas de 5-7 a típicamente
-2, pero no llegó a cero en su momento. El usuario confirmó que el
-diagnóstico anterior ("contacto exterior simultáneo es
-geométricamente difícil") estaba mal planteado -- una topología en
-tira con dirección consistente lo resuelve trivialmente; el problema
-real era que ni la construcción inicial del árbol ni la búsqueda
-protegían esa propiedad una vez conseguida. Este escenario concreto
-del CLI se resolvió después por otra vía, más simple: reducir el
-programa de ejemplo de 11 a 6 estancias (ver más arriba,
-`[ARCH:cli-programa-reducido]`) -- `test_sample_program_generates_a_valid_layout_with_fixed_seed`
-ya NO está en `xfail`, pasa de verdad. El aprendizaje sobre el
-bloqueo progresivo y sus límites sigue siendo válido y se aplicó
-después en la migración al árbol B* -- se mantiene documentado aquí
-por eso, no porque el escenario original siga sin resolver.
-
-**Modo espejo no transforma todavía el VACÍO** ([ARCH:area-objetivo]):
-el visor omite dibujar la zona de vacío si el plano está transformado
-(mirrorH/V/rotación), en vez de dibujarlo en el sitio equivocado --
-limitación conocida, documentada, pendiente de resolver.
-
-**Cytoscape.js para la pestaña "Sinergias"** (investigado a fondo, no
-implementado -- decisión explícita de posponerlo): sustituiría la red
-SVG dibujada a mano (posicionamiento radial estático) por una red
-interactiva real (arrastrar nodos, zoom, selección por caja). Viable
-técnicamente -- `cytoscape.min.js` (UMD, MIT, muy establecida) tiene
-bundle standalone real cargable con `<script src="">` clásico desde
-CDN (unpkg/jsDelivr/CDNJS), funciona desde `file://` igual que Pyodide.
-Coste real, no trivial: se renderiza en `<canvas>`, no SVG -- nuestras
-variables CSS no se le pueden pasar directamente, hay que leer los
-valores computados vía JS. Gotcha documentado por la propia librería
-que nos afecta de verdad: necesita que su contenedor tenga dimensiones
-reales en el momento de inicializarse, y nuestras pestañas inactivas
-usan `display:none` -- inicializar mientras la pestaña está oculta le
-daría tamaño cero. Solución conocida (inicializar solo al abrir la
-pestaña la primera vez, + `cy.resize()`+`cy.fit()` al mostrarla) pero
-es trabajo real de integración, no "añadir una librería y ya".
-
-**[RESUELTO] Probar el generador real en el navegador (Pyodide) en un
-navegador de verdad, con internet normal**: el usuario lo hizo de
-verdad esta sesión (no en este entorno de desarrollo, donde el CDN
-sigue bloqueado) -- confirmó que funciona, y por el camino aparecieron
-dos bugs reales que ESTE entorno nunca podía haber detectado por sí
-solo: (1) `pyodide.globals.set('x', null)` no se convierte a `None`
-de Python de forma fiable (llega como objeto `JsNull`), causaba
-`TypeError: float() argument... not 'JsNull'` al generar sin
-retranqueo -- corregido construyendo el literal Python directamente
-como texto en vez de pasar por la conversión automática, ver
-`[ARCH:btree-partition]`. (2) el generador automático creaba
-lavadero/tendedero/aseo al mínimo legal exacto (1.5m², Tabla 2), que
-con el ancho libre práctico (1.20m) dejaba casi imposible de colocar
--- corregido relajando el umbral para aseo/tendedero y dando margen
-de área al lavadero, ambas decisiones confirmadas explícitamente con
-el usuario, ver `[ARCH:ancho-libre-practico]`. Ambos confirmados
-resueltos por el usuario probando de nuevo tras cada arreglo.
+**Cytoscape.js para la pestaña "Sinergias"** (investigado a fondo, NO
+en architecture.md -- decisión explícita de posponerlo, no implementado):
+sustituiría la red SVG dibujada a mano por una red interactiva real
+(arrastrar nodos, zoom, selección por caja). Viable técnicamente
+(`cytoscape.min.js`, UMD/MIT, funciona desde `file://` igual que
+Pyodide) pero con coste real de integración: se renderiza en
+`<canvas>` (nuestras variables CSS no se le pueden pasar directamente,
+hay que leer valores computados vía JS) y necesita que su contenedor
+tenga dimensiones reales al inicializarse -- nuestras pestañas
+inactivas usan `display:none`, así que hay que inicializar solo al
+abrir la pestaña la primera vez (+ `cy.resize()`+`cy.fit()`).
 
 **[INVESTIGADO, no es un hueco genuino] Zona de desembarco de
-escalera**: señalado en una crítica externa que el usuario compartió.
-Investigado contra CTE DB-SUA 1 real: el concepto normativo que existe
-de verdad es la "meseta" (descansillo intermedio), obligatoria dentro
-de un mismo tramo al superar cierto número de peldaños (16 en uso
-restringido, confirmado que ni siquiera tiene límite de altura que
-fuerce mesetas por altura en vivienda unifamiliar) -- pero esto vive
-DENTRO de la geometría propia de la escalera (peldaños/tramos), algo
-que ya documentamos explícitamente como fuera de alcance (no modelamos
-peldaños individuales, `STAIRCASE` es un único rectángulo). No es un
-hueco nuevo, es el mismo límite ya conocido. La preocupación de fondo
-de la crítica (topología de circulación, "puntos muertos") ya está
-cubierta en espíritu por `PasilloTopologiaValidator` +
-`EscaleraAlineacionValidator`. Cerrado, sin trabajo pendiente.
+escalera** (NO en architecture.md): señalado en una crítica externa
+que el usuario compartió. Investigado contra CTE DB-SUA 1 real: el
+concepto normativo real es la "meseta" (descansillo intermedio),
+obligatoria dentro de un mismo tramo al superar cierto número de
+peldaños -- pero vive DENTRO de la geometría propia de la escalera
+(peldaños/tramos), ya fuera de alcance documentado (`STAIRCASE` es un
+único rectángulo, no modelamos peldaños individuales). La preocupación
+de fondo (topología de circulación, "puntos muertos") ya está cubierta
+en espíritu por `PasilloTopologiaValidator` + `EscaleraAlineacionValidator`.
+Cerrado, sin trabajo pendiente.
 
 Auditoría de flujo completo realizada a petición del usuario (recopilar
 fallos/huecos de flujo, no solo bugs sueltos). El hallazgo #1
@@ -438,122 +320,11 @@ sin salir a una terminal) también está RESUELTO -- ver la sección de
 Pyodide arriba. **[RESUELTO] `--retranqueo`/`--retranqueo-incremento`
 en el CLI** y **[RESUELTO] `AnchoLibrePracticoValidator` mencionado en
 el dashboard** -- ver `[ARCH:cli-retranqueo]` y
-`[ARCH:ancho-practico-dashboard]`. Quedan estos:
-
-- **Contacto exterior no garantizado por construcción -- rediseño
-  "periferia hacia el centro" EN CURSO (Fases 0-3 implementadas, en
-  paralelo, todavía no sustituye al generador por defecto)**: ver
-  `docs/referencia/generador/contacto-exterior-y-envolvente.md`
-  (`[ARCH:contacto-exterior-arquitectura]`, `[ARCH:perimeter-core-layout-generator]`).
-  `PerimeterCoreLayoutGenerator` (`build_generate_layout_use_case_v2`,
-  nombre `_v2` provisional) talla el perímetro contra el borde real del
-  solar y reparte el núcleo (estancias sin necesidad de fachada) entre
-  las piezas del residuo -- confirmado con datos reales que el
-  contacto exterior en sí ya no es el problema. Lo que SÍ sigue
-  bloqueando los 5 escenarios reales usados como criterio de
-  aceptación (`test_generate_layout_use_case_v2.py`, xfail):
-  repartir el núcleo en piezas separadas del residuo (pedido
-  explícitamente por el usuario para reducir severidad de solape) las
-  dejaba a veces geométricamente DESCONECTADAS entre sí. **Resuelto**
-  con un incentivo de proximidad (`_grouping_proximity_penalty`,
-  gradiente real por distancia -- árbol generador mínimo sobre el
-  hueco entre componentes conexos, mismo patrón que
-  `_stair_corner_penalty` de `btree_layout_generator.py`),
-  generalizado a los 4 grupos que rompían en cascada (piezas de
-  núcleo, núcleo húmedo, zona día/noche/servicio) -- verificado con
-  datos reales que las piezas SÍ terminan conectadas entre sí en los 5
-  escenarios. **Hallazgo más preciso, sin resolver todavía**: lo que
-  sigue bloqueando la convergencia no es proximidad -- es que
-  `PasilloTopologiaValidator` sigue señalando docenas de "paso
-  obligado" (puntos de corte del grafo de circulación). Confirmado
-  ESTRUCTURAL, no de búsqueda: el mismo escenario con 5 semillas y
-  20000 iteraciones (6-7x el presupuesto real de los tests) converge
-  siempre al mismo número exacto de violaciones. Causa probable: el
-  tallado perimetral confina el núcleo a una sola bolsa del residuo,
-  que por construcción solo puede tocar 1-2 estancias perimetrales --
-  esas quedan como punto de corte inevitable, sin que ninguna mutación
-  actual cree una segunda vía de conexión independiente. Un gradiente
-  de distancia no ataca esto (dos piezas ya en contacto siguen siendo
-  el único punto de corte); hace falta una mutación o incentivo de
-  REDUNDANCIA de contacto núcleo-perímetro, decisión de arquitectura
-  pendiente con el usuario. Ver docstring de
-  `test_generate_layout_use_case_v2.py` para el detalle completo.
-- **[NUEVO, sesión 2026-07-18] El mismo problema de fondo también
-  bloquea `BTreeLayoutGenerator` (el generador POR DEFECTO, no solo el
-  experimental) en escenarios multi-planta con escalera compartida --
-  16 tests de integración reales en `test_generate_building.py`/
-  `test_browser_bridge.py`, antes en rojo sin marcar (rompía la
-  convención de este documento), investigados a fondo antes de tocar
-  nada:**
-  - **Confirmado que NO es un problema de tamaño de parcela**: 0/5
-    semillas convergen igual con una parcela ajustada al programa
-    (9x9m, 1.3x el área de planta baja) que con una generosa (16x16m,
-    3.3x) -- descarta la hipótesis de "solo hace falta más margen".
-  - **Hallazgo real de diseño, no del algoritmo**: el programa de
-    referencia de `_two_floor_program()` tenía la planta superior con
-    3 piezas privadas (dormitorio principal/dormitorio 2/baño) y
-    NINGÚN distribuidor -- solo la escalera como estancia de
-    circulación. Geométricamente eso exige que la escalera toque a las
-    3 piezas privadas a la vez para que ninguna sea "paso obligado"
-    (`PasilloTopologiaValidator`), algo muy difícil para un
-    empaquetado de árbol B* anidado. **Corregido el programa de
-    referencia** (añadido un distribuidor real, `RoomType.CORRIDOR`,
-    lo que cualquier arquitecto pondría ahí) -- medido: sube la tasa
-    de convergencia por semilla de 0% a ~10-20% en el mismo lote
-    16x16m (confirmado con 10 semillas x 3 tamaños de parcela, no una
-    muestra pequeña).
-  - **No basta por sí solo**: ~10-20% de éxito por semilla no es 100%.
-    Con el reintento automático de semillas que ya existía
-    (`bridge.py::generar_edificio`/CLI `--retry-seeds`), subido de 5 a
-    20 por defecto tras medir esto (con 5, la probabilidad de fallo
-    total rondaba 33-59%; con 20, baja a ~1-12%) -- barato para los
-    casos que ya convergen (el bucle corta en el primer éxito). Con
-    esto, la generación multi-planta real (dashboard/CLI, que SÍ
-    reintenta) debería ser razonablemente fiable en la práctica; los
-    tests de integración con semilla ÚNICA fija (`seed=1`, sin
-    reintento, para que sean deterministas) siguen marcados `xfail`
-    donde la semilla 1 en concreto no converge -- no es lo mismo que
-    "el generador no funciona en producción".
-  - **Pendiente real, mismo pendiente que el generador experimental**:
-    la solución de fondo (que CUALQUIER programa converja de forma
-    fiable con una sola semilla, sin depender de reintentos) sigue
-    siendo el incentivo de REDUNDANCIA de contacto núcleo-perímetro,
-    decisión de arquitectura pendiente con el usuario -- el reintento
-    de semillas es una mitigación práctica para el MVP, no el arreglo
-    de raíz.
-- **El panel de generación automática de "Sección vertical" solo cubre
-  1-2 plantas** (planta baja/superior) -- sótano, semisótano y bajo
-  cubierta quedan fuera de la generación automática (sí accesibles a
-  mano, chip a chip, sin cambios).
-- **Las puertas del visor son una marca genérica (0.9m) en la pared
-  compartida, no una posición/ancho/sentido de apertura real** --
-  documentado como limitación en su momento, pero fácil de olvidar.
-- **`CocinaIntegrada` (cocina abierta al salón) no tiene ninguna forma
-  de activarse ni explicarse desde el dashboard.**
-- **Importación de parcela real desde Catastro (GML/DXF/XML), Fase A --
-  investigada a fondo, confirmada, NO implementada todavía**: el
-  usuario aportó 2 parcelas reales (una sin edificar, una con
-  edificación) en las tres versiones que ofrece la Sede Electrónica
-  del Catastro. Confirmado con datos reales: ambas parcelas ocupan
-  solo ~53% de su rectángulo alineado a ejes (genuinamente
-  irregulares) pero 88-94% de su rectángulo ORIENTADO
-  (`minimum_rotated_rectangle`, ya en `shapely`, sin dependencias
-  nuevas) -- confirma la vía correcta para el "rectángulo de trabajo"
-  que el generador actual necesita. Tres librerías de "rectángulo
-  inscrito óptimo" investigadas y descartadas con evidencia real, no
-  solo por peso: `largestinteriorrectangle` (77s, 37.7% aprovechamiento,
-  peor que el OBB), `maxrect` de Planet Labs (rota con sus propias
-  dependencias modernas, sin mantener desde 2015), `ExtractRect`
-  (mismo enfoque de rejilla, código sin actualizar). GDAL/OGR
-  descartado también -- el GML es XML simple, ya parseado a mano con
-  éxito, `xml.etree.ElementTree` de la librería estándar basta.
-  Diseño confirmado con el usuario: polígono real (relleno) + OBB
-  (línea discontinua) + zona de afección (retranqueo aplicado al
-  polígono real, no al rectángulo) + etiqueta "Manual" vs "Importado
-  (Catastro)" + alertas de viabilidad visuales, no solo texto. Si se
-  retoma, empezar por el parser GML (`xml.etree.ElementTree`,
-  extraer `cp:areaValue` + `gml:posList`, recalcular área siempre
-  del polígono en vez de confiar ciegamente en el valor del archivo).
+`[ARCH:ancho-practico-dashboard]`. La conectividad de circulación
+multi-planta (antes documentada aquí como "EN CURSO") ya no está
+pendiente -- ver "Decisiones de arquitectura tomadas" más abajo. El
+resto de huecos de flujo encontrados en esa auditoría se listan en
+"Mejoras menores pendientes" y "Feature grande pendiente" más abajo.
 
 **Proyecto Lua anterior del usuario, evaluado (10 archivos: nhv.lua ya
 conocido + main.lua, accesibilidad.lua, termica.lua, acustica.lua,
@@ -579,6 +350,93 @@ estacional verano/equinoccio/invierno, no solo una idea de
 investigación externa como la referencia de `building-sunlight-simulator`
 ya documentada. Si se retoma `SolarExposureValidator`, revisar esto
 primero -- puede ahorrar la investigación desde cero.
+
+## Decisiones de arquitectura tomadas
+
+**[DECIDIDO, 2026-07-18] Conectividad de circulación multi-planta**: se
+evaluó "periferia hacia el centro" (`PerimeterCoreLayoutGenerator`,
+tallado perimetral + núcleo B* repartido en piezas del residuo) como
+alternativa a `BTreeLayoutGenerator` para resolver de raíz el contacto
+exterior/conectividad. Introduce su PROPIO bloqueo estructural
+(fragmentación del núcleo en piezas que solo tocan 1-2 estancias
+perimetrales) sin resolver el problema original -- confirmado con datos
+reales: el mismo escenario con 5 semillas y 20.000 iteraciones (6-7x el
+presupuesto real de los tests) converge SIEMPRE a las mismas 25
+violaciones de "paso obligado" (`PasilloTopologiaValidator`). No es un
+problema de búsqueda, ninguna mutación actual crea una segunda vía de
+conexión independiente.
+
+**Decisión: mantener `BTreeLayoutGenerator` como único generador** +
+las mitigaciones ya probadas y en producción (escalera compartida por
+anclaje exacto, preferencia de esquina, `retry_seeds=20` -- mide
+~1-12% de fallo total en escenarios reales multi-planta, frente a
+33-59% con el valor anterior de 5). El código del generador
+experimental (`perimeter_carving.py`, `perimeter_core_partition.py`,
+`perimeter_core_layout_generator.py`, `build_generate_layout_use_case_v2`)
+se ha retirado del repositorio -- nunca llegó a conectarse a
+CLI/dashboard, su propio docstring lo marcaba "PROVISIONAL". Investigación
+completa, fuentes (SAP, GFLAN y por qué no aplica aquí) y todo el
+razonamiento técnico se conservan en
+`docs/referencia/generador/contacto-exterior-y-envolvente.md`, ahora
+marcado como decisión cerrada.
+
+**Límite conocido y ACEPTADO, no oculto**: los tests de integración con
+semilla única fija y sin reintento (`xfail`, documentados en
+`test_generate_building.py`/`test_browser_bridge.py`) pueden no
+converger -- la producción real (CLI/dashboard) siempre reintenta
+semillas, por lo que este límite no equivale a "el generador no
+funciona" en uso real.
+
+**Si se retoma en el futuro**: hacerlo como una implementación NUEVA e
+independiente de `LayoutGeneratorPort` (el generador ya es una pieza
+intercambiable, por diseño), medida contra los mismos escenarios
+`xfail` de multi-planta como criterio objetivo de éxito -- no como
+parche incremental sobre el generador actual ni sobre el retirado.
+
+## Mejoras menores pendientes
+
+Backlog de producto, no decisiones de arquitectura sin resolver:
+
+- **El panel de generación automática de "Sección vertical" solo cubre
+  1-2 plantas** (planta baja/superior) -- sótano, semisótano y bajo
+  cubierta quedan fuera de la generación automática (sí accesibles a
+  mano, chip a chip, sin cambios).
+- **Las puertas del visor son una marca genérica (0.9m) en la pared
+  compartida, no una posición/ancho/sentido de apertura real** --
+  documentado como limitación en su momento, pero fácil de olvidar.
+- **`CocinaIntegrada` (cocina abierta al salón) no tiene ninguna forma
+  de activarse ni explicarse desde el dashboard.**
+- **Modo espejo no transforma todavía el VACÍO** ([ARCH:area-objetivo]):
+  el visor omite dibujar la zona de vacío si el plano está transformado
+  (mirrorH/V/rotación), en vez de dibujarlo en el sitio equivocado --
+  limitación conocida, documentada, pendiente de resolver.
+
+## Feature grande pendiente (bien delimitada, no arquitectura confusa)
+
+**Importación de parcela real desde Catastro (GML/DXF/XML), Fase A --
+investigada a fondo, confirmada, NO implementada todavía**: el
+usuario aportó 2 parcelas reales (una sin edificar, una con
+edificación) en las tres versiones que ofrece la Sede Electrónica
+del Catastro. Confirmado con datos reales: ambas parcelas ocupan
+solo ~53% de su rectángulo alineado a ejes (genuinamente
+irregulares) pero 88-94% de su rectángulo ORIENTADO
+(`minimum_rotated_rectangle`, ya en `shapely`, sin dependencias
+nuevas) -- confirma la vía correcta para el "rectángulo de trabajo"
+que el generador actual necesita. Tres librerías de "rectángulo
+inscrito óptimo" investigadas y descartadas con evidencia real, no
+solo por peso: `largestinteriorrectangle` (77s, 37.7% aprovechamiento,
+peor que el OBB), `maxrect` de Planet Labs (rota con sus propias
+dependencias modernas, sin mantener desde 2015), `ExtractRect`
+(mismo enfoque de rejilla, código sin actualizar). GDAL/OGR
+descartado también -- el GML es XML simple, ya parseado a mano con
+éxito, `xml.etree.ElementTree` de la librería estándar basta.
+Diseño confirmado con el usuario: polígono real (relleno) + OBB
+(línea discontinua) + zona de afección (retranqueo aplicado al
+polígono real, no al rectángulo) + etiqueta "Manual" vs "Importado
+(Catastro)" + alertas de viabilidad visuales, no solo texto. Si se
+retoma, empezar por el parser GML (`xml.etree.ElementTree`,
+extraer `cp:areaValue` + `gml:posList`, recalcular área siempre
+del polígono en vez de confiar ciegamente en el valor del archivo).
 
 Y este número, como cualquier otro de este documento, se quedará
 obsoleto en cuanto haya un incremento nuevo (ver "Cosas aprendidas por

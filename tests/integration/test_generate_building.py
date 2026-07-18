@@ -10,26 +10,27 @@ from housing_generator.domain.value_objects.adjacency import AdjacencyRequiremen
 from housing_generator.domain.enums import RoomType, AdjacencyStrength, NivelPlanta
 
 # HALLAZGO REAL, investigado a fondo antes de marcar xfail (no una
-# suposicion, ver docs/CONTINUIDAD.md, seccion "Pendiente real, si se
-# retoma" -- entrada de 2026-07-18): BTreeLayoutGenerator empaqueta
-# "de dentro hacia fuera" (origen abstracto) y valida el contacto
-# exterior DESPUES, sin gradiente que empuje hacia el perimetro --
-# en escenarios multi-planta con escalera compartida, esto deja
-# habitualmente 1-3 estancias con 0 lados de contacto exterior.
-# Confirmado ESTRUCTURAL, no de tamano de parcela: 0/5 semillas
-# convergen igual con un lote ajustado (9x9m, 1.3x el area de planta
-# baja) que con uno generoso (16x16m, 3.3x). Confirmado tambien que un
-# distribuidor real en cada planta con >1 pieza privada SI mejora la
-# tasa de convergencia (de 0% a ~10-20% por semilla, medido con 10
-# semillas x 3 lotes) -- ya aplicado en _two_floor_program() mas abajo,
-# pero 10-20% no es 100%: estos tests usan una UNICA semilla fija
-# (seed=1, deterministas a proposito), sin el reintento automatico que
-# SI usan bridge.py/CLI en produccion (subido de 5 a 20 tras medir
-# esto). La solucion de fondo (que cualquier semilla converja) sigue
-# siendo un incentivo de REDUNDANCIA de contacto nucleo-perimetro,
-# decision de arquitectura pendiente con el usuario -- mismo pendiente
-# que bloquea test_generate_layout_use_case_v2.py (generador
-# experimental). Ver [ARCH:generate-building].
+# suposicion, ver docs/CONTINUIDAD.md, seccion "Decisiones de
+# arquitectura tomadas" -- decision de 2026-07-18): BTreeLayoutGenerator
+# empaqueta "de dentro hacia fuera" (origen abstracto) y valida el
+# contacto exterior DESPUES, sin gradiente que empuje hacia el
+# perimetro -- en escenarios multi-planta con escalera compartida,
+# esto deja habitualmente 1-3 estancias con 0 lados de contacto
+# exterior. Confirmado ESTRUCTURAL, no de tamano de parcela: 0/5
+# semillas convergen igual con un lote ajustado (9x9m, 1.3x el area de
+# planta baja) que con uno generoso (16x16m, 3.3x). Confirmado tambien
+# que un distribuidor real en cada planta con >1 pieza privada SI
+# mejora la tasa de convergencia (de 0% a ~10-20% por semilla, medido
+# con 10 semillas x 3 lotes) -- ya aplicado en _two_floor_program() mas
+# abajo, pero 10-20% no es 100%: estos tests usan una UNICA semilla
+# fija (seed=1, deterministas a proposito), sin el reintento automatico
+# que SI usan bridge.py/CLI en produccion (subido de 5 a 20 tras medir
+# esto). DECIDIDO (no pendiente): se evaluo y se descarto un generador
+# alternativo ("periferia hacia el centro") que perseguia resolver esto
+# de raiz -- introducia su propio bloqueo estructural sin resolver el
+# original, ver docs/CONTINUIDAD.md. Limite conocido y ACEPTADO: la
+# produccion real siempre reintenta semillas, estos tests documentan el
+# limite de semilla unica, no un bug oculto. Ver [ARCH:generate-building].
 _MOTIVO_XFAIL_MULTIPLANTA_CONTACTO_EXTERIOR = (
     "BTreeLayoutGenerator empaqueta sin gradiente hacia el contacto exterior -- en "
     "multi-planta con escalera compartida, 1-3 estancias suelen quedar con 0 lados "
@@ -37,9 +38,9 @@ _MOTIVO_XFAIL_MULTIPLANTA_CONTACTO_EXTERIOR = (
     "convergen igual con lote ajustado 1.3x que generoso 3.3x). Un distribuidor real "
     "mejora la tasa de exito por semilla de 0% a ~10-20% (ya aplicado aqui), pero no "
     "al 100% -- este test usa una semilla UNICA fija (sin el reintento automatico de "
-    "produccion, subido de 5 a 20 tras medir esto). Pendiente real: incentivo de "
-    "REDUNDANCIA de contacto nucleo-perimetro, decision de arquitectura pendiente "
-    "con el usuario. Ver docs/CONTINUIDAD.md."
+    "produccion, subido de 5 a 20 tras medir esto). DECIDIDO: se evaluo y se descarto "
+    "una alternativa ('periferia hacia el centro'); limite conocido y aceptado, "
+    "mitigado en produccion via reintento de semillas. Ver docs/CONTINUIDAD.md."
 )
 
 # Distinto del anterior: este escenario es de UNA sola planta -- la

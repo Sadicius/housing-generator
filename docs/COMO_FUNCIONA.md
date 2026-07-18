@@ -12,8 +12,8 @@ Genera distribuciones de planta de vivienda unifamiliar que cumplen el
 **Decreto 29/2010 de Galicia** (normas de habitabilidad, modificado por
 Decreto 128/2023): a partir de una lista de estancias con su superficie
 y un solar, produce la posición y forma de cada estancia dentro del
-solar, verificando ~18 reglas normativas (superficies mínimas, anchos
-libres, alturas, adyacencias obligatorias, programa mínimo...).
+solar, verificando 24 reglas normativas/prácticas (superficies mínimas,
+anchos libres, alturas, adyacencias obligatorias, programa mínimo...).
 
 ## Arquitectura: hexagonal / clean architecture
 
@@ -31,8 +31,8 @@ application/       casos de uso, coordinan dominio + infraestructura via ports
 
 infrastructure/    implementaciones concretas de los ports
   algorithms/
-    layout_generation/   SimulatedAnnealingLayoutGenerator, partition_tree
-    constraints/          20 validadores normativos/practicos (1 opt-in)
+    layout_generation/   BTreeLayoutGenerator, btree_partition (arbol B*)
+    constraints/          24 validadores normativos/practicos (1 opt-in)
     adjacency/             GeometryAdjacencyGraphBuilder, door_graph
     zoning/                TreemapZoningStrategy
   geometry/          shapely_utils (funciones geométricas compartidas)
@@ -50,44 +50,43 @@ concretas de todas las capas a la vez y las conecta.
 
 ## El algoritmo de generación
 
-### Árbol de partición + recocido simulado
+### Árbol B* + recocido simulado
 
-Cada estancia es una **hoja** de un árbol binario; cada nodo interno
-representa un **corte** (horizontal o vertical) que reparte un
-rectángulo entre sus dos subárboles, proporcionalmente al área total
-de estancias de cada lado (`partition_tree.place_tree`).
+Cada estancia es un **nodo** de un árbol B* (Chang & Chang 2000,
+`btree_partition.py`) -- a diferencia del árbol de partición anterior
+(eliminado del proyecto por completo), aquí TODO nodo es una estancia,
+sin distinción hoja/corte. La posición
+de cada estancia se calcula con un algoritmo de contorno tipo "Tetris"
+(`compute_positions`): cada estancia nueva "cae" hasta apoyarse en lo
+ya ocupado en su rango de X, no reparte proporcionalmente un
+rectángulo predecidido -- la huella final es el RESULTADO del propio
+empaquetado, no una forma decidida de antemano.
 
 1. Se construye un árbol inicial con topología aleatoria
-   (`build_random_tree`) -- cada corte empieza en modo automático
-   (`direction=None`).
+   (`build_random_tree`) -- inserción sucesiva en un hueco libre
+   elegido al azar entre los nodos ya colocados.
 2. En cada iteración, se genera un "vecino" mutando el árbol actual con
-   uno de 4 movimientos aleatorios (`random_neighbor`):
-   - `swap_leaves`: intercambia dos estancias de sitio
-   - `flip_direction`: cicla la dirección de un corte por 3 estados
-     (automático → horizontal forzado → vertical forzado → automático)
-   - `swap_children`: espeja un subárbol
-   - `slide_wall`: desliza un corte existente ±8% desde su proporción
-     actual (técnica de Merrell et al. 2010)
+   uno de 5 movimientos aleatorios (`random_neighbor`):
+   - `swap`: intercambia qué estancia ocupa cada nodo (Op3, Chang & Chang)
+   - `move`: extrae una estancia y la inserta en un hueco libre
+     distinto -- cambia la FORMA del árbol, no solo la identidad (Op2)
+   - `resize`: perturba la proporción ancho:alto de una estancia ±15%
+   - `reset`: restablece la proporción de una estancia a 1:1
+   - `swap_children`: intercambia los hijos `left`/`right` de un nodo
+   - bloqueo progresivo (`locked_room_ids`): un movimiento se rechaza
+     si desplaza, como efecto colateral, una estancia que ya cumplía
+     todas las restricciones -- con una válvula de escape
+     (`ESCAPE_PROBABILITY`) para no atascarse
 3. Se acepta o rechaza el vecino según el criterio de Metropolis
-   (`SimulatedAnnealingLayoutGenerator.generate`), con temperatura que
-   decae en cada iteración (`cooling_rate`).
-
-**Dirección automática = cortar por el lado más largo.** Un corte en
-modo automático (`direction=None`, el punto de partida por defecto)
-no decide horizontal/vertical al construir el árbol -- lo decide
-`place_tree`, en el momento de colocar, según cuál sea el lado más
-largo del rectángulo real en ese punto (técnica de squarified treemap,
-Marson & Musse 2010). Reduce la aparición de estancias como tiras
-finas frente a elegir la dirección al azar -- confirmado con un caso
-real donde añadir un mínimo de ancho práctico volvió la búsqueda
-mucho más difícil hasta aplicar esta técnica.
+   (`BTreeLayoutGenerator.generate`), con temperatura que decae en
+   cada iteración (`cooling_rate`).
 
 ### Función objetivo: duro + blando, comparación lexicográfica
 
 Cada layout candidato se puntúa como una tupla
 `(violaciones_duras, penalización_blanda)`:
-- **Duras** (`MUST_BE_NEAR`/`MUST_BE_AWAY` y las 18 reglas normativas):
-  cuentan violaciones de `CompositeConstraintValidator`.
+- **Duras** (`MUST_BE_NEAR`/`MUST_BE_AWAY` y las 24 reglas normativas/
+  prácticas): cuentan violaciones de `CompositeConstraintValidator`.
 - **Blandas** (`SHOULD_BE_NEAR`/`SHOULD_BE_AWAY`): calculadas por
   `SoftConstraintScorer` vía distancia de saltos en el grafo de
   adyacencia real (cerca objetivo ≤2 saltos, alejar objetivo ≥3).
@@ -123,21 +122,23 @@ Tras generar todas las plantas, dos comprobaciones de ámbito EDIFICIO
 mínimo, unión de todas las plantas) y `BanoAccesoGeneralValidator` (al
 menos un baño con acceso general en **alguna** planta).
 
-## Los 20 validadores normativos/prácticos (+ 1 combinador, 1 opt-in)
+## Los 24 validadores normativos/prácticos (+ 1 combinador, 1 opt-in)
 
 Implementan `ConstraintValidatorPort.validate(layout) -> ValidationResult`
 (listas de `violations` y `warnings` — las violaciones bloquean la
 generación, los avisos no). `CompositeConstraintValidator` no es una
 regla normativa en sí -- agrupa una lista de validadores y expone la
 misma interfaz, para que el generador solo necesite hablar con "un"
-validador aunque por dentro sean 16 clases distintas (19 instancias
-por planta, contando las 4 de `GroupingConstraintValidator`).
+validador aunque por dentro sean 20 clases distintas (23 instancias
+por planta, contando las 4 de `GroupingConstraintValidator`) + 2 de
+ámbito edificio + 2 entre plantas = 24 clases distintas en total.
 
 **Por planta** (`build_per_floor_validators` en `container.py`):
 
 | Validador | Qué comprueba |
 |---|---|
 | `AdjacencyConstraintValidator` | `MUST_BE_NEAR`/`MUST_BE_AWAY` declarados |
+| `ParcelaRealValidator` | cada estancia dentro del polígono REAL de la parcela (Catastro), no solo del rectángulo de trabajo -- inactivo si no hay parcela importada |
 | `GroupingConstraintValidator` ×4 | núcleo húmedo, zonificación día/noche/servicio (distancia de saltos) |
 | `EstanciaMinimumAreaValidator` | Tabla 1: superficie mínima por puesto de tamaño + cuadrado inscribible del salón |
 | `ServicioMinimumAreaValidator` | Tabla 2: superficie mínima por tipo de servicio |
@@ -148,11 +149,14 @@ por planta, contando las 4 de `GroupingConstraintValidator`).
 | `AnchoLibrePasilloValidator` | ancho libre de pasillo (A.3.2.3) |
 | `AlturaLibreValidator` | altura libre mínima (A.3.1.1), con reducción directa a 2.20m en las piezas que el decreto nombra explícitamente |
 | `ExteriorContactValidator` | lados de contacto exterior mínimos por tipo |
+| `RoomOverlapValidator` | ninguna pareja de estancias colocadas se solapa en área |
 | `CocinaIntegradaValidator` | cocina abierta al salón: superficie combinada + apertura vertical |
 | `EspacioAccesoValidator` | cuadrado inscribible de 1.50m en el vestíbulo |
 | `EscaleraAnchoLibreValidator` | ancho libre de escalera (CTE DB-SUA 1, uso restringido) |
 | `PasilloTopologiaValidator` | ninguna estancia (salvo salón/comedor) es paso obligado hacia otra |
 | `ViviendaAccesibleValidator` | **opt-in** (`vivienda_accesible=True`), inactivo por defecto -- círculo de giro Ø1.50m + pasillo 1.20m (DB-SUA/Base 5.4, vivienda adaptada) |
+| `ProporcionMaximaValidator` | proporción ancho:alto máxima **NO normativa** (2.5:1, confirmada explícitamente) -- red de seguridad contra estancias tipo "tira fina" que cumplen el ancho mínimo pero son absurdas en proporción |
+| `AreaObjetivoValidator` | **NO normativo** -- el área REALMENTE generada debe parecerse al área DECLARADA por el programa, no solo superar el mínimo de Tabla 1/2 |
 
 **De ámbito edificio** (tras generar todas las plantas):
 `ViviendaMinimaValidator`, `BanoAccesoGeneralValidator`.

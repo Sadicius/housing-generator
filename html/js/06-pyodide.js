@@ -7,9 +7,12 @@
 // navegador via Pyodide (Python compilado a WebAssembly) -- nada de
 // terminal, nada de descargar/subir archivos para el caso normal.
 // shapely/geos estan oficialmente soportados por Pyodide (confirmado en
-// el changelog oficial antes de construir esto, no asumido); scipy/numpy
-// son parte del stack cientifico estandar; networkx es Python puro, se
-// instala via micropip sin problema.
+// el changelog oficial antes de construir esto, no asumido); numpy es
+// dependencia real de shapely 2.x; networkx es Python puro, se instala
+// via micropip sin problema. scipy NO se instala -- nunca fue una
+// dependencia real de housing_generator (confirmado por grep en src/,
+// retirado de pyproject.toml), cargarlo aqui solo anadia tiempo de
+// instalacion sin uso.
 //
 // Ejecucion en un Web Worker, no en el hilo principal: una busqueda de
 // recocido simulado de miles de iteraciones bloqueaba la pestana entera
@@ -33,8 +36,8 @@ const PYODIDE_WORKER_SOURCE = [
   "  postMessage({type: 'progress', message: 'Cargando Python en el navegador (Pyodide, primera vez tarda unos segundos)...'});",
   '  pyodide = await loadPyodide();',
   '',
-  "  postMessage({type: 'progress', message: 'Instalando shapely, numpy, scipy...'});",
-  "  await pyodide.loadPackage(['shapely', 'numpy', 'scipy']);",
+  "  postMessage({type: 'progress', message: 'Instalando shapely, numpy...'});",
+  "  await pyodide.loadPackage(['shapely', 'numpy']);",
   '',
   "  postMessage({type: 'progress', message: 'Instalando networkx...'});",
   "  await pyodide.loadPackage('micropip');",
@@ -138,8 +141,8 @@ async function initPyodideMainThreadFallback(onProgress){
   onProgress('Cargando Python en el navegador (Pyodide, primera vez tarda unos segundos)...');
   const pyodide = await loadPyodide();
 
-  onProgress('Instalando shapely, numpy, scipy...');
-  await pyodide.loadPackage(['shapely', 'numpy', 'scipy']);
+  onProgress('Instalando shapely, numpy...');
+  await pyodide.loadPackage(['shapely', 'numpy']);
 
   onProgress('Instalando networkx...');
   await pyodide.loadPackage('micropip');

@@ -5,14 +5,16 @@
 ## [ARCH:inicio-launcher] INICIO.html -- punto de entrada del proyecto
 
 A petición del usuario: un archivo único para "iniciar todo", dado que
-el dashboard real vive en una ruta anidada
-(`docs/visualizador/relaciones_espaciales.html`) y el README no
-mencionaba el dashboard en absoluto (documentaba solo el CLI).
+el dashboard real vivía en una ruta anidada
+(`docs/visualizador/relaciones_espaciales.html` en aquel momento --
+movido después a `html/relaciones_espaciales.html`, ver
+`[ARCH:reorganizacion-docs]` más abajo) y el README no mencionaba el
+dashboard en absoluto (documentaba solo el CLI).
 
 - `INICIO.html` en la raíz del proyecto -- se abre con doble clic,
   mismo patrón "sin servidor" que el resto (reutiliza
-  `docs/visualizador/relaciones_espaciales.css` vía ruta relativa,
-  misma estética cianotipo).
+  `relaciones_espaciales.css` vía ruta relativa, misma estética
+  cianotipo).
 - Enlace principal al dashboard real, resumen de las 3 zonas, y
   enlaces a toda la documentación (`GUIA_USO.md`, `COMO_FUNCIONA.md`,
   `architecture.md`, `CONTINUIDAD.md`, `README.md`) con una nota

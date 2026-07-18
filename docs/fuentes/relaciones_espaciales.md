@@ -27,14 +27,14 @@ siguen en la columna "motivo" de cada par).
   métrica con la de las preferencias blandas (ver más abajo) para no
   perder la precisión de "ancho de puerta" en una regla ya probada y
   estable.
-- **Preferencia (cerca) / Preferencia (alejar)** → término elegido
-  deliberadamente distinto de `AdjacencyStrength.SHOULD_BE_NEAR` para no
-  sugerir que ya tiene efecto. **Hoy no influye en el generador en
-  absoluto** — pendiente de conectarse a la función objetivo del
-  recocido simulado, en un paso aparte ya decidido. Diseño ya acordado
-  para cuando se conecte (métrica: saltos en el grafo de adyacencia,
-  igual que ya usan núcleo húmedo y zonificación -- no una métrica
-  nueva):
+- **Preferencia (cerca) / Preferencia (alejar)** → corresponde a
+  `AdjacencyStrength.SHOULD_BE_NEAR`/`SHOULD_BE_AWAY`. **[RESUELTO]**
+  Conectado a la función objetivo del recocido simulado vía
+  `SoftConstraintScorer`, con comparación lexicográfica `(duro, blando)`
+  -- lo duro nunca cede por una preferencia blanda (ver
+  `docs/CONTINUIDAD.md`, sección "Restricciones blandas"). Métrica:
+  saltos en el grafo de adyacencia, igual que ya usan núcleo húmedo y
+  zonificación -- no una métrica nueva:
   - `Preferencia (cerca)` → distancia de grafo objetivo ≤ 2 (mismo
     umbral que ya usa y valida `GroupingConstraintValidator` para
     agrupación de zona).

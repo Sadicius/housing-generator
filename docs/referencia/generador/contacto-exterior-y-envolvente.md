@@ -1,6 +1,8 @@
-# Generador -- contacto exterior y envolvente (hallazgo pendiente de decisión)
+# Generador -- contacto exterior y envolvente (investigación, decisión cerrada)
 
-> Referencia técnica -- documentado el 2026-07-17 a petición del usuario tras una sesión de auditoría completa del flujo (revisión de arquitecto) que encontró un bug real (`ParcelaRealValidator` perdía el retranqueo en `floor_lot`, ya corregido) y este hallazgo de fondo, que queda pendiente de decisión antes de tocar más código. No es un bug puntual -- es una característica estructural del generador actual.
+> Referencia técnica -- documentado el 2026-07-17 a petición del usuario tras una sesión de auditoría completa del flujo (revisión de arquitecto) que encontró un bug real (`ParcelaRealValidator` perdía el retranqueo en `floor_lot`, ya corregido) y este hallazgo de fondo. No fue un bug puntual -- era una característica estructural del generador actual.
+>
+> **[DECIDIDO, 2026-07-18]** El rediseño "periferia hacia el centro" descrito abajo (`PerimeterCoreLayoutGenerator`) se implementó (Fases 0-3), se probó contra los 5 escenarios de aceptación, y confirmó tener su PROPIO bloqueo estructural (fragmentación del núcleo en piezas que solo tocan 1-2 estancias perimetrales, causando "paso obligado" -- 25 violaciones estables en 20.000 iteraciones × 5 semillas) sin resolver el problema original. Se decidió retirar ese código y mantener `BTreeLayoutGenerator` + las mitigaciones ya probadas (escalera compartida, preferencia de esquina, `retry_seeds=20`). Ver `docs/CONTINUIDAD.md`, sección "Decisiones de arquitectura tomadas", para el razonamiento completo de la decisión. Este documento se conserva íntegro como registro de la investigación (útil si se retoma en el futuro), no como pendiente activo.
 
 ## [ARCH:escalera-compartida] Escalera compartida entre plantas -- implementado, insuficiente por sí solo
 
@@ -137,18 +139,33 @@ lo que dificulta que TODO toque el exterior. No hay una respuesta
 solución futura (perímetro-primero u otra) tendría que decidir
 explícitamente, no ignorar.
 
-## Estado: pendiente de decisión, no de código
+## Estado: decisión tomada, código retirado
 
-No se ha implementado ninguna reestructuración de "periferia hacia el
-centro" -- es un cambio de arquitectura mayor (afecta al corazón del
-generador: `btree_partition.py`, `btree_layout_generator.py`, posible
-nueva fase antes del empaquetado actual), no otro parche puntual.
-Decisión pendiente con el usuario: retomar este rediseño como
-siguiente pieza de trabajo real, o mantener el generador actual con
-las mitigaciones ya aplicadas (escalera compartida + preferencia de
-esquina) y aceptar que el contacto exterior seguirá siendo una
-dificultad de búsqueda real en escenarios exigentes, no un bug
-escondido.
+"Periferia hacia el centro" SÍ se implementó (Fases 0-3:
+`perimeter_carving.py`, `perimeter_core_partition.py`,
+`perimeter_core_layout_generator.py`) y sí resolvió el contacto
+exterior por construcción -- pero al conectarla al pipeline completo
+(Fase 3) reveló un segundo problema estructural, distinto del
+original: fragmentación del núcleo en piezas del residuo que solo
+tocan 1-2 estancias perimetrales, causando "paso obligado"
+(`PasilloTopologiaValidator`) de forma tan estable como el problema
+que pretendía resolver. Confirmado con 5 semillas × 20.000
+iteraciones (6-7x el presupuesto real de los tests): mismo número
+exacto de violaciones siempre -- no es un problema de búsqueda que más
+iteraciones fueran a resolver.
+
+**Decisión (2026-07-18)**: no vale la pena mantener dos generadores
+sin que ninguno resuelva el problema de fondo. Se retiró el código de
+"periferia hacia el centro" del repositorio y se mantiene
+`BTreeLayoutGenerator` con las mitigaciones ya probadas y en
+producción (escalera compartida, preferencia de esquina,
+`retry_seeds=20`). Si se retoma en el futuro, la investigación de este
+documento (incluidas las fuentes de abajo) sigue siendo el punto de
+partida correcto -- pero haría falta además una solución específica
+para la redundancia de contacto núcleo-perímetro (candidata: garantizar
+por construcción, a nivel de grafo, que ninguna estancia protegida sea
+un punto de corte -- no solo por proximidad geométrica, que es lo que
+`_grouping_proximity_penalty` ya resolvía sin ser suficiente).
 
 ### Fuentes (investigación real antes de proponer nada, no asumido)
 

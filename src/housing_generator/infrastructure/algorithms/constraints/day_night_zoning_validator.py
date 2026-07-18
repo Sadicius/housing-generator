@@ -1,11 +1,10 @@
-from typing import Callable, List, Tuple
+from typing import List
 from housing_generator.application.ports.adjacency_graph_builder_port import (
     AdjacencyGraphBuilderPort,
 )
 from housing_generator.infrastructure.algorithms.constraints.grouping_constraint_validator import (
     GroupingConstraintValidator,
 )
-from housing_generator.domain.entities.room import Room
 from housing_generator.domain.enums import ZoneType, SpaceCategory
 
 # Ver [ARCH:day-night-zoning].
@@ -20,20 +19,6 @@ def _is_non_circulation_in_zone(zone: ZoneType):
         lambda room: room.zone == zone
         and room.space_category != SpaceCategory.CIRCULACION
     )
-
-
-def zone_grouping_predicates() -> List[Tuple[Callable[[Room], bool], str]]:
-    """Los 3 predicados dia/noche/servicio, expuestos para que otros
-    consumidores (el incentivo de proximidad de
-    `PerimeterCoreLayoutGenerator`) midan EXACTAMENTE lo mismo que
-    estos validadores duros -- una sola definicion, sin duplicar el
-    predicado y arriesgar que diverjan. Ver [ARCH:day-night-zoning],
-    [ARCH:perimeter-core-layout-generator]."""
-    return [
-        (_is_non_circulation_in_zone(ZoneType.DAY), "zona dia"),
-        (_is_non_circulation_in_zone(ZoneType.NIGHT), "zona noche"),
-        (_is_non_circulation_in_zone(ZoneType.SERVICE), "zona servicio"),
-    ]
 
 
 def build_day_zone_grouping_validator(

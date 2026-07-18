@@ -17,12 +17,14 @@ generador en sí, no esto, ve a [`../INICIO.html`](../INICIO.html).
 `referencia/` — consolidada, organizada por tema (no cronológica).
 Cada archivo agrupa varias piezas relacionadas, no una por archivo:
 
-- `generador/` — el motor de generación (partición, huella
-  construible, área objetivo, bloqueo progresivo). Incluye
-  `prototipo-btree/` -- migración planificada a árbol B* (no
-  guillotina), con las 5 fases documentadas, código de producción
-  real (`--experimental-btree` en el CLI) y comparación empírica.
-- `validadores/` — los 20+ validadores normativos, agrupados por qué
+- `generador/` — decisiones de arquitectura del motor de generación
+  vigentes hoy (contacto exterior/envolvente, conectividad
+  multi-planta). El motor en sí es `BTreeLayoutGenerator` (árbol B*,
+  Chang & Chang 2000, `btree_partition.py`) -- ver `docs/COMO_FUNCIONA.md`
+  para cómo funciona; el generador clásico (partición/guillotina) y su
+  migración se eliminaron del proyecto y de esta documentación, quedan
+  solo en el histórico (`docs/historico/architecture.md`).
+- `validadores/` — los 24 validadores normativos, agrupados por qué
   exigencia comparten (superficies mínimas, anchos libres, geometría
   general, agrupación/zonificación, adyacencias, programa de
   vivienda, multi-planta).

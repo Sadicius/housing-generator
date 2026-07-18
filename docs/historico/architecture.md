@@ -3240,7 +3240,7 @@ actualizado solos al cambiar las variables (algunos ni siquiera
 coincidían ya con ningún color actual -- restos de iteraciones
 anteriores).
 
-### Elemento de firma: norte + escala gráfica en el visor de plano
+### [ARCH:visor-firma] Elemento de firma: norte + escala gráfica en el visor de plano
 
 Identificado en la revisión como "el punto de mayor oportunidad
 perdida" -- el visor de plano es donde un arquitecto pasa más tiempo

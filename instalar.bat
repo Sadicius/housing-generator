@@ -1,8 +1,7 @@
 @echo off
 REM Instala el entorno de Python para el CLI de housing_generator --
-REM NO hace falta para usar el dashboard (docs\visualizador\
-REM relaciones_espaciales.html), que no necesita instalar nada. Esto
-REM es solo para desarrollo o uso del CLI.
+REM NO hace falta para usar el dashboard (html\relaciones_espaciales.html),
+REM que no necesita instalar nada. Esto es solo para desarrollo o uso del CLI.
 REM
 REM Uso: doble clic sobre este archivo, o "instalar.bat" desde cmd.
 REM

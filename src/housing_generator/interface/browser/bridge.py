@@ -197,7 +197,7 @@ def generar_edificio(
     del usuario. El generador es siempre el árbol B* (Chang & Chang
     2000) -- el generador clásico (árbol de partición/guillotina) se
     eliminó por completo del proyecto a petición explícita del
-    usuario, ver `docs/referencia/generador/prototipo-btree/`,
+    usuario, ver `docs/historico/architecture.md`,
     [ARCH:btree-generador-por-defecto].
 
     `coeficiente_edificabilidad`/`ocupacion_maxima_pct`/`altura_maxima_plantas`/
@@ -215,7 +215,7 @@ def generar_edificio(
     de la vía) -- distinto de `retranqueo_m`/`retranqueo_por_lado`
     (elección del arquitecto): si el retranqueo ya declarado en ese
     lado es menor, se usa este valor en su lugar SOLO ahí, nunca
-    reduce lo ya declarado. Ver [ARCH:linea-edificacion].
+    reduce lo ya declarado.
 
     `poligono_real_coords`: lista de [x,y] del polígono REAL de la
     parcela (importado de Catastro, mismas coordenadas locales que
@@ -239,11 +239,13 @@ def generar_edificio(
     Ver [ARCH:browser-bridge].
     """
     # Cotas duras sobre el coste de busqueda: sin esto, un valor extremo
-    # llegado del dashboard (max_iterations/retry_seeds) bloquea el hilo
-    # principal del navegador (Pyodide corre sin Web Worker) el tiempo
-    # que tarde la busqueda completa, sin forma de cancelarla. Recorta
-    # en vez de rechazar -- un valor grande sigue siendo una peticion
-    # valida, solo se limita su coste maximo.
+    # llegado del dashboard (max_iterations/retry_seeds) puede bloquear
+    # el hilo principal del navegador el tiempo que tarde la busqueda
+    # completa, sin forma de cancelarla -- sobre todo en el fallback sin
+    # Web Worker (ver 06-pyodide.js, tryInitPyodideWorker), que existe
+    # para cuando el Worker via Blob no arranca. Recorta en vez de
+    # rechazar -- un valor grande sigue siendo una peticion valida,
+    # solo se limita su coste maximo.
     MAX_ITERATIONS_CAP = 20_000
     MAX_RETRY_SEEDS_CAP = 30
     if max_iterations > MAX_ITERATIONS_CAP:

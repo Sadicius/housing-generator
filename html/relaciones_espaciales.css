@@ -237,7 +237,6 @@ table.matrix th.dim{opacity:.3;}
 .chip-controls input:focus{outline:none; border-color:var(--terracota);}
 .chip-controls .unit{font-size:9.5px; color:var(--ink-faint);}
 .chip-controls input.area-warn{border-color:var(--bad); color:var(--bad); background:rgba(176,67,46,.08);}
-.level-empty{color:var(--ink-faint); font-size:11px; font-family:'Archivo',sans-serif; font-style:italic;}
 .section-summary{
   display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; padding:10px 14px;
   border:1px solid var(--line); border-radius:8px; font-family:'Archivo',sans-serif; font-size:12.5px;
@@ -337,25 +336,12 @@ table.matrix th.dim{opacity:.3;}
 .plano-empty.plano-error{color:var(--bad); text-align:left; background:rgba(176,67,46,.05); border:1px solid var(--bad); border-radius:8px; line-height:1.6;}
 .plano-empty.plano-error code{background:var(--bg-panel); padding:1px 5px; border-radius:3px;}
 
-.plano-norte{position:absolute; top:12px; right:12px; width:34px; height:34px; display:flex; align-items:center; justify-content:center;}
-.plano-escala{
-  position:absolute; bottom:10px; left:16px;
-  font-family:'Space Mono',monospace; font-size:9px; color:var(--ink-faint);
-  display:flex; align-items:center; gap:4px;
-}
-.plano-escala .barra{height:3px; background:var(--ink);}
-
 @media (max-width:700px){
   .titleblock{grid-template-columns:1fr;}
   .titleblock .meta{border-left:none; border-top:1px solid var(--line); padding-left:0; padding-top:10px; margin-top:10px; text-align:left;}
   table.matrix th.rowhead{font-size:9px;}
 }
 
-.picker-head{
-  display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;
-  font-family:'Archivo',sans-serif; font-size:11px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.02em;
-}
-.picker-actions{display:flex; gap:4px;}
 .picker-btn{
   font-family:'Archivo',sans-serif; font-size:12px; font-weight:600; padding:7px 14px; border:1px solid var(--terracota);
   background:var(--papel); color:var(--terracota); cursor:pointer; border-radius:6px;
