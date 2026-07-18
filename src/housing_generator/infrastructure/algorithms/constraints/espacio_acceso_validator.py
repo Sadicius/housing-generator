@@ -1,5 +1,7 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
@@ -24,7 +26,9 @@ class EspacioAccesoValidator(ConstraintValidatorPort):
             if not room.is_placed:
                 continue
 
-            cumple = can_inscribe_square(room.boundary.polygon, ESPACIO_ACCESO_CUADRADO_M)
+            cumple = can_inscribe_square(
+                room.boundary.polygon, ESPACIO_ACCESO_CUADRADO_M
+            )
             if cumple is False:
                 violations.append(
                     f"'{room.id}': no admite el cuadrado de {ESPACIO_ACCESO_CUADRADO_M:.2f}m "

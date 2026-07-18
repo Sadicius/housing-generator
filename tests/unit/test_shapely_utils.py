@@ -38,15 +38,27 @@ def test_triangle_is_unverifiable():
 
 
 def test_rectangle_fits_regardless_of_orientation():
-    from housing_generator.infrastructure.geometry.shapely_utils import can_fit_rectangle
+    from housing_generator.infrastructure.geometry.shapely_utils import (
+        can_fit_rectangle,
+    )
+
     room = box(0, 0, 1.0, 3.0)  # 1m x 3m
-    assert can_fit_rectangle(room, 1.5, 0.6) is True   # cabe girado (3m >= 1.5, 1m >= 0.6)
-    assert can_fit_rectangle(room, 0.6, 1.5) is True   # mismo caso, argumentos intercambiados
+    assert (
+        can_fit_rectangle(room, 1.5, 0.6) is True
+    )  # cabe girado (3m >= 1.5, 1m >= 0.6)
+    assert (
+        can_fit_rectangle(room, 0.6, 1.5) is True
+    )  # mismo caso, argumentos intercambiados
 
 
 def test_rectangle_does_not_fit_when_both_orientations_fail():
-    from housing_generator.infrastructure.geometry.shapely_utils import can_fit_rectangle
-    room = box(0, 0, 0.4, 3.0)  # demasiado estrecho en ambas orientaciones para 0.6 de fondo
+    from housing_generator.infrastructure.geometry.shapely_utils import (
+        can_fit_rectangle,
+    )
+
+    room = box(
+        0, 0, 0.4, 3.0
+    )  # demasiado estrecho en ambas orientaciones para 0.6 de fondo
     assert can_fit_rectangle(room, 1.5, 0.6) is False
 
 
@@ -56,7 +68,10 @@ def test_degenerate_zero_area_polygon_is_never_a_rectangle():
     # ahora. Al no ser un rectangulo real, el resultado correcto es
     # None ("no verificable"), no False -- mismo patron de tres estados
     # que usa el resto del proyecto para formas no rectangulares.
-    from housing_generator.infrastructure.geometry.shapely_utils import can_fit_rectangle
+    from housing_generator.infrastructure.geometry.shapely_utils import (
+        can_fit_rectangle,
+    )
+
     degenerate = Polygon([(0, 0), (5, 0), (0, 0)])  # colapsado a una linea
     assert degenerate.area == 0
     assert can_fit_rectangle(degenerate, 1.0, 1.0) is None
@@ -66,27 +81,48 @@ def test_evaluate_minimum_width_passes_when_wide_enough():
     # helper compartido, extraido por duplicacion real entre tres
     # validadores (pasillo, escalera, trastero) -- nunca probado en
     # aislamiento hasta ahora, solo indirectamente via esos tres.
-    from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
+    from housing_generator.infrastructure.geometry.shapely_utils import (
+        evaluate_minimum_width,
+    )
+
     violations, warnings = evaluate_minimum_width(
-        "r1", box(0, 0, 2.0, 5), 1.0, violation_message="demasiado estrecho", warning_message="no rectangular",
+        "r1",
+        box(0, 0, 2.0, 5),
+        1.0,
+        violation_message="demasiado estrecho",
+        warning_message="no rectangular",
     )
     assert violations == [] and warnings == []
 
 
 def test_evaluate_minimum_width_fails_when_too_narrow():
-    from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
+    from housing_generator.infrastructure.geometry.shapely_utils import (
+        evaluate_minimum_width,
+    )
+
     violations, warnings = evaluate_minimum_width(
-        "r1", box(0, 0, 0.5, 5), 1.0, violation_message="demasiado estrecho (1.00m)", warning_message="no rectangular",
+        "r1",
+        box(0, 0, 0.5, 5),
+        1.0,
+        violation_message="demasiado estrecho (1.00m)",
+        warning_message="no rectangular",
     )
     assert violations == ["'r1': demasiado estrecho (1.00m)"]
     assert warnings == []
 
 
 def test_evaluate_minimum_width_warns_for_non_rectangular_shape():
-    from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
+    from housing_generator.infrastructure.geometry.shapely_utils import (
+        evaluate_minimum_width,
+    )
+
     l_shape = Polygon([(0, 0), (3, 0), (3, 1), (1, 1), (1, 3), (0, 3)])
     violations, warnings = evaluate_minimum_width(
-        "r1", l_shape, 1.0, violation_message="demasiado estrecho", warning_message="forma no rectangular",
+        "r1",
+        l_shape,
+        1.0,
+        violation_message="demasiado estrecho",
+        warning_message="forma no rectangular",
     )
     assert violations == []
     assert warnings == ["'r1': forma no rectangular"]

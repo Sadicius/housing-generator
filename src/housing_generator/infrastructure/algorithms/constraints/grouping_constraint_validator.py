@@ -1,7 +1,11 @@
 from typing import Callable, List, Optional, Union
 import networkx as nx
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
-from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
+from housing_generator.application.ports.adjacency_graph_builder_port import (
+    AdjacencyGraphBuilderPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.entities.room import Room
@@ -32,11 +36,15 @@ class GroupingConstraintValidator(ConstraintValidatorPort):
     def validate(self, layout: Layout) -> ValidationResult:
         graph = self._graph_builder.build(layout)
         members = [r.id for r in layout.rooms if r.is_placed and self._predicate(r)]
-        max_distance = self._max_distance(len(members)) if callable(self._max_distance) else self._max_distance
+        max_distance = (
+            self._max_distance(len(members))
+            if callable(self._max_distance)
+            else self._max_distance
+        )
 
         violations: List[str] = []
         for i, room_a_id in enumerate(members):
-            for room_b_id in members[i + 1:]:
+            for room_b_id in members[i + 1 :]:
                 distance = self._distance(graph, room_a_id, room_b_id)
                 if distance is None:
                     violations.append(

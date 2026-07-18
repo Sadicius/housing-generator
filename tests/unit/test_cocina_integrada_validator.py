@@ -15,8 +15,18 @@ def _dummy_lot() -> Lot:
 
 
 def test_no_integrated_kitchen_does_not_apply_no_violations_no_warnings():
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25))
-    kitchen = Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=3))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=25),
+    )
+    kitchen = Room(
+        id="kitchen",
+        name="Cocina",
+        room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=3),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[living, kitchen], zones=[])
 
     result = CocinaIntegradaValidator().validate(layout)
@@ -24,10 +34,18 @@ def test_no_integrated_kitchen_does_not_apply_no_violations_no_warnings():
 
 
 def test_integrated_kitchen_without_living_room_warns():
-    bed = Room(id="bed", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12))
+    bed = Room(
+        id="bed",
+        name="Dorm",
+        room_type=RoomType.BEDROOM,
+        dimensions=Dimensions(area_m2=12),
+    )
     kitchen = Room(
-        id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
-        dimensions=Dimensions(area_m2=10), integrated_in_largest_room=True,
+        id="kitchen",
+        name="Cocina",
+        room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=10),
+        integrated_in_largest_room=True,
     )
     layout = Layout(lot=_dummy_lot(), rooms=[bed, kitchen], zones=[])
 
@@ -40,10 +58,18 @@ def test_integrated_kitchen_without_living_room_warns():
 def test_combined_area_below_minimum_fails():
     # 1 sola estancia (living) -> minimoMayor=25 (fila 1); 1 servicio -> minimoCocina=5 (fila 1)
     # combinado minimo = 30. Declaramos 20+5=25, por debajo.
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=20),
+    )
     kitchen = Room(
-        id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
-        dimensions=Dimensions(area_m2=5), integrated_in_largest_room=True,
+        id="kitchen",
+        name="Cocina",
+        room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=5),
+        integrated_in_largest_room=True,
         vertical_opening_m2=4.0,
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living, kitchen], zones=[])
@@ -54,10 +80,18 @@ def test_combined_area_below_minimum_fails():
 
 
 def test_combined_area_meets_minimum_passes():
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=25),
+    )
     kitchen = Room(
-        id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
-        dimensions=Dimensions(area_m2=5), integrated_in_largest_room=True,
+        id="kitchen",
+        name="Cocina",
+        room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=5),
+        integrated_in_largest_room=True,
         vertical_opening_m2=4.0,
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living, kitchen], zones=[])
@@ -67,10 +101,18 @@ def test_combined_area_meets_minimum_passes():
 
 
 def test_missing_vertical_opening_warns_not_violates():
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=25),
+    )
     kitchen = Room(
-        id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
-        dimensions=Dimensions(area_m2=5), integrated_in_largest_room=True,
+        id="kitchen",
+        name="Cocina",
+        room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=5),
+        integrated_in_largest_room=True,
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living, kitchen], zones=[])
 
@@ -81,10 +123,18 @@ def test_missing_vertical_opening_warns_not_violates():
 
 
 def test_vertical_opening_below_minimum_fails():
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=25),
+    )
     kitchen = Room(
-        id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
-        dimensions=Dimensions(area_m2=5), integrated_in_largest_room=True,
+        id="kitchen",
+        name="Cocina",
+        room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=5),
+        integrated_in_largest_room=True,
         vertical_opening_m2=2.0,
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living, kitchen], zones=[])
@@ -103,17 +153,36 @@ def test_total_num_estancias_override_prevents_silent_approval_in_multi_planta()
     # al edificio completo (5 estancias reales -> 31m2 = 22+9). Un area
     # combinada de 25m2 pasaba SIN avisar con el conteo local, pese a
     # ser insuficiente para el edificio real.
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=18))
-    bed = Room(id="bed", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=18),
+    )
+    bed = Room(
+        id="bed",
+        name="Dorm",
+        room_type=RoomType.BEDROOM,
+        dimensions=Dimensions(area_m2=12),
+    )
     kitchen = Room(
-        id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
-        dimensions=Dimensions(area_m2=7), integrated_in_largest_room=True,
+        id="kitchen",
+        name="Cocina",
+        room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=7),
+        integrated_in_largest_room=True,
         vertical_opening_m2=5.0,
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living, bed, kitchen], zones=[])
 
     sin_override = CocinaIntegradaValidator().validate(layout)
-    assert sin_override.violations == []  # 25m2 >= 23m2 (fila local de 2 estancias) -- aprobaba mal
+    assert (
+        sin_override.violations == []
+    )  # 25m2 >= 23m2 (fila local de 2 estancias) -- aprobaba mal
 
-    con_override = CocinaIntegradaValidator(total_num_estancias_override=5).validate(layout)
-    assert len(con_override.violations) == 1  # 25m2 < 31m2 (fila real del edificio de 5 estancias)
+    con_override = CocinaIntegradaValidator(total_num_estancias_override=5).validate(
+        layout
+    )
+    assert (
+        len(con_override.violations) == 1
+    )  # 25m2 < 31m2 (fila real del edificio de 5 estancias)

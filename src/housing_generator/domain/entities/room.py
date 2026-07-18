@@ -22,6 +22,7 @@ class Room:
     `boundary` es None hasta que un LayoutGenerator la coloca en el espacio;
     hasta entonces Room solo representa el requisito programatico.
     """
+
     id: str
     name: str
     room_type: RoomType
@@ -46,7 +47,9 @@ class Room:
         if self.is_wet is None:
             self.is_wet = self.room_type in DEFAULT_WET_ROOMS
         if self.space_category is None:
-            self.space_category = DEFAULT_SPACE_CATEGORY.get(self.room_type, SpaceCategory.OTROS)
+            self.space_category = DEFAULT_SPACE_CATEGORY.get(
+                self.room_type, SpaceCategory.OTROS
+            )
         if self.service_subtype is None:
             self.service_subtype = DEFAULT_SERVICE_SUBTYPE.get(self.room_type)
         if self.min_exterior_sides is None:

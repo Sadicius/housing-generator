@@ -19,7 +19,12 @@ def _dummy_lot() -> Lot:
 
 
 def _placed(room_id, room_type, polygon) -> Room:
-    r = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area))
+    r = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     r.boundary = Boundary(polygon=polygon)
     return r
 
@@ -48,7 +53,9 @@ def test_should_be_near_beyond_target_distance_is_penalized():
     a = _placed("a", RoomType.LIVING_ROOM, box(0, 0, 2, 2))
     b = _placed("b", RoomType.KITCHEN, box(2, 0, 4, 2))
     c = _placed("c", RoomType.DINING_ROOM, box(4, 0, 6, 2))
-    d = _placed("d", RoomType.STUDY, box(6, 0, 8, 2))  # a-b-c-d en cadena: a a d hay 3 saltos
+    d = _placed(
+        "d", RoomType.STUDY, box(6, 0, 8, 2)
+    )  # a-b-c-d en cadena: a a d hay 3 saltos
     reqs = [AdjacencyRequirement("a", "d", AdjacencyStrength.SHOULD_BE_NEAR)]
     layout = Layout(lot=_dummy_lot(), rooms=[a, b, c, d], zones=[])
 
@@ -59,7 +66,9 @@ def test_should_be_away_satisfied_beyond_target_distance_scores_zero():
     a = _placed("a", RoomType.LIVING_ROOM, box(0, 0, 2, 2))
     b = _placed("b", RoomType.KITCHEN, box(2, 0, 4, 2))
     c = _placed("c", RoomType.DINING_ROOM, box(4, 0, 6, 2))
-    d = _placed("d", RoomType.GARAGE, box(6, 0, 8, 2))  # 3 saltos -- justo en el objetivo (>=3)
+    d = _placed(
+        "d", RoomType.GARAGE, box(6, 0, 8, 2)
+    )  # 3 saltos -- justo en el objetivo (>=3)
     reqs = [AdjacencyRequirement("a", "d", AdjacencyStrength.SHOULD_BE_AWAY)]
     layout = Layout(lot=_dummy_lot(), rooms=[a, b, c, d], zones=[])
 
@@ -68,7 +77,9 @@ def test_should_be_away_satisfied_beyond_target_distance_scores_zero():
 
 def test_should_be_away_too_close_is_penalized():
     a = _placed("a", RoomType.LIVING_ROOM, box(0, 0, 3, 3))
-    b = _placed("b", RoomType.GARAGE, box(3, 0, 6, 3))  # adyacentes directas, distancia 1
+    b = _placed(
+        "b", RoomType.GARAGE, box(3, 0, 6, 3)
+    )  # adyacentes directas, distancia 1
     reqs = [AdjacencyRequirement("a", "b", AdjacencyStrength.SHOULD_BE_AWAY)]
     layout = Layout(lot=_dummy_lot(), rooms=[a, b], zones=[])
 
@@ -120,7 +131,9 @@ def test_should_be_near_unplaced_room_not_in_graph_is_penalized():
     # el grafo) -- caso distinto de "desconectada pero colocada", nunca
     # probado hasta ahora
     a = _placed("a", RoomType.LIVING_ROOM, box(0, 0, 2, 2))
-    unplaced = Room(id="b", name="b", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=8))
+    unplaced = Room(
+        id="b", name="b", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=8)
+    )
     reqs = [AdjacencyRequirement("a", "b", AdjacencyStrength.SHOULD_BE_NEAR)]
     layout = Layout(lot=_dummy_lot(), rooms=[a, unplaced], zones=[])
 
@@ -129,7 +142,9 @@ def test_should_be_near_unplaced_room_not_in_graph_is_penalized():
 
 def test_should_be_away_unplaced_room_not_in_graph_scores_zero():
     a = _placed("a", RoomType.LIVING_ROOM, box(0, 0, 2, 2))
-    unplaced = Room(id="b", name="b", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=15))
+    unplaced = Room(
+        id="b", name="b", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=15)
+    )
     reqs = [AdjacencyRequirement("a", "b", AdjacencyStrength.SHOULD_BE_AWAY)]
     layout = Layout(lot=_dummy_lot(), rooms=[a, unplaced], zones=[])
 

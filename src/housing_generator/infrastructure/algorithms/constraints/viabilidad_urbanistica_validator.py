@@ -16,6 +16,7 @@ convenio que `Lot.retranqueo_m`) -- los valores concretos vienen
 siempre del usuario (de su PGOU/ficha urbanística real), nunca
 inventados aquí. Ver [ARCH:viabilidad-urbanistica].
 """
+
 from typing import List
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.application.ports.viabilidad_urbanistica_validator_port import (
@@ -31,14 +32,20 @@ class ViabilidadUrbanisticaValidator(ViabilidadUrbanisticaValidatorPort):
     (confirmado contra varios PGOU municipales, no solo teoría).
     Ver [ARCH:viabilidad-urbanistica]."""
 
-    def validate(self, program: Program, lot: Lot, num_plantas: int) -> ValidationResult:
+    def validate(
+        self, program: Program, lot: Lot, num_plantas: int
+    ) -> ValidationResult:
         violations: List[str] = []
         # hallazgo real, confirmado por el usuario con captura del
         # navegador: si hay poligono_real (importado de Catastro), la
         # superficie de parcela debe ser la REAL, no la del rectangulo
         # de trabajo (que puede sobrestimarla hasta un 12-22%,
         # confirmado con 2 parcelas reales de Galicia). Ver [ARCH:parcela-real].
-        superficie_parcela = lot.poligono_real.area if lot.poligono_real is not None else lot.boundary.polygon.area
+        superficie_parcela = (
+            lot.poligono_real.area
+            if lot.poligono_real is not None
+            else lot.boundary.polygon.area
+        )
 
         if lot.coeficiente_edificabilidad is not None:
             techo_declarado = sum(r.dimensions.area_m2 for r in program.rooms)
@@ -62,8 +69,12 @@ class ViabilidadUrbanisticaValidator(ViabilidadUrbanisticaValidatorPort):
             superficie_por_planta: dict = {}
             for room in program.rooms:
                 nivel = room.level.value if room.level else "sin_nivel"
-                superficie_por_planta[nivel] = superficie_por_planta.get(nivel, 0.0) + room.dimensions.area_m2
-            huella_estimada = max(superficie_por_planta.values()) if superficie_por_planta else 0.0
+                superficie_por_planta[nivel] = (
+                    superficie_por_planta.get(nivel, 0.0) + room.dimensions.area_m2
+                )
+            huella_estimada = (
+                max(superficie_por_planta.values()) if superficie_por_planta else 0.0
+            )
             huella_maxima = (lot.ocupacion_maxima_pct / 100.0) * superficie_parcela
             if huella_estimada > huella_maxima:
                 violations.append(
@@ -73,13 +84,19 @@ class ViabilidadUrbanisticaValidator(ViabilidadUrbanisticaValidatorPort):
                     f"parcela solo permite {huella_maxima:.1f}m²"
                 )
 
-        if lot.altura_maxima_plantas is not None and num_plantas > lot.altura_maxima_plantas:
+        if (
+            lot.altura_maxima_plantas is not None
+            and num_plantas > lot.altura_maxima_plantas
+        ):
             violations.append(
                 f"Altura superada: el programa declara {num_plantas} plantas, pero la altura "
                 f"máxima permitida es de {lot.altura_maxima_plantas} plantas"
             )
 
-        if lot.frente_minimo_m is not None and lot.frente_actual_m < lot.frente_minimo_m:
+        if (
+            lot.frente_minimo_m is not None
+            and lot.frente_actual_m < lot.frente_minimo_m
+        ):
             violations.append(
                 f"Frente de fachada insuficiente: la parcela mide {lot.frente_actual_m:.1f}m "
                 f"en el lado de calle ('{lot.street_side}'), pero el frente mínimo exigido es "

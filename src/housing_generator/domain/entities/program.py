@@ -8,6 +8,7 @@ from housing_generator.domain.exceptions import InvalidProgramError
 @dataclass
 class Program:
     """El encargo de diseno: estancias solicitadas + requisitos de adyacencia."""
+
     rooms: List[Room]
     adjacency_requirements: List[AdjacencyRequirement] = field(default_factory=list)
 

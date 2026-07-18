@@ -17,10 +17,14 @@ class BuildAdjacencyGraphUseCase:
     def execute(self, program: Program) -> nx.Graph:
         graph = nx.Graph()
         for room in program.rooms:
-            graph.add_node(room.id, name=room.name, room_type=room.room_type, zone=room.zone)
+            graph.add_node(
+                room.id, name=room.name, room_type=room.room_type, zone=room.zone
+            )
 
         for req in program.adjacency_requirements:
             weight = self._WEIGHTS[req.strength.value]
-            graph.add_edge(req.room_a_id, req.room_b_id, weight=weight, strength=req.strength)
+            graph.add_edge(
+                req.room_a_id, req.room_b_id, weight=weight, strength=req.strength
+            )
 
         return graph

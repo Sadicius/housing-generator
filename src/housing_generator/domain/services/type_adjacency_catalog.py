@@ -3,6 +3,7 @@ formalizado como estructura ejecutable del dominio. Generado
 programáticamente desde docs/fuentes/relaciones_espaciales.md. Ver
 [ARCH:type-adjacency-catalog] para qué pares se omiten y por qué.
 """
+
 from typing import Dict, List, Optional, Tuple
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.entities.program import Program
@@ -87,7 +88,10 @@ DEFAULT_TYPE_ADJACENCY: Dict[Tuple[RoomType, RoomType], AdjacencyStrength] = {
     (RoomType.MASTER_BEDROOM, RoomType.STORAGE): AdjacencyStrength.SHOULD_BE_NEAR,
     (RoomType.MASTER_BEDROOM, RoomType.STORAGE_ROOM): AdjacencyStrength.SHOULD_BE_AWAY,
     (RoomType.MASTER_BEDROOM, RoomType.STUDY): AdjacencyStrength.SHOULD_BE_NEAR,
-    (RoomType.MASTER_BEDROOM, RoomType.TECHNICAL_ROOM): AdjacencyStrength.SHOULD_BE_AWAY,
+    (
+        RoomType.MASTER_BEDROOM,
+        RoomType.TECHNICAL_ROOM,
+    ): AdjacencyStrength.SHOULD_BE_AWAY,
     (RoomType.STORAGE, RoomType.CORRIDOR): AdjacencyStrength.SHOULD_BE_NEAR,
     (RoomType.STORAGE_ROOM, RoomType.CORRIDOR): AdjacencyStrength.SHOULD_BE_NEAR,
     (RoomType.STORAGE_ROOM, RoomType.GARAGE): AdjacencyStrength.SHOULD_BE_NEAR,
@@ -104,11 +108,15 @@ DEFAULT_TYPE_ADJACENCY: Dict[Tuple[RoomType, RoomType], AdjacencyStrength] = {
 }
 
 
-def get_type_adjacency(type_a: RoomType, type_b: RoomType) -> Optional[AdjacencyStrength]:
+def get_type_adjacency(
+    type_a: RoomType, type_b: RoomType
+) -> Optional[AdjacencyStrength]:
     """Consulta el catalogo para un par de tipos, sin importar el orden
     (el diccionario se genero directamente de una tabla fila/columna,
     no con claves canonicamente ordenadas)."""
-    return DEFAULT_TYPE_ADJACENCY.get((type_a, type_b)) or DEFAULT_TYPE_ADJACENCY.get((type_b, type_a))
+    return DEFAULT_TYPE_ADJACENCY.get((type_a, type_b)) or DEFAULT_TYPE_ADJACENCY.get(
+        (type_b, type_a)
+    )
 
 
 def build_adjacency_requirements(rooms: List[Room]) -> List[AdjacencyRequirement]:
@@ -118,7 +126,7 @@ def build_adjacency_requirements(rooms: List[Room]) -> List[AdjacencyRequirement
     Ver [ARCH:type-adjacency-catalog]."""
     requirements: List[AdjacencyRequirement] = []
     for i, room_a in enumerate(rooms):
-        for room_b in rooms[i + 1:]:
+        for room_b in rooms[i + 1 :]:
             if room_a.room_type == room_b.room_type:
                 continue
             type_pair_a = (room_a.room_type, room_b.room_type)
@@ -130,7 +138,9 @@ def build_adjacency_requirements(rooms: List[Room]) -> List[AdjacencyRequirement
 
             strength = get_type_adjacency(room_a.room_type, room_b.room_type)
             if strength is not None:
-                requirements.append(AdjacencyRequirement(room_a.id, room_b.id, strength))
+                requirements.append(
+                    AdjacencyRequirement(room_a.id, room_b.id, strength)
+                )
 
     return requirements
 
@@ -140,4 +150,6 @@ def build_program_with_auto_adjacency(rooms: List[Room]) -> Program:
     automáticamente en vez de exigir declararlos a mano. Vive en
     domain/services (lógica de dominio pura, sin infraestructura). Ver
     [ARCH:type-adjacency-catalog]."""
-    return Program(rooms=rooms, adjacency_requirements=build_adjacency_requirements(rooms))
+    return Program(
+        rooms=rooms, adjacency_requirements=build_adjacency_requirements(rooms)
+    )

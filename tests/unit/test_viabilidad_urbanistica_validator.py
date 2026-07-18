@@ -12,8 +12,13 @@ from housing_generator.domain.enums import RoomType, NivelPlanta
 
 
 def _room(room_id, area, level=None) -> Room:
-    return Room(id=room_id, name=room_id, room_type=RoomType.LIVING_ROOM,
-                dimensions=Dimensions(area_m2=area), level=level)
+    return Room(
+        id=room_id,
+        name=room_id,
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=area),
+        level=level,
+    )
 
 
 def _lot(width=20, depth=20, **kwargs) -> Lot:
@@ -21,7 +26,9 @@ def _lot(width=20, depth=20, **kwargs) -> Lot:
 
 
 def test_all_none_means_no_restrictions_at_all():
-    program = Program(rooms=[_room("a", 1000)])  # area absurda, no importa: nada esta configurado
+    program = Program(
+        rooms=[_room("a", 1000)]
+    )  # area absurda, no importa: nada esta configurado
     lot = _lot()
     result = ViabilidadUrbanisticaValidator().validate(program, lot, num_plantas=5)
     assert result.violations == []
@@ -49,10 +56,12 @@ def test_edificabilidad_exceeded_fails_with_real_numbers_in_message():
 def test_ocupacion_uses_the_largest_floor_not_always_ground_floor():
     # planta baja 80m2, planta superior 120m2 (voladizo) -- la estimacion
     # de huella debe usar la MAYOR (120m2), no siempre la baja
-    program = Program(rooms=[
-        _room("pb", 80, level=NivelPlanta.PLANTA_BAJA),
-        _room("ps", 120, level=NivelPlanta.PLANTA_SUPERIOR),
-    ])
+    program = Program(
+        rooms=[
+            _room("pb", 80, level=NivelPlanta.PLANTA_BAJA),
+            _room("ps", 120, level=NivelPlanta.PLANTA_SUPERIOR),
+        ]
+    )
     # 400m2 parcela, ocupacion 25% -> 100m2 maximo -- 120m2 (la superior) lo supera
     lot = _lot(ocupacion_maxima_pct=25)
     result = ViabilidadUrbanisticaValidator().validate(program, lot, num_plantas=2)
@@ -105,15 +114,25 @@ def test_frente_minimo_uses_the_correct_side_for_east_west_street():
     program = Program(rooms=[_room("a", 10)])
     lot = _lot(width=10, depth=20, street_side="east", frente_minimo_m=15)
     result = ViabilidadUrbanisticaValidator().validate(program, lot, num_plantas=1)
-    assert result.violations == []  # fondo real 20m >= 15m minimo, aunque el ancho (10m) no llegaria
+    assert (
+        result.violations == []
+    )  # fondo real 20m >= 15m minimo, aunque el ancho (10m) no llegaria
 
 
 def test_multiple_violations_all_reported_together():
     program = Program(rooms=[_room("a", 300, level=NivelPlanta.PLANTA_BAJA)])
-    lot = _lot(width=10, depth=10, coeficiente_edificabilidad=0.5,
-               ocupacion_maxima_pct=10, altura_maxima_plantas=1, frente_minimo_m=20)
+    lot = _lot(
+        width=10,
+        depth=10,
+        coeficiente_edificabilidad=0.5,
+        ocupacion_maxima_pct=10,
+        altura_maxima_plantas=1,
+        frente_minimo_m=20,
+    )
     result = ViabilidadUrbanisticaValidator().validate(program, lot, num_plantas=3)
-    assert len(result.violations) == 4  # las 4 restricciones fallan a la vez, todas reportadas
+    assert (
+        len(result.violations) == 4
+    )  # las 4 restricciones fallan a la vez, todas reportadas
 
 
 def test_edificabilidad_uses_real_polygon_area_not_working_rectangle_when_available():
@@ -123,17 +142,26 @@ def test_edificabilidad_uses_real_polygon_area_not_working_rectangle_when_availa
     # sobrestimarla). Aqui: rectangulo de trabajo 20x20=400m2, poligono
     # real solo 300m2 (mas pequeno, como en un caso real irregular).
     from shapely.geometry import Polygon
+
     poligono_real = Polygon([(2, 2), (18, 2), (18, 16), (10, 18), (2, 16), (2, 2)])
     assert poligono_real.area == pytest.approx(240.0, abs=1.0)
 
     lot = _lot(width=20, depth=20, coeficiente_edificabilidad=0.5)
     lot_con_poligono = lot.__class__(
-        boundary=lot.boundary, coeficiente_edificabilidad=0.5, poligono_real=poligono_real,
+        boundary=lot.boundary,
+        coeficiente_edificabilidad=0.5,
+        poligono_real=poligono_real,
     )
-    program = Program(rooms=[_room("a", 160)])  # 160m2: supera 0.5*240=120 (real), no 0.5*400=200 (rectangulo)
+    program = Program(
+        rooms=[_room("a", 160)]
+    )  # 160m2: supera 0.5*240=120 (real), no 0.5*400=200 (rectangulo)
 
-    result_sin_poligono = ViabilidadUrbanisticaValidator().validate(program, lot, num_plantas=1)
-    result_con_poligono = ViabilidadUrbanisticaValidator().validate(program, lot_con_poligono, num_plantas=1)
+    result_sin_poligono = ViabilidadUrbanisticaValidator().validate(
+        program, lot, num_plantas=1
+    )
+    result_con_poligono = ViabilidadUrbanisticaValidator().validate(
+        program, lot_con_poligono, num_plantas=1
+    )
 
     assert result_sin_poligono.violations == []  # 160 < 200 (rectangulo) -> pasa
     assert len(result_con_poligono.violations) == 1  # 160 > 120 (real) -> falla

@@ -1,5 +1,7 @@
 from typing import List, Optional
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import AdjacencyStrength
@@ -19,7 +21,11 @@ class AdjacencyConstraintValidator(ConstraintValidatorPort):
       punto o un tramo muy corto)
     """
 
-    def __init__(self, adjacency_requirements: Optional[list] = None, touch_tolerance_m: float = 0.05):
+    def __init__(
+        self,
+        adjacency_requirements: Optional[list] = None,
+        touch_tolerance_m: float = 0.05,
+    ):
         self._requirements = adjacency_requirements or []
         self._tolerance = touch_tolerance_m
 
@@ -38,7 +44,9 @@ class AdjacencyConstraintValidator(ConstraintValidatorPort):
                 violations.append(f"La estancia '{room.id}' no fue colocada")
                 continue
             if not lot_boundary_buffered.contains(room.boundary.polygon):
-                violations.append(f"La estancia '{room.id}' queda fuera del limite del solar")
+                violations.append(
+                    f"La estancia '{room.id}' queda fuera del limite del solar"
+                )
 
         rooms_by_id = {r.id: r for r in layout.rooms if r.is_placed}
         for req in self._requirements:
@@ -48,7 +56,10 @@ class AdjacencyConstraintValidator(ConstraintValidatorPort):
                 continue
 
             if req.strength == AdjacencyStrength.MUST_BE_AWAY:
-                if room_a.boundary.polygon.distance(room_b.boundary.polygon) < self._tolerance:
+                if (
+                    room_a.boundary.polygon.distance(room_b.boundary.polygon)
+                    < self._tolerance
+                ):
                     violations.append(
                         f"Las estancias '{req.room_a_id}' y '{req.room_b_id}' deben estar "
                         f"separadas pero son adyacentes"

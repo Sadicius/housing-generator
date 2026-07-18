@@ -13,5 +13,4 @@ class AdjacencyGraphBuilderPort(ABC):
     """
 
     @abstractmethod
-    def build(self, layout: Layout) -> nx.Graph:
-        ...
+    def build(self, layout: Layout) -> nx.Graph: ...

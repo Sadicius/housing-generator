@@ -1,5 +1,7 @@
 from typing import Callable, List, Tuple
-from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
+from housing_generator.application.ports.adjacency_graph_builder_port import (
+    AdjacencyGraphBuilderPort,
+)
 from housing_generator.infrastructure.algorithms.constraints.grouping_constraint_validator import (
     GroupingConstraintValidator,
 )
@@ -10,10 +12,14 @@ from housing_generator.domain.enums import ZoneType, SpaceCategory
 ZONA_DIA_MAX_DISTANCE = 2
 ZONA_NOCHE_MAX_DISTANCE = 2
 
+
 # Excluye circulacion (CORRIDOR/ENTRANCE_HALL): sirve a varias zonas a
 # la vez, no debe atraparse en la agrupacion de una sola. Ver [ARCH:day-night-zoning].
 def _is_non_circulation_in_zone(zone: ZoneType):
-    return lambda room: room.zone == zone and room.space_category != SpaceCategory.CIRCULACION
+    return (
+        lambda room: room.zone == zone
+        and room.space_category != SpaceCategory.CIRCULACION
+    )
 
 
 def zone_grouping_predicates() -> List[Tuple[Callable[[Room], bool], str]]:

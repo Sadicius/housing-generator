@@ -3,6 +3,8 @@ generador real (este mismo paquete Python), pensado para ejecutarse
 dentro de Pyodide -- no un servidor aparte. Solo cruza datos planos
 (dict/JSON), nunca objetos de dominio. Ver [ARCH:browser-bridge].
 """
+
+import logging
 import math
 from typing import Optional
 from shapely.geometry import box, Polygon
@@ -11,12 +13,38 @@ from housing_generator.config.container import build_generate_building_use_case
 from housing_generator.domain.entities.lot import Lot, CLASIFICACIONES_SUELO_VALIDAS
 from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.exceptions import LayoutGenerationError
-from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
-from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
-from housing_generator.infrastructure.persistence.catastro_gml_importer import importar_parcela_gml
+from housing_generator.infrastructure.persistence.json_layout_repository import (
+    JsonLayoutRepository,
+)
+from housing_generator.infrastructure.persistence.seleccion_plantas_importer import (
+    import_seleccion_plantas,
+)
+from housing_generator.infrastructure.persistence.catastro_gml_importer import (
+    importar_parcela_gml,
+)
+
+logger = logging.getLogger(__name__)
 
 
-def analizar_parcela_catastro(gml_content: str, retranqueo_m: Optional[float] = None) -> dict:
+def _mayor_poligono(geom) -> Optional[Polygon]:
+    """Devuelve el `Polygon` de mayor area de `geom` -- si `geom` ya es
+    un `Polygon`, se devuelve tal cual; si es `MultiPolygon`, la pieza
+    mas grande (las demas se descartan para la vista previa, no se
+    tratan como si el retranqueo hubiera colapsado a vacio, que era el
+    comportamiento anterior); en cualquier otro caso (geometria
+    degenerada), `None`."""
+    if geom.is_empty:
+        return None
+    if geom.geom_type == "Polygon":
+        return geom
+    if geom.geom_type == "MultiPolygon":
+        return max(geom.geoms, key=lambda g: g.area)
+    return None
+
+
+def analizar_parcela_catastro(
+    gml_content: str, retranqueo_m: Optional[float] = None
+) -> dict:
     """Analiza un GML de parcela catastral (Sede Electrónica del
     Catastro, formato INSPIRE CadastralParcels) y devuelve los datos
     que la Zona 0 del dashboard necesita para la vista previa: el
@@ -63,26 +91,45 @@ def analizar_parcela_catastro(gml_content: str, retranqueo_m: Optional[float] = 
     try:
         resultado = importar_parcela_gml(gml_content)
     except ValueError as e:
+        logger.warning("analizar_parcela_catastro: GML rechazado: %s", e)
         return {"ok": False, "error": str(e)}
 
-    coords_rect = list(resultado.rectangulo_trabajo.exterior.coords)[:-1]  # sin el punto de cierre repetido
-    ancho_m = math.hypot(coords_rect[1][0] - coords_rect[0][0], coords_rect[1][1] - coords_rect[0][1])
-    fondo_m = math.hypot(coords_rect[2][0] - coords_rect[1][0], coords_rect[2][1] - coords_rect[1][1])
+    coords_rect = list(resultado.rectangulo_trabajo.exterior.coords)[
+        :-1
+    ]  # sin el punto de cierre repetido
+    ancho_m = math.hypot(
+        coords_rect[1][0] - coords_rect[0][0], coords_rect[1][1] - coords_rect[0][1]
+    )
+    fondo_m = math.hypot(
+        coords_rect[2][0] - coords_rect[1][0], coords_rect[2][1] - coords_rect[1][1]
+    )
 
     zona_afeccion = None
     zona_afeccion_orientacion_real = None
     if retranqueo_m is not None and retranqueo_m > 0:
         afeccion_poly = resultado.poligono.buffer(-retranqueo_m)
-        if not afeccion_poly.is_empty and afeccion_poly.geom_type == "Polygon":
-            zona_afeccion = [list(c) for c in afeccion_poly.exterior.coords]
+        mayor = _mayor_poligono(afeccion_poly)
+        if mayor is not None:
+            zona_afeccion = [list(c) for c in mayor.exterior.coords]
+            if afeccion_poly.geom_type == "MultiPolygon":
+                logger.info(
+                    "analizar_parcela_catastro: el retranqueo (%.2fm) parte la parcela "
+                    "en %d piezas -- se devuelve solo la mayor para la vista previa",
+                    retranqueo_m,
+                    len(afeccion_poly.geoms),
+                )
         else:
-            zona_afeccion = []  # retranqueo excesivo, colapsa a vacio -- no es un error
+            zona_afeccion = (
+                []
+            )  # retranqueo excesivo, colapsa a vacio real -- no es un error
 
         afeccion_real = resultado.poligono_orientacion_real.buffer(-retranqueo_m)
-        if not afeccion_real.is_empty and afeccion_real.geom_type == "Polygon":
-            zona_afeccion_orientacion_real = [list(c) for c in afeccion_real.exterior.coords]
-        else:
-            zona_afeccion_orientacion_real = []
+        mayor_real = _mayor_poligono(afeccion_real)
+        zona_afeccion_orientacion_real = (
+            [list(c) for c in mayor_real.exterior.coords]
+            if mayor_real is not None
+            else []
+        )
 
     return {
         "ok": True,
@@ -91,10 +138,15 @@ def analizar_parcela_catastro(gml_content: str, retranqueo_m: Optional[float] = 
         "area_calculada_m2": round(resultado.area_calculada_m2, 1),
         "discrepancia_area_pct": round(resultado.discrepancia_area_pct, 2),
         "poligono_real": [list(c) for c in resultado.poligono.exterior.coords],
-        "rectangulo_trabajo": [list(c) for c in resultado.rectangulo_trabajo.exterior.coords],
-        "poligono_orientacion_real": [list(c) for c in resultado.poligono_orientacion_real.exterior.coords],
+        "rectangulo_trabajo": [
+            list(c) for c in resultado.rectangulo_trabajo.exterior.coords
+        ],
+        "poligono_orientacion_real": [
+            list(c) for c in resultado.poligono_orientacion_real.exterior.coords
+        ],
         "rectangulo_trabajo_orientacion_real": [
-            list(c) for c in resultado.poligono_orientacion_real.minimum_rotated_rectangle.exterior.coords
+            list(c)
+            for c in resultado.poligono_orientacion_real.minimum_rotated_rectangle.exterior.coords
         ],
         "zona_afeccion_orientacion_real": zona_afeccion_orientacion_real,
         "ancho_m": round(ancho_m, 2),
@@ -109,7 +161,17 @@ def generar_edificio(
     lot_height_m: float,
     seed: int = 1,
     max_iterations: int = 3000,
-    retry_seeds: int = 5,
+    # 5 -> 20: hallazgo real investigando la convergencia multi-planta
+    # (escalera compartida + dormitorios con contacto exterior): con un
+    # programa arquitectonicamente completo (con distribuidor real en
+    # cada planta con mas de una pieza privada), la tasa de exito por
+    # semilla medida fue ~10-20%, no ~100% -- confirmado con 10 semillas
+    # x 3 tamanos de parcela reales, no una suposicion. Con 5 intentos
+    # la probabilidad de fallo total rondaba el 33-59%; con 20, baja a
+    # ~1-12%. El coste es barato para los casos que YA convergen (el
+    # bucle corta en el primer exito), solo importa para los dificiles.
+    # Documentado en detalle en docs/CONTINUIDAD.md. Ver [ARCH:generate-building].
+    retry_seeds: int = 20,
     vivienda_accesible: bool = False,
     retranqueo_m: Optional[float] = None,
     retranqueo_incremento_por_planta_m: Optional[float] = None,
@@ -176,22 +238,70 @@ def generar_edificio(
 
     Ver [ARCH:browser-bridge].
     """
+    # Cotas duras sobre el coste de busqueda: sin esto, un valor extremo
+    # llegado del dashboard (max_iterations/retry_seeds) bloquea el hilo
+    # principal del navegador (Pyodide corre sin Web Worker) el tiempo
+    # que tarde la busqueda completa, sin forma de cancelarla. Recorta
+    # en vez de rechazar -- un valor grande sigue siendo una peticion
+    # valida, solo se limita su coste maximo.
+    MAX_ITERATIONS_CAP = 20_000
+    MAX_RETRY_SEEDS_CAP = 30
+    if max_iterations > MAX_ITERATIONS_CAP:
+        logger.warning(
+            "generar_edificio: max_iterations=%d por encima del limite, recortado a %d",
+            max_iterations,
+            MAX_ITERATIONS_CAP,
+        )
+        max_iterations = MAX_ITERATIONS_CAP
+    if retry_seeds > MAX_RETRY_SEEDS_CAP:
+        logger.warning(
+            "generar_edificio: retry_seeds=%d por encima del limite, recortado a %d",
+            retry_seeds,
+            MAX_RETRY_SEEDS_CAP,
+        )
+        retry_seeds = MAX_RETRY_SEEDS_CAP
+
     try:
         seleccion = import_seleccion_plantas(seleccion_payload)
     except (KeyError, ValueError) as e:
-        return {"ok": False, "error": f"El JSON de selección no tiene el formato esperado: {e}", "semillas_probadas": 0}
+        logger.warning(
+            "generar_edificio: seleccion_payload con formato invalido: %s", e
+        )
+        return {
+            "ok": False,
+            "error": f"El JSON de selección no tiene el formato esperado: {e}",
+            "semillas_probadas": 0,
+        }
 
     program = seleccion.program
     if not program.rooms:
-        return {"ok": False, "error": "La selección no tiene ninguna estancia -- añade al menos el programa mínimo.", "semillas_probadas": 0}
+        return {
+            "ok": False,
+            "error": "La selección no tiene ninguna estancia -- añade al menos el programa mínimo.",
+            "semillas_probadas": 0,
+        }
 
     poligono_real = Polygon(poligono_real_coords) if poligono_real_coords else None
+    if poligono_real is not None and (
+        not poligono_real.is_valid or poligono_real.area <= 0
+    ):
+        logger.warning(
+            "generar_edificio: poligono_real_coords describe un poligono invalido o de area nula"
+        )
+        return {
+            "ok": False,
+            "error": "El polígono real importado es inválido o tiene área nula -- revisa la parcela importada.",
+            "semillas_probadas": 0,
+        }
     LADOS_VALIDOS = {"north", "south", "east", "west"}
     retranqueo_por_lado_valido = {
-        lado: float(valor) for lado, valor in (retranqueo_por_lado or {}).items()
+        lado: float(valor)
+        for lado, valor in (retranqueo_por_lado or {}).items()
         if lado in LADOS_VALIDOS and valor is not None
     }
-    clasificacion_valida = frozenset(clasificacion_suelo or []) & CLASIFICACIONES_SUELO_VALIDAS
+    clasificacion_valida = (
+        frozenset(clasificacion_suelo or []) & CLASIFICACIONES_SUELO_VALIDAS
+    )
     lot = Lot(
         boundary=Boundary(polygon=box(0, 0, lot_width_m, lot_height_m)),
         medianera_sides=seleccion.medianera_sides,
@@ -226,19 +336,29 @@ def generar_edificio(
             building = use_case.execute(program, lot)
             break
         except LayoutGenerationError as e:
+            logger.info("generar_edificio: semilla %d no convergio: %s", used_seed, e)
             last_error = e
 
     if building is None:
+        logger.warning(
+            "generar_edificio: fallaron las %d semillas probadas (desde %d hasta %d). Ultimo error: %s",
+            attempts,
+            seed,
+            seed + attempts - 1,
+            last_error,
+        )
         return {
             "ok": False,
             "error": f"No se pudo generar tras probar {attempts} semillas (desde {seed} hasta {seed + attempts - 1}). "
-                     f"Último error: {last_error}",
+            f"Último error: {last_error}",
             "semillas_probadas": attempts,
         }
 
     floors = {}
     for level, layout in building.floors.items():
-        floors[level.value] = JsonLayoutRepository.to_dict(layout, adjacency_requirements=program.adjacency_requirements)
+        floors[level.value] = JsonLayoutRepository.to_dict(
+            layout, adjacency_requirements=program.adjacency_requirements
+        )
 
     return {
         "ok": True,

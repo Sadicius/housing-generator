@@ -8,6 +8,7 @@ from housing_generator.domain.entities.lot import Lot
 @dataclass
 class Layout:
     """Resultado generado: estancias colocadas en el espacio, agrupadas en zonas."""
+
     lot: Lot
     rooms: List[Room]
     zones: List[Zone]

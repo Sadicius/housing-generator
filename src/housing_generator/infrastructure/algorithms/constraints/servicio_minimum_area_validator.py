@@ -1,5 +1,7 @@
 from typing import List, Dict, Optional
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import SpaceCategory
@@ -9,11 +11,30 @@ TABLA_2: Dict[int, Dict[str, float]] = {
     1: {"cocina": 5, "bano": 5, "lavadero": 1.5, "tendedero": 1.5, "almacenamiento": 1},
     2: {"cocina": 7, "bano": 5, "lavadero": 1.5, "tendedero": 1.5, "almacenamiento": 2},
     3: {"cocina": 7, "bano": 5, "lavadero": 1.5, "tendedero": 1.5, "almacenamiento": 3},
-    4: {"cocina": 9, "bano": 5, "aseo": 1.5, "lavadero": 1.5, "tendedero": 1.5, "almacenamiento": 4},
-    5: {"cocina": 9, "bano": 5, "aseo": 1.5, "lavadero": 1.5, "tendedero": 1.5, "almacenamiento": 5},
+    4: {
+        "cocina": 9,
+        "bano": 5,
+        "aseo": 1.5,
+        "lavadero": 1.5,
+        "tendedero": 1.5,
+        "almacenamiento": 4,
+    },
+    5: {
+        "cocina": 9,
+        "bano": 5,
+        "aseo": 1.5,
+        "lavadero": 1.5,
+        "tendedero": 1.5,
+        "almacenamiento": 5,
+    },
 }
 TABLA_2_MAS_DE_CINCO: Dict[str, float] = {
-    "cocina": 10, "bano": 5, "aseo": 1.5, "lavadero": 1.5, "tendedero": 1.5, "almacenamiento": 6,
+    "cocina": 10,
+    "bano": 5,
+    "aseo": 1.5,
+    "lavadero": 1.5,
+    "tendedero": 1.5,
+    "almacenamiento": 6,
 }
 
 
@@ -36,8 +57,12 @@ class ServicioMinimumAreaValidator(ConstraintValidatorPort):
         self._total_override = total_num_estancias_override
 
     def validate(self, layout: Layout) -> ValidationResult:
-        local_count = sum(1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA)
-        num_estancias = self._total_override if self._total_override is not None else local_count
+        local_count = sum(
+            1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA
+        )
+        num_estancias = (
+            self._total_override if self._total_override is not None else local_count
+        )
         tabla = tabla_servicios_para(num_estancias)
 
         violations: List[str] = []

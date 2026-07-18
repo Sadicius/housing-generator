@@ -12,5 +12,4 @@ class ZoningStrategyPort(ABC):
     """
 
     @abstractmethod
-    def build_zones(self, program: Program) -> List[Zone]:
-        ...
+    def build_zones(self, program: Program) -> List[Zone]: ...

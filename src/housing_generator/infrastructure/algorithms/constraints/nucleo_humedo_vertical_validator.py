@@ -1,7 +1,9 @@
 from typing import List
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 
@@ -14,7 +16,9 @@ class NucleoHumedoVerticalValidator(ConstraintValidatorPort):
     Ver [ARCH:nucleo-humedo-vertical]."""
 
     def __init__(self, reference_wet_boundaries: List[Polygon]):
-        self._reference_union = unary_union(reference_wet_boundaries) if reference_wet_boundaries else None
+        self._reference_union = (
+            unary_union(reference_wet_boundaries) if reference_wet_boundaries else None
+        )
 
     def validate(self, layout: Layout) -> ValidationResult:
         if self._reference_union is None:

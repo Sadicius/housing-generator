@@ -15,7 +15,12 @@ from housing_generator.domain.enums import RoomType
 
 
 def _placed_room(room_id: str, room_type: RoomType, polygon) -> Room:
-    room = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area))
+    room = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     room.boundary = Boundary(polygon=polygon)
     return room
 
@@ -40,7 +45,9 @@ def test_day_zone_reports_violation_when_a_day_room_is_scattered_too_far():
     living = _placed_room("living", RoomType.LIVING_ROOM, box(0, 0, 3, 3))
     dining = _placed_room("dining", RoomType.DINING_ROOM, box(3, 0, 6, 3))
     kitchen = _placed_room("kitchen", RoomType.KITCHEN, box(6, 0, 9, 3))
-    study = _placed_room("study", RoomType.STUDY, box(9, 0, 12, 3))  # distancia 3 de living
+    study = _placed_room(
+        "study", RoomType.STUDY, box(9, 0, 12, 3)
+    )  # distancia 3 de living
 
     layout = Layout(lot=_dummy_lot(), rooms=[living, dining, kitchen, study], zones=[])
 
@@ -54,7 +61,9 @@ def test_day_zone_reports_violation_when_a_day_room_is_scattered_too_far():
 def test_night_zone_ignores_day_zone_rooms():
     bed1 = _placed_room("bed1", RoomType.MASTER_BEDROOM, box(0, 0, 3, 3))
     bed2 = _placed_room("bed2", RoomType.BEDROOM, box(3, 0, 6, 3))
-    living_far_away = _placed_room("living", RoomType.LIVING_ROOM, box(50, 50, 53, 53))  # zona dia, ignorado aqui
+    living_far_away = _placed_room(
+        "living", RoomType.LIVING_ROOM, box(50, 50, 53, 53)
+    )  # zona dia, ignorado aqui
 
     layout = Layout(lot=_dummy_lot(), rooms=[bed1, bed2, living_far_away], zones=[])
 
@@ -72,7 +81,9 @@ def test_corridor_placed_near_bedrooms_does_not_falsely_violate_day_zone():
     living = _placed_room("living", RoomType.LIVING_ROOM, box(0, 0, 4, 5))
     dining = _placed_room("dining", RoomType.DINING_ROOM, box(4, 0, 8, 5))
     bed1 = _placed_room("bed1", RoomType.BEDROOM, box(0, 10, 3, 13))
-    corridor = _placed_room("corridor", RoomType.CORRIDOR, box(3, 10, 5, 13))  # junto al dormitorio
+    corridor = _placed_room(
+        "corridor", RoomType.CORRIDOR, box(3, 10, 5, 13)
+    )  # junto al dormitorio
 
     layout = Layout(lot=_dummy_lot(), rooms=[living, dining, bed1, corridor], zones=[])
 
@@ -84,7 +95,9 @@ def test_entrance_hall_placed_away_from_day_rooms_does_not_falsely_violate_day_z
     # Mismo caso, para ENTRANCE_HALL (tambien CIRCULACION; zona por
     # defecto ahora ZoneType.CIRCULATION, ya no DAY)
     living = _placed_room("living", RoomType.LIVING_ROOM, box(0, 0, 4, 5))
-    hall = _placed_room("hall", RoomType.ENTRANCE_HALL, box(50, 50, 52, 52))  # muy lejos
+    hall = _placed_room(
+        "hall", RoomType.ENTRANCE_HALL, box(50, 50, 52, 52)
+    )  # muy lejos
 
     layout = Layout(lot=_dummy_lot(), rooms=[living, hall], zones=[])
 

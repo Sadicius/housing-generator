@@ -1,5 +1,7 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
@@ -10,13 +12,13 @@ ALTURA_LIBRE_REDUCIDA_M = 2.20
 
 ROOM_TYPES_REDUCCION_DIRECTA = {
     RoomType.ENTRANCE_HALL,  # vestibulo
-    RoomType.CORRIDOR,       # pasillo
-    RoomType.STAIRCASE,      # escaleras
-    RoomType.BATHROOM,       # bano
-    RoomType.TOILET,         # aseo
-    RoomType.LAUNDRY,        # lavadero
-    RoomType.DRYING_AREA,    # tendedero
-    RoomType.GARAGE,         # garajes de viviendas unifamiliares
+    RoomType.CORRIDOR,  # pasillo
+    RoomType.STAIRCASE,  # escaleras
+    RoomType.BATHROOM,  # bano
+    RoomType.TOILET,  # aseo
+    RoomType.LAUNDRY,  # lavadero
+    RoomType.DRYING_AREA,  # tendedero
+    RoomType.GARAGE,  # garajes de viviendas unifamiliares
 }
 ROOM_TYPES_FUERA_DE_ALCANCE = {RoomType.TECHNICAL_ROOM}
 

@@ -7,6 +7,7 @@ from housing_generator.domain.value_objects.boundary import Boundary
 @dataclass
 class Zone:
     """Macro-zona (dia / noche / servicio) que agrupa varias estancias."""
+
     zone_type: ZoneType
     room_ids: List[str] = field(default_factory=list)
     boundary: Optional[Boundary] = None

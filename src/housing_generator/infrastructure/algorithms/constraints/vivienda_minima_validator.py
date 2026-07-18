@@ -1,5 +1,7 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
@@ -13,9 +15,15 @@ class ViviendaMinimaValidator(ConstraintValidatorPort):
     almacenamiento general. Ver [ARCH:vivienda-minima]."""
 
     _REQUIRED = [
-        (RoomType.LIVING_ROOM, "un salón (LIVING_ROOM) -- una estancia de estar-comedor"),
+        (
+            RoomType.LIVING_ROOM,
+            "un salón (LIVING_ROOM) -- una estancia de estar-comedor",
+        ),
         (RoomType.KITCHEN, "una cocina (KITCHEN)"),
-        (RoomType.BATHROOM, "un baño completo (BATHROOM) -- un aseo (TOILET) no sustituye este requisito"),
+        (
+            RoomType.BATHROOM,
+            "un baño completo (BATHROOM) -- un aseo (TOILET) no sustituye este requisito",
+        ),
         (RoomType.LAUNDRY, "un lavadero (LAUNDRY)"),
         (RoomType.DRYING_AREA, "un tendedero (DRYING_AREA)"),
         (RoomType.STORAGE, "un espacio de almacenamiento general (STORAGE)"),

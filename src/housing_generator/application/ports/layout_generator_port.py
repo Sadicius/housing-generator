@@ -12,5 +12,4 @@ class LayoutGeneratorPort(ABC):
     CSP...) implementan este mismo puerto y son intercambiables."""
 
     @abstractmethod
-    def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout:
-        ...
+    def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout: ...

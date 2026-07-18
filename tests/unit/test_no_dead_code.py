@@ -13,6 +13,7 @@ refactorización, hasta una auditoría manual ocasional. Este test hace
 esa misma comprobación en cada pase de la suite -- el próximo archivo
 huérfano se detecta solo, no por casualidad.
 """
+
 import subprocess
 import sys
 from pathlib import Path
@@ -29,11 +30,17 @@ def test_no_new_dead_code():
     vulture_whitelist.py tras revisarla, no ignorar el test."""
     result = subprocess.run(
         [
-            sys.executable, "-m", "vulture",
-            str(ROOT / "src"), str(ROOT / "vulture_whitelist.py"),
-            "--min-confidence", "60",
+            sys.executable,
+            "-m",
+            "vulture",
+            str(ROOT / "src"),
+            str(ROOT / "vulture_whitelist.py"),
+            "--min-confidence",
+            "60",
         ],
-        capture_output=True, text=True, cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
     )
 
     assert result.returncode == 0, (

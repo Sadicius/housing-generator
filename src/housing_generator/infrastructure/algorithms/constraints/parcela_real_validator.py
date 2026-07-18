@@ -13,8 +13,11 @@ Si `Lot.poligono_real` es `None` (caso manual, sin importar de
 Catastro), este validador no hace nada -- mismo convenio que el
 resto de campos opcionales. Ver [ARCH:parcela-real].
 """
+
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 

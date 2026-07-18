@@ -44,41 +44,59 @@ def test_no_medianera_behaves_like_before():
 
 def test_one_medianera_side_has_no_retranqueo_on_that_side_only():
     lot = Lot(
-        boundary=Boundary(polygon=box(0, 0, 20, 15)), retranqueo_m=3.0,
+        boundary=Boundary(polygon=box(0, 0, 20, 15)),
+        retranqueo_m=3.0,
         medianera_sides=frozenset({"east"}),
     )
     minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
-    assert (minx, miny, maxy) == (3.0, 3.0, 12.0)  # retranqueo normal en oeste/sur/norte
+    assert (minx, miny, maxy) == (
+        3.0,
+        3.0,
+        12.0,
+    )  # retranqueo normal en oeste/sur/norte
     assert maxx == 20.0  # SIN retranqueo en el lado de medianera (este)
 
 
 def test_two_medianera_sides_adosada():
     # vivienda adosada tipica: medianeras en dos lados opuestos (este y oeste)
     lot = Lot(
-        boundary=Boundary(polygon=box(0, 0, 20, 15)), retranqueo_m=3.0,
+        boundary=Boundary(polygon=box(0, 0, 20, 15)),
+        retranqueo_m=3.0,
         medianera_sides=frozenset({"east", "west"}),
     )
     minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
-    assert (minx, maxx) == (0.0, 20.0)  # sin retranqueo en ninguno de los dos lados de medianera
+    assert (minx, maxx) == (
+        0.0,
+        20.0,
+    )  # sin retranqueo en ninguno de los dos lados de medianera
     assert (miny, maxy) == (3.0, 12.0)  # retranqueo normal en sur/norte
 
 
 def test_medianera_boundary_segments_use_original_lot_position():
     lot = Lot(
-        boundary=Boundary(polygon=box(0, 0, 20, 15)), retranqueo_m=3.0,
+        boundary=Boundary(polygon=box(0, 0, 20, 15)),
+        retranqueo_m=3.0,
         medianera_sides=frozenset({"east"}),
     )
     segments = lot.medianera_boundary_segments()
     assert len(segments) == 1
-    assert list(segments[0].coords) == [(20.0, 0.0), (20.0, 15.0)]  # linde ORIGINAL, no encogido
+    assert list(segments[0].coords) == [
+        (20.0, 0.0),
+        (20.0, 15.0),
+    ]  # linde ORIGINAL, no encogido
 
 
 def test_medianera_without_retranqueo_still_removes_that_side():
     # medianera sin retranqueo declarado (r=0 en el resto de lados) --
     # el lado de medianera sigue sin retranqueo (coincide con el resto
     # en este caso), pero medianera_boundary_segments() sigue poblado
-    lot = Lot(boundary=Boundary(polygon=box(0, 0, 20, 15)), medianera_sides=frozenset({"north"}))
-    assert lot.buildable_area.polygon.equals(lot.boundary.polygon)  # sin retranqueo, coincide igual
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 15)),
+        medianera_sides=frozenset({"north"}),
+    )
+    assert lot.buildable_area.polygon.equals(
+        lot.boundary.polygon
+    )  # sin retranqueo, coincide igual
     assert len(lot.medianera_boundary_segments()) == 1
 
 
@@ -87,8 +105,13 @@ def _poligono_real_de_fixture():
     # 349.2m2, genuinamente irregular (confirmado en la investigacion:
     # solo 53.6% de su rectangulo alineado a ejes).
     from pathlib import Path
-    from housing_generator.infrastructure.persistence.catastro_gml_importer import importar_parcela_gml
-    fixture = Path(__file__).parents[1] / "fixtures" / "catastro" / "parcela_sin_edificar.gml"
+    from housing_generator.infrastructure.persistence.catastro_gml_importer import (
+        importar_parcela_gml,
+    )
+
+    fixture = (
+        Path(__file__).parents[1] / "fixtures" / "catastro" / "parcela_sin_edificar.gml"
+    )
     resultado = importar_parcela_gml(fixture.read_text(encoding="utf-8"))
     return resultado.poligono
 
@@ -103,7 +126,10 @@ def test_area_edificable_real_without_poligono_real_matches_buildable_area():
 def test_area_edificable_real_uses_the_real_polygon_not_the_bounding_box():
     poligono_real = _poligono_real_de_fixture()
     minx, miny, maxx, maxy = poligono_real.bounds
-    lot = Lot(boundary=Boundary(polygon=box(minx, miny, maxx, maxy)), poligono_real=poligono_real)
+    lot = Lot(
+        boundary=Boundary(polygon=box(minx, miny, maxx, maxy)),
+        poligono_real=poligono_real,
+    )
 
     # sin retranqueo: coincide con el poligono real (349.2m2), NO con
     # el rectangulo envolvente (que seria mayor)
@@ -113,16 +139,26 @@ def test_area_edificable_real_uses_the_real_polygon_not_the_bounding_box():
 
 def test_area_edificable_real_applies_retranqueo_via_buffer_on_real_polygon():
     poligono_real = _poligono_real_de_fixture()
-    lot = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=3.0)
+    lot = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        retranqueo_m=3.0,
+    )
 
     area_reducida = lot.area_edificable_real.polygon.area
     assert area_reducida < poligono_real.area  # se redujo de verdad
-    assert area_reducida == pytest.approx(154.0, abs=5.0)  # verificado a mano en la investigacion
+    assert area_reducida == pytest.approx(
+        154.0, abs=5.0
+    )  # verificado a mano en la investigacion
 
 
 def test_area_edificable_real_collapses_gracefully_on_excessive_retranqueo():
     poligono_real = _poligono_real_de_fixture()
-    lot = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=15.0)
+    lot = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        retranqueo_m=15.0,
+    )
 
     assert lot.area_edificable_real.polygon.is_empty
 
@@ -133,14 +169,21 @@ def test_area_edificable_real_stays_within_the_true_legal_boundary():
     # diferencia del rectangulo de trabajo (que si puede sobresalir,
     # confirmado en la investigacion -- hasta 49m2 en un caso real).
     poligono_real = _poligono_real_de_fixture()
-    lot = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=2.0)
+    lot = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        retranqueo_m=2.0,
+    )
 
     interseccion = lot.area_edificable_real.polygon.intersection(poligono_real)
-    assert interseccion.area == pytest.approx(lot.area_edificable_real.polygon.area, abs=1e-6)
+    assert interseccion.area == pytest.approx(
+        lot.area_edificable_real.polygon.area, abs=1e-6
+    )
 
 
 def test_clasificacion_suelo_defaults_to_empty_and_accepts_real_categories():
     from housing_generator.domain.entities.lot import CLASIFICACIONES_SUELO_VALIDAS
+
     lot_sin_clasificar = Lot(boundary=Boundary(polygon=box(0, 0, 14, 16)))
     assert lot_sin_clasificar.clasificacion_suelo == frozenset()
 
@@ -184,7 +227,9 @@ def test_area_edificable_real_uses_retranqueo_por_lado_for_imported_polygon():
     )
     area_variable = lot.area_edificable_real.polygon.area
     lot_uniforme = Lot(
-        boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, retranqueo_m=1.0,
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        retranqueo_m=1.0,
     )
     area_uniforme = lot_uniforme.area_edificable_real.polygon.area
     assert area_variable < area_uniforme  # el lado sur mas exigente reduce mas
@@ -194,35 +239,53 @@ def test_empty_retranqueo_por_lado_does_not_change_existing_behavior():
     # sin entradas (caso por defecto de siempre), debe coincidir
     # EXACTAMENTE con el comportamiento uniforme -- ningun cambio para
     # quien no use esta funcionalidad nueva.
-    lot_nuevo = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0, retranqueo_por_lado={})
+    lot_nuevo = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 20)),
+        retranqueo_m=3.0,
+        retranqueo_por_lado={},
+    )
     lot_viejo = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0)
     assert lot_nuevo.buildable_area.polygon.equals(lot_viejo.buildable_area.polygon)
 
 
 def test_fondo_edificacion_clips_from_the_street_side_south():
-    lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)), street_side="south", fondo_edificacion_m=10.0)
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 14, 20)),
+        street_side="south",
+        fondo_edificacion_m=10.0,
+    )
     minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
     assert (minx, miny, maxx, maxy) == pytest.approx((0.0, 0.0, 14.0, 10.0))
 
 
 def test_fondo_edificacion_combines_with_uniform_retranqueo():
     lot = Lot(
-        boundary=Boundary(polygon=box(0, 0, 14, 20)), street_side="south",
-        fondo_edificacion_m=10.0, retranqueo_m=1.0,
+        boundary=Boundary(polygon=box(0, 0, 14, 20)),
+        street_side="south",
+        fondo_edificacion_m=10.0,
+        retranqueo_m=1.0,
     )
     assert lot.buildable_area.polygon.bounds == pytest.approx((1.0, 1.0, 13.0, 10.0))
 
 
 def test_fondo_edificacion_respects_street_side_east():
-    lot = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)), street_side="east", fondo_edificacion_m=8.0)
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 14, 20)),
+        street_side="east",
+        fondo_edificacion_m=8.0,
+    )
     minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
     assert (round(minx, 1), round(maxx, 1)) == (6.0, 14.0)
 
 
 def test_fondo_edificacion_none_does_not_change_existing_behavior():
-    lot_con_none = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)), fondo_edificacion_m=None)
+    lot_con_none = Lot(
+        boundary=Boundary(polygon=box(0, 0, 14, 20)), fondo_edificacion_m=None
+    )
     lot_sin_campo = Lot(boundary=Boundary(polygon=box(0, 0, 14, 20)))
-    assert lot_con_none.buildable_area.polygon.equals(lot_sin_campo.buildable_area.polygon)
+    assert lot_con_none.buildable_area.polygon.equals(
+        lot_sin_campo.buildable_area.polygon
+    )
 
 
 def test_frente_actual_m_without_poligono_real_matches_rectangle_side():
@@ -245,19 +308,37 @@ def test_frente_actual_m_uses_the_real_polygon_side_not_the_bounding_box():
     bbox_ancho_x = poligono_real.bounds[2] - poligono_real.bounds[0]
     bbox_ancho_y = poligono_real.bounds[3] - poligono_real.bounds[1]
 
-    lot_sur = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="south")
+    lot_sur = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        street_side="south",
+    )
     assert lot_sur.frente_actual_m == pytest.approx(27.80, abs=0.01)
-    assert lot_sur.frente_actual_m != pytest.approx(bbox_ancho_x)  # NO el rectangulo envolvente
+    assert lot_sur.frente_actual_m != pytest.approx(
+        bbox_ancho_x
+    )  # NO el rectangulo envolvente
 
-    lot_norte = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="north")
+    lot_norte = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        street_side="north",
+    )
     assert lot_norte.frente_actual_m == pytest.approx(23.80, abs=0.01)
     assert lot_norte.frente_actual_m != pytest.approx(bbox_ancho_x)
 
-    lot_este = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="east")
+    lot_este = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        street_side="east",
+    )
     assert lot_este.frente_actual_m == pytest.approx(15.50, abs=0.01)
     assert lot_este.frente_actual_m != pytest.approx(bbox_ancho_y)
 
-    lot_oeste = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="west")
+    lot_oeste = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        street_side="west",
+    )
     assert lot_oeste.frente_actual_m == pytest.approx(10.40, abs=0.01)
     assert lot_oeste.frente_actual_m != pytest.approx(bbox_ancho_y)
 
@@ -265,24 +346,43 @@ def test_frente_actual_m_uses_the_real_polygon_side_not_the_bounding_box():
 def test_fondo_edificacion_applies_to_area_edificable_real_too():
     poligono_real = _poligono_real_de_fixture()
     lot_con_fondo = Lot(
-        boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real,
-        street_side="south", fondo_edificacion_m=8.0,
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        street_side="south",
+        fondo_edificacion_m=8.0,
     )
-    lot_sin_fondo = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="south")
-    assert lot_con_fondo.area_edificable_real.polygon.area < lot_sin_fondo.area_edificable_real.polygon.area
+    lot_sin_fondo = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        street_side="south",
+    )
+    assert (
+        lot_con_fondo.area_edificable_real.polygon.area
+        < lot_sin_fondo.area_edificable_real.polygon.area
+    )
 
 
 def test_linea_edificacion_none_does_not_change_existing_behavior():
-    lot_con_none = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0, linea_edificacion_m=None)
+    lot_con_none = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 20)),
+        retranqueo_m=3.0,
+        linea_edificacion_m=None,
+    )
     lot_sin_campo = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), retranqueo_m=3.0)
-    assert lot_con_none.buildable_area.polygon.equals(lot_sin_campo.buildable_area.polygon)
+    assert lot_con_none.buildable_area.polygon.equals(
+        lot_sin_campo.buildable_area.polygon
+    )
 
 
 def test_linea_edificacion_pushes_back_only_the_street_side_when_larger():
     # sin retranqueo declarado (0) en un solar 20x20, street_side=south --
     # la reserva municipal de 5m debe recortar SOLO el lado sur, el resto
     # de lados quedan intactos (sin retranqueo propio).
-    lot = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), street_side="south", linea_edificacion_m=5.0)
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 20)),
+        street_side="south",
+        linea_edificacion_m=5.0,
+    )
     minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
     assert (minx, miny, maxx, maxy) == pytest.approx((0.0, 5.0, 20.0, 20.0))
 
@@ -292,11 +392,19 @@ def test_linea_edificacion_does_not_reduce_a_larger_declared_retranqueo():
     # municipal de 3m no debe reducirlo, el minimo obligatorio ya esta
     # superado.
     lot_con_linea = Lot(
-        boundary=Boundary(polygon=box(0, 0, 20, 20)), street_side="south",
-        retranqueo_m=6.0, linea_edificacion_m=3.0,
+        boundary=Boundary(polygon=box(0, 0, 20, 20)),
+        street_side="south",
+        retranqueo_m=6.0,
+        linea_edificacion_m=3.0,
     )
-    lot_sin_linea = Lot(boundary=Boundary(polygon=box(0, 0, 20, 20)), street_side="south", retranqueo_m=6.0)
-    assert lot_con_linea.buildable_area.polygon.equals(lot_sin_linea.buildable_area.polygon)
+    lot_sin_linea = Lot(
+        boundary=Boundary(polygon=box(0, 0, 20, 20)),
+        street_side="south",
+        retranqueo_m=6.0,
+    )
+    assert lot_con_linea.buildable_area.polygon.equals(
+        lot_sin_linea.buildable_area.polygon
+    )
 
 
 def test_linea_edificacion_combines_with_retranqueo_por_lado():
@@ -304,8 +412,10 @@ def test_linea_edificacion_combines_with_retranqueo_por_lado():
     # menor que la reserva municipal de 5m, debe prevalecer la reserva
     # SOLO en ese lado, el resto de entradas del dict quedan intactas.
     lot = Lot(
-        boundary=Boundary(polygon=box(0, 0, 20, 20)), street_side="south",
-        retranqueo_por_lado={"south": 2.0, "east": 1.0}, linea_edificacion_m=5.0,
+        boundary=Boundary(polygon=box(0, 0, 20, 20)),
+        street_side="south",
+        retranqueo_por_lado={"south": 2.0, "east": 1.0},
+        linea_edificacion_m=5.0,
     )
     minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
     assert (minx, miny, maxx, maxy) == pytest.approx((0.0, 5.0, 19.0, 20.0))
@@ -314,8 +424,17 @@ def test_linea_edificacion_combines_with_retranqueo_por_lado():
 def test_linea_edificacion_applies_to_area_edificable_real_too():
     poligono_real = _poligono_real_de_fixture()
     lot_con_linea = Lot(
-        boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real,
-        street_side="south", linea_edificacion_m=8.0,
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        street_side="south",
+        linea_edificacion_m=8.0,
     )
-    lot_sin_linea = Lot(boundary=Boundary(polygon=poligono_real), poligono_real=poligono_real, street_side="south")
-    assert lot_con_linea.area_edificable_real.polygon.area < lot_sin_linea.area_edificable_real.polygon.area
+    lot_sin_linea = Lot(
+        boundary=Boundary(polygon=poligono_real),
+        poligono_real=poligono_real,
+        street_side="south",
+    )
+    assert (
+        lot_con_linea.area_edificable_real.polygon.area
+        < lot_sin_linea.area_edificable_real.polygon.area
+    )

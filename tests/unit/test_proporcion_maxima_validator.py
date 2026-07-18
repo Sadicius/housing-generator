@@ -16,7 +16,12 @@ def _dummy_lot() -> Lot:
 
 
 def _placed(room_id, room_type, polygon) -> Room:
-    r = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area))
+    r = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     r.boundary = Boundary(polygon=polygon)
     return r
 
@@ -41,7 +46,9 @@ def test_applies_to_any_room_type_not_just_specific_ones():
         room = _placed("r", room_type, box(0, 0, 1.0, 5.0))  # 5:1
         layout = Layout(lot=_dummy_lot(), rooms=[room], zones=[])
         result = ProporcionMaximaValidator().validate(layout)
-        assert len(result.violations) == 1, f"{room_type} deberia fallar con proporcion 5:1"
+        assert (
+            len(result.violations) == 1
+        ), f"{room_type} deberia fallar con proporcion 5:1"
 
 
 def test_within_ratio_passes():
@@ -66,7 +73,9 @@ def test_just_over_threshold_fails():
 
 
 def test_unplaced_room_is_skipped_not_crashed():
-    room = Room(id="r", name="r", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12))
+    room = Room(
+        id="r", name="r", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[room], zones=[])
     result = ProporcionMaximaValidator().validate(layout)
     assert result.violations == []

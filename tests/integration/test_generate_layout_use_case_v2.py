@@ -57,6 +57,7 @@ todavía: `_solve_room_depth` (perimeter_carving.py) calibra solo por
 ÁREA, sin acotar por `max_aspect_ratio` -- en un hueco muy comprimido
 puede producir una estancia de 0.80x14.00m (ratio 17.5:1).
 """
+
 import pytest
 from shapely.geometry import box
 from housing_generator.config.container import build_generate_layout_use_case_v2
@@ -89,15 +90,60 @@ _MOTIVO_XFAIL_PASO_OBLIGADO = (
 @pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_generate_layout_places_all_rooms_within_lot():
     rooms = [
-        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20)),
-        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
-        Room(id="bed1", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)),
-        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=7)),
-        Room(id="bathroom", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
-        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=1.5)),
-        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=1.5)),
-        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=2)),
-        Room(id="garage", name="Garaje", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=15)),
+        Room(
+            id="living",
+            name="Estar",
+            room_type=RoomType.LIVING_ROOM,
+            dimensions=Dimensions(area_m2=20),
+        ),
+        Room(
+            id="entrance",
+            name="Recibidor",
+            room_type=RoomType.ENTRANCE_HALL,
+            dimensions=Dimensions(area_m2=4),
+        ),
+        Room(
+            id="bed1",
+            name="Dorm",
+            room_type=RoomType.BEDROOM,
+            dimensions=Dimensions(area_m2=12),
+        ),
+        Room(
+            id="kitchen",
+            name="Cocina",
+            room_type=RoomType.KITCHEN,
+            dimensions=Dimensions(area_m2=7),
+        ),
+        Room(
+            id="bathroom",
+            name="Bano",
+            room_type=RoomType.BATHROOM,
+            dimensions=Dimensions(area_m2=5),
+        ),
+        Room(
+            id="laundry",
+            name="Lavadero",
+            room_type=RoomType.LAUNDRY,
+            dimensions=Dimensions(area_m2=1.5),
+        ),
+        Room(
+            id="drying",
+            name="Tendedero",
+            room_type=RoomType.DRYING_AREA,
+            dimensions=Dimensions(area_m2=1.5),
+        ),
+        Room(
+            id="storage",
+            name="Almacen",
+            room_type=RoomType.STORAGE,
+            dimensions=Dimensions(area_m2=2),
+        ),
+        Room(
+            id="garage",
+            name="Garaje",
+            room_type=RoomType.GARAGE,
+            dimensions=Dimensions(area_m2=15),
+        ),
     ]
     adjacency = [
         AdjacencyRequirement("living", "garage", AdjacencyStrength.MUST_BE_AWAY),
@@ -106,7 +152,9 @@ def test_generate_layout_places_all_rooms_within_lot():
     program = Program(rooms=rooms, adjacency_requirements=adjacency)
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 17, 18)))
 
-    use_case = build_generate_layout_use_case_v2(adjacency_requirements=adjacency, seed=1, max_iterations=3000)
+    use_case = build_generate_layout_use_case_v2(
+        adjacency_requirements=adjacency, seed=1, max_iterations=3000
+    )
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     assert layout.is_complete
@@ -117,39 +165,125 @@ def test_generate_layout_places_all_rooms_within_lot():
 @pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_generate_layout_respects_retranqueo_vivienda_aislada():
     rooms = [
-        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20)),
-        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
-        Room(id="bed1", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)),
-        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=7)),
-        Room(id="bathroom", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
-        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=1.5)),
-        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=1.5)),
-        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=2)),
+        Room(
+            id="living",
+            name="Estar",
+            room_type=RoomType.LIVING_ROOM,
+            dimensions=Dimensions(area_m2=20),
+        ),
+        Room(
+            id="entrance",
+            name="Recibidor",
+            room_type=RoomType.ENTRANCE_HALL,
+            dimensions=Dimensions(area_m2=4),
+        ),
+        Room(
+            id="bed1",
+            name="Dorm",
+            room_type=RoomType.BEDROOM,
+            dimensions=Dimensions(area_m2=12),
+        ),
+        Room(
+            id="kitchen",
+            name="Cocina",
+            room_type=RoomType.KITCHEN,
+            dimensions=Dimensions(area_m2=7),
+        ),
+        Room(
+            id="bathroom",
+            name="Bano",
+            room_type=RoomType.BATHROOM,
+            dimensions=Dimensions(area_m2=5),
+        ),
+        Room(
+            id="laundry",
+            name="Lavadero",
+            room_type=RoomType.LAUNDRY,
+            dimensions=Dimensions(area_m2=1.5),
+        ),
+        Room(
+            id="drying",
+            name="Tendedero",
+            room_type=RoomType.DRYING_AREA,
+            dimensions=Dimensions(area_m2=1.5),
+        ),
+        Room(
+            id="storage",
+            name="Almacen",
+            room_type=RoomType.STORAGE,
+            dimensions=Dimensions(area_m2=2),
+        ),
     ]
-    adjacency = [AdjacencyRequirement("bathroom", "entrance", AdjacencyStrength.MUST_BE_NEAR)]
+    adjacency = [
+        AdjacencyRequirement("bathroom", "entrance", AdjacencyStrength.MUST_BE_NEAR)
+    ]
     program = Program(rooms=rooms, adjacency_requirements=adjacency)
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 22, 24)), retranqueo_m=3.0)
 
-    use_case = build_generate_layout_use_case_v2(adjacency_requirements=adjacency, seed=3, max_iterations=3000)
+    use_case = build_generate_layout_use_case_v2(
+        adjacency_requirements=adjacency, seed=3, max_iterations=3000
+    )
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     assert layout.is_complete
     buildable = lot.buildable_area.polygon.buffer(0.05)
     for room in layout.rooms:
-        assert buildable.contains(room.boundary.polygon), f"'{room.id}' invade la franja de retranqueo"
+        assert buildable.contains(
+            room.boundary.polygon
+        ), f"'{room.id}' invade la franja de retranqueo"
 
 
 @pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_soft_constraint_should_be_near_is_actually_satisfied_by_the_search():
     rooms = [
-        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20)),
-        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
-        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=7)),
-        Room(id="bathroom", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
-        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=1.5)),
-        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=1.5)),
-        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=2)),
-        Room(id="study", name="Despacho", room_type=RoomType.STUDY, dimensions=Dimensions(area_m2=12)),
+        Room(
+            id="living",
+            name="Estar",
+            room_type=RoomType.LIVING_ROOM,
+            dimensions=Dimensions(area_m2=20),
+        ),
+        Room(
+            id="entrance",
+            name="Recibidor",
+            room_type=RoomType.ENTRANCE_HALL,
+            dimensions=Dimensions(area_m2=4),
+        ),
+        Room(
+            id="kitchen",
+            name="Cocina",
+            room_type=RoomType.KITCHEN,
+            dimensions=Dimensions(area_m2=7),
+        ),
+        Room(
+            id="bathroom",
+            name="Bano",
+            room_type=RoomType.BATHROOM,
+            dimensions=Dimensions(area_m2=5),
+        ),
+        Room(
+            id="laundry",
+            name="Lavadero",
+            room_type=RoomType.LAUNDRY,
+            dimensions=Dimensions(area_m2=1.5),
+        ),
+        Room(
+            id="drying",
+            name="Tendedero",
+            room_type=RoomType.DRYING_AREA,
+            dimensions=Dimensions(area_m2=1.5),
+        ),
+        Room(
+            id="storage",
+            name="Almacen",
+            room_type=RoomType.STORAGE,
+            dimensions=Dimensions(area_m2=2),
+        ),
+        Room(
+            id="study",
+            name="Despacho",
+            room_type=RoomType.STUDY,
+            dimensions=Dimensions(area_m2=12),
+        ),
     ]
     adjacency = [
         AdjacencyRequirement("bathroom", "entrance", AdjacencyStrength.MUST_BE_NEAR),
@@ -158,7 +292,9 @@ def test_soft_constraint_should_be_near_is_actually_satisfied_by_the_search():
     program = Program(rooms=rooms, adjacency_requirements=adjacency)
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 16, 16)))
 
-    use_case = build_generate_layout_use_case_v2(adjacency_requirements=adjacency, seed=1, max_iterations=3000)
+    use_case = build_generate_layout_use_case_v2(
+        adjacency_requirements=adjacency, seed=1, max_iterations=3000
+    )
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     assert layout.metadata["hard_violations"] == 0
@@ -168,24 +304,68 @@ def test_soft_constraint_should_be_near_is_actually_satisfied_by_the_search():
 @pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_hard_constraint_never_loses_to_soft_even_when_tempting():
     rooms = [
-        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
-        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
-        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=7)),
-        Room(id="bathroom", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
-        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=1.5)),
-        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=1.5)),
-        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=2)),
-        Room(id="garage", name="Garaje", room_type=RoomType.GARAGE, dimensions=Dimensions(area_m2=15)),
+        Room(
+            id="living",
+            name="Estar",
+            room_type=RoomType.LIVING_ROOM,
+            dimensions=Dimensions(area_m2=25),
+        ),
+        Room(
+            id="entrance",
+            name="Recibidor",
+            room_type=RoomType.ENTRANCE_HALL,
+            dimensions=Dimensions(area_m2=4),
+        ),
+        Room(
+            id="kitchen",
+            name="Cocina",
+            room_type=RoomType.KITCHEN,
+            dimensions=Dimensions(area_m2=7),
+        ),
+        Room(
+            id="bathroom",
+            name="Bano",
+            room_type=RoomType.BATHROOM,
+            dimensions=Dimensions(area_m2=5),
+        ),
+        Room(
+            id="laundry",
+            name="Lavadero",
+            room_type=RoomType.LAUNDRY,
+            dimensions=Dimensions(area_m2=1.5),
+        ),
+        Room(
+            id="drying",
+            name="Tendedero",
+            room_type=RoomType.DRYING_AREA,
+            dimensions=Dimensions(area_m2=1.5),
+        ),
+        Room(
+            id="storage",
+            name="Almacen",
+            room_type=RoomType.STORAGE,
+            dimensions=Dimensions(area_m2=2),
+        ),
+        Room(
+            id="garage",
+            name="Garaje",
+            room_type=RoomType.GARAGE,
+            dimensions=Dimensions(area_m2=15),
+        ),
     ]
     adjacency = [
         AdjacencyRequirement("bathroom", "entrance", AdjacencyStrength.MUST_BE_NEAR),
         AdjacencyRequirement("living", "garage", AdjacencyStrength.MUST_BE_AWAY),
-        AdjacencyRequirement("living", "garage", AdjacencyStrength.SHOULD_BE_NEAR),  # tension directa
+        AdjacencyRequirement(
+            "living", "garage", AdjacencyStrength.SHOULD_BE_NEAR
+        ),  # tension directa
     ]
     program = Program(rooms=rooms, adjacency_requirements=adjacency)
     lot = Lot(boundary=Boundary(polygon=box(0, 0, 16, 16)))
 
-    use_case = build_generate_layout_use_case_v2(adjacency_requirements=adjacency, seed=1, max_iterations=3000)
+    use_case = build_generate_layout_use_case_v2(
+        adjacency_requirements=adjacency, seed=1, max_iterations=3000
+    )
     layout = use_case.execute(GenerationRequest(program=program, lot=lot))
 
     assert layout.metadata["hard_violations"] == 0
@@ -197,18 +377,59 @@ def test_hard_constraint_never_loses_to_soft_even_when_tempting():
 @pytest.mark.xfail(reason=_MOTIVO_XFAIL_PASO_OBLIGADO, strict=False)
 def test_vivienda_adosada_respects_medianera_sides_end_to_end():
     rooms = [
-        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=22)),
-        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=9)),
-        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
-        Room(id="bed1", name="Dormitorio", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)),
-        Room(id="bath", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
-        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=3)),
-        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=2)),
-        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=3)),
+        Room(
+            id="living",
+            name="Estar",
+            room_type=RoomType.LIVING_ROOM,
+            dimensions=Dimensions(area_m2=22),
+        ),
+        Room(
+            id="kitchen",
+            name="Cocina",
+            room_type=RoomType.KITCHEN,
+            dimensions=Dimensions(area_m2=9),
+        ),
+        Room(
+            id="entrance",
+            name="Recibidor",
+            room_type=RoomType.ENTRANCE_HALL,
+            dimensions=Dimensions(area_m2=4),
+        ),
+        Room(
+            id="bed1",
+            name="Dormitorio",
+            room_type=RoomType.BEDROOM,
+            dimensions=Dimensions(area_m2=12),
+        ),
+        Room(
+            id="bath",
+            name="Bano",
+            room_type=RoomType.BATHROOM,
+            dimensions=Dimensions(area_m2=5),
+        ),
+        Room(
+            id="laundry",
+            name="Lavadero",
+            room_type=RoomType.LAUNDRY,
+            dimensions=Dimensions(area_m2=3),
+        ),
+        Room(
+            id="drying",
+            name="Tendedero",
+            room_type=RoomType.DRYING_AREA,
+            dimensions=Dimensions(area_m2=2),
+        ),
+        Room(
+            id="storage",
+            name="Almacen",
+            room_type=RoomType.STORAGE,
+            dimensions=Dimensions(area_m2=3),
+        ),
     ]
     program = Program(rooms=rooms, adjacency_requirements=[])
     lot = Lot(
-        boundary=Boundary(polygon=box(0, 0, 8, 20)), retranqueo_m=3.0,
+        boundary=Boundary(polygon=box(0, 0, 8, 20)),
+        retranqueo_m=3.0,
         medianera_sides=frozenset({"east", "west"}),
     )
 

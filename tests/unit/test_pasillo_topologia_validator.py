@@ -18,7 +18,12 @@ def _dummy_lot() -> Lot:
 
 
 def _placed(room_id, room_type, polygon) -> Room:
-    r = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area))
+    r = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     r.boundary = Boundary(polygon=polygon)
     return r
 
@@ -85,7 +90,9 @@ def test_disconnected_rooms_produce_no_false_positive():
     # estancias que ni siquiera se tocan geometricamente -- no hay
     # "paso obligado" que detectar, son simplemente inconexas
     corridor = _placed("corridor", RoomType.CORRIDOR, box(0, 0, 2, 2))
-    kitchen = _placed("kitchen", RoomType.KITCHEN, box(10, 10, 12, 12))  # lejos, sin tocar nada
+    kitchen = _placed(
+        "kitchen", RoomType.KITCHEN, box(10, 10, 12, 12)
+    )  # lejos, sin tocar nada
     layout = Layout(lot=_dummy_lot(), rooms=[corridor, kitchen], zones=[])
 
     result = _validator().validate(layout)
@@ -105,7 +112,11 @@ def test_realistic_cli_style_layout_does_not_produce_false_positives():
     bed1 = _placed("bed1", RoomType.BEDROOM, box(6, 4, 10, 8))
     bath = _placed("bath", RoomType.BATHROOM, box(8, 0, 10, 4))
 
-    layout = Layout(lot=_dummy_lot(), rooms=[entrance, living, dining, kitchen, bed1, bath], zones=[])
+    layout = Layout(
+        lot=_dummy_lot(),
+        rooms=[entrance, living, dining, kitchen, bed1, bath],
+        zones=[],
+    )
 
     result = _validator().validate(layout)
     assert result.violations == []

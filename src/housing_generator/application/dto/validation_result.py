@@ -9,6 +9,7 @@ class ValidationResult:
     datos disponibles -- tercera categoría, no aprobado por defecto ni
     bloqueo). Ver [ARCH:validation-result].
     """
+
     violations: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
 

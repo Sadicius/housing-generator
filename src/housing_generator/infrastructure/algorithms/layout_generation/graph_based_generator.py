@@ -1,6 +1,8 @@
 from typing import List, Dict
 from shapely.geometry import Polygon, box
-from housing_generator.application.ports.layout_generator_port import LayoutGeneratorPort
+from housing_generator.application.ports.layout_generator_port import (
+    LayoutGeneratorPort,
+)
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.lot import Lot
 from housing_generator.domain.entities.zone import Zone
@@ -27,7 +29,9 @@ class GraphBasedLayoutGenerator(LayoutGeneratorPort):
 
         ordered_zones = sorted(
             zones,
-            key=lambda z: _ZONE_ORDER.index(z.zone_type) if z.zone_type in _ZONE_ORDER else 99,
+            key=lambda z: (
+                _ZONE_ORDER.index(z.zone_type) if z.zone_type in _ZONE_ORDER else 99
+            ),
         )
 
         zone_areas: Dict[ZoneType, float] = {
@@ -52,7 +56,9 @@ class GraphBasedLayoutGenerator(LayoutGeneratorPort):
 
         return Layout(lot=lot, rooms=placed_rooms, zones=ordered_zones)
 
-    def _place_rooms_in_zone(self, zone: Zone, zone_box: Polygon, rooms_by_id: Dict) -> None:
+    def _place_rooms_in_zone(
+        self, zone: Zone, zone_box: Polygon, rooms_by_id: Dict
+    ) -> None:
         minx, miny, maxx, maxy = zone_box.bounds
         zone_width = maxx - minx
         zone_rooms = [rooms_by_id[rid] for rid in zone.room_ids]

@@ -15,6 +15,7 @@ Migración planificada a fondo, con las decisiones de diseño y el
 prototipo verificado, en `docs/referencia/generador/prototipo-btree/`.
 Ver [ARCH:btree-partition].
 """
+
 import copy
 import math
 import random
@@ -38,6 +39,7 @@ class BStarNode:
 
     [ARCH:btree-partition]
     """
+
     room_id: str
     aspect_ratio: float = 1.0
     left: Optional["BStarNode"] = None
@@ -117,14 +119,14 @@ def compute_positions(root: BStarNode, areas: Dict[str, float]) -> Dict[str, Pol
 
     def height_in_range(x1: float, x2: float) -> float:
         max_h = 0.0
-        for (cx1, cx2, cy) in contour:
+        for cx1, cx2, cy in contour:
             if cx1 < x2 and cx2 > x1:  # se solapan en X
                 max_h = max(max_h, cy)
         return max_h
 
     def update_contour(x1: float, x2: float, y: float) -> None:
         nuevo = []
-        for (cx1, cx2, cy) in contour:
+        for cx1, cx2, cy in contour:
             if cx2 <= x1 or cx1 >= x2:
                 nuevo.append((cx1, cx2, cy))
             else:
@@ -145,7 +147,7 @@ def compute_positions(root: BStarNode, areas: Dict[str, float]) -> Dict[str, Pol
         positions[node.room_id] = box(x, y, x + w, y + h)
         update_contour(x, x + w, y + h)
         place(node.left, x + w)  # hijo izquierdo: pegado a la derecha del padre
-        place(node.right, x)     # hijo derecho: misma X que el padre, encima
+        place(node.right, x)  # hijo derecho: misma X que el padre, encima
 
     place(root, 0.0)
     _cache_root_ref, _cache_areas_ref, _cache_positions = root, areas, positions
@@ -172,8 +174,12 @@ def _find_node(root: BStarNode, room_id: str) -> BStarNode:
     raise ValueError(f"'{room_id}' no esta en el arbol")
 
 
-def _find_parent(root: BStarNode, objetivo: BStarNode) -> Tuple[Optional[BStarNode], Optional[str]]:
-    def buscar(nodo: Optional[BStarNode], padre: Optional[BStarNode], lado: Optional[str]):
+def _find_parent(
+    root: BStarNode, objetivo: BStarNode
+) -> Tuple[Optional[BStarNode], Optional[str]]:
+    def buscar(
+        nodo: Optional[BStarNode], padre: Optional[BStarNode], lado: Optional[str]
+    ):
         if nodo is None:
             return None
         if nodo is objetivo:
@@ -182,6 +188,7 @@ def _find_parent(root: BStarNode, objetivo: BStarNode) -> Tuple[Optional[BStarNo
         if r is not None:
             return r
         return buscar(nodo.right, nodo, "right")
+
     resultado = buscar(root, None, None)
     assert resultado is not None, "el nodo objetivo no pertenece a este arbol"
     return resultado
@@ -210,7 +217,9 @@ def move_module(root: BStarNode, room_id: str, rng: random.Random) -> BStarNode:
     padre, lado = _find_parent(nuevo, objetivo)
     if padre is None:
         return nuevo  # es la raiz sin hijos -- no hay nada que mover (arbol de 1 nodo)
-    assert lado is not None, "si hay padre, siempre hay lado -- invariante de _find_parent"
+    assert (
+        lado is not None
+    ), "si hay padre, siempre hay lado -- invariante de _find_parent"
     setattr(padre, lado, None)
 
     huecos = [
@@ -228,7 +237,9 @@ def move_module(root: BStarNode, room_id: str, rng: random.Random) -> BStarNode:
     return nuevo
 
 
-def resize_module(root: BStarNode, room_id: str, rng: random.Random, step: float = 0.15) -> BStarNode:
+def resize_module(
+    root: BStarNode, room_id: str, rng: random.Random, step: float = 0.15
+) -> BStarNode:
     """Redimensiona una estancia "blanda" (área fija, proporción
     variable) -- equivalente a `slide_wall` del árbol de partición,
     adaptado a que aquí la proporción vive en la propia estancia, no
@@ -307,7 +318,9 @@ def random_neighbor(
     ignora el bloqueo por completo (válvula de escape, evita atascos).
     """
     ignorar_bloqueo = not locked_room_ids or rng.random() < ESCAPE_PROBABILITY
-    bloqueadas: set = set() if ignorar_bloqueo or locked_room_ids is None else locked_room_ids
+    bloqueadas: set = (
+        set() if ignorar_bloqueo or locked_room_ids is None else locked_room_ids
+    )
 
     nodos = root.nodes()
     room_id = rng.choice([n.room_id for n in nodos])
@@ -317,8 +330,11 @@ def random_neighbor(
     # antes invisible porque nunca se habia probado el arbol B* contra
     # un programa de 1 sola estancia. Excluido dinamicamente cuando no
     # hay al menos 2 nodos, en vez de asumir que siempre los hay.
-    posibles_moves = ["swap", "move", "resize", "reset", "swap_children"] if len(nodos) >= 2 \
+    posibles_moves = (
+        ["swap", "move", "resize", "reset", "swap_children"]
+        if len(nodos) >= 2
         else ["move", "resize", "reset", "swap_children"]
+    )
     move = rng.choice(posibles_moves)
 
     if move == "swap":

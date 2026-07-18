@@ -1,6 +1,10 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
-from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
+from housing_generator.application.ports.adjacency_graph_builder_port import (
+    AdjacencyGraphBuilderPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType, SpaceCategory
@@ -21,13 +25,16 @@ class BanoAccesoGeneralValidator(ConstraintValidatorPort):
         self._graph_builder = graph_builder
 
     def validate(self, layout: Layout) -> ValidationResult:
-        bathrooms = [r for r in layout.rooms if r.is_placed and r.room_type == RoomType.BATHROOM]
+        bathrooms = [
+            r for r in layout.rooms if r.is_placed and r.room_type == RoomType.BATHROOM
+        ]
         if not bathrooms:
             return ValidationResult()
 
         graph = self._graph_builder.build(layout)
         circulation_ids = {
-            r.id for r in layout.rooms
+            r.id
+            for r in layout.rooms
             if r.is_placed and r.space_category == SpaceCategory.CIRCULACION
         }
         if not circulation_ids:
@@ -44,7 +51,9 @@ class BanoAccesoGeneralValidator(ConstraintValidatorPort):
                 continue
             neighbors = set(graph.neighbors(bath.id))
             if neighbors & circulation_ids:
-                return ValidationResult()  # al menos uno tiene acceso general -- regla satisfecha
+                return (
+                    ValidationResult()
+                )  # al menos uno tiene acceso general -- regla satisfecha
 
         violations: List[str] = [
             f"Ningún baño tiene acceso directo desde circulación general (CORRIDOR/ENTRANCE_HALL) "

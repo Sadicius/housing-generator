@@ -1,9 +1,14 @@
+import logging
 from typing import Callable, Dict, List, Optional
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
 from housing_generator.application.ports.zoning_strategy_port import ZoningStrategyPort
-from housing_generator.application.ports.layout_generator_port import LayoutGeneratorPort
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.layout_generator_port import (
+    LayoutGeneratorPort,
+)
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.ports.viabilidad_urbanistica_validator_port import (
     ViabilidadUrbanisticaValidatorPort,
 )
@@ -13,18 +18,33 @@ from housing_generator.domain.entities.lot import Lot
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.value_objects.boundary import Boundary
-from housing_generator.domain.enums import NivelPlanta, NIVEL_PLANTA_ORDEN, RoomType, SpaceCategory
+from housing_generator.domain.enums import (
+    NivelPlanta,
+    NIVEL_PLANTA_ORDEN,
+    RoomType,
+    SpaceCategory,
+)
 from housing_generator.domain.exceptions import LayoutGenerationError
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
+
+logger = logging.getLogger(__name__)
 
 # Fabrica de validadores por planta -- funcion, no clases concretas
 # (aplicacion no depende de infraestructura). Ver [ARCH:generate-building].
 PerFloorValidatorsFactory = Callable[
-    [List[AdjacencyRequirement], Optional[BaseGeometry], List[BaseGeometry], int, Dict[str, int], bool],
+    [
+        List[AdjacencyRequirement],
+        Optional[BaseGeometry],
+        List[BaseGeometry],
+        int,
+        Dict[str, int],
+        bool,
+    ],
     ConstraintValidatorPort,
 ]
 LayoutGeneratorFactory = Callable[
-    [ConstraintValidatorPort, List[AdjacencyRequirement], Optional[BaseGeometry]], LayoutGeneratorPort,
+    [ConstraintValidatorPort, List[AdjacencyRequirement], Optional[BaseGeometry]],
+    LayoutGeneratorPort,
 ]
 
 
@@ -43,7 +63,9 @@ class GenerateBuildingUseCase:
         zoning_strategy: ZoningStrategyPort,
         programa_minimo_validator: ConstraintValidatorPort,
         bano_acceso_validator: ConstraintValidatorPort,
-        viabilidad_urbanistica_validator: Optional[ViabilidadUrbanisticaValidatorPort] = None,
+        viabilidad_urbanistica_validator: Optional[
+            ViabilidadUrbanisticaValidatorPort
+        ] = None,
         adjacency_requirements: Optional[List[AdjacencyRequirement]] = None,
     ):
         self._per_floor_validators_factory = per_floor_validators_factory
@@ -65,13 +87,17 @@ class GenerateBuildingUseCase:
         # no despues de minutos de busqueda que nunca podia tener
         # exito. Ver [ARCH:viabilidad-urbanistica].
         if self._viabilidad_urbanistica_validator is not None:
-            viabilidad = self._viabilidad_urbanistica_validator.validate(program, lot, len(levels))
+            viabilidad = self._viabilidad_urbanistica_validator.validate(
+                program, lot, len(levels)
+            )
             if not viabilidad.is_valid:
                 raise LayoutGenerationError(
                     f"Programa no viable urbanisticamente: {viabilidad.violations}"
                 )
 
-        total_num_estancias = sum(1 for r in program.rooms if r.space_category == SpaceCategory.ESTANCIA)
+        total_num_estancias = sum(
+            1 for r in program.rooms if r.space_category == SpaceCategory.ESTANCIA
+        )
         global_rank = self._compute_global_rank(program.rooms)
 
         building = Building()
@@ -124,10 +150,13 @@ class GenerateBuildingUseCase:
             level_rooms = rooms_by_level[level]
             level_room_ids = {r.id for r in level_rooms}
             level_adjacency = [
-                req for req in self._adjacency_requirements
+                req
+                for req in self._adjacency_requirements
                 if req.room_a_id in level_room_ids and req.room_b_id in level_room_ids
             ]
-            level_program = Program(rooms=level_rooms, adjacency_requirements=level_adjacency)
+            level_program = Program(
+                rooms=level_rooms, adjacency_requirements=level_adjacency
+            )
 
             reference_stair = self._staircase_boundary(previous_layout)
             reference_wet = self._wet_boundaries(previous_layout)
@@ -140,11 +169,15 @@ class GenerateBuildingUseCase:
             # una version desactualizada. Ver [ARCH:generate-building].
             if floor_below_exists:
                 current_buildable_polygon = self._shrink_for_next_floor(
-                    current_buildable_polygon, lot.retranqueo_incremento_por_planta_m, level_rooms,
+                    current_buildable_polygon,
+                    lot.retranqueo_incremento_por_planta_m,
+                    level_rooms,
                 )
                 if current_real_boundary is not None:
                     current_real_boundary = self._shrink_for_next_floor(
-                        current_real_boundary, lot.retranqueo_incremento_por_planta_m, level_rooms,
+                        current_real_boundary,
+                        lot.retranqueo_incremento_por_planta_m,
+                        level_rooms,
                     )
             floor_lot = Lot(
                 boundary=Boundary(polygon=current_buildable_polygon),
@@ -155,12 +188,32 @@ class GenerateBuildingUseCase:
             )
 
             composite = self._per_floor_validators_factory(
-                level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank,
+                level_adjacency,
+                reference_stair,
+                reference_wet,
+                total_num_estancias,
+                global_rank,
                 floor_below_exists,
             )
-            generator = self._layout_generator_factory(composite, level_adjacency, reference_stair)
+            generator = self._layout_generator_factory(
+                composite, level_adjacency, reference_stair
+            )
             zones = self._zoning_strategy.build_zones(level_program)
-            layout = generator.generate(level_program, floor_lot, zones)
+            # BUG REAL encontrado auditando el mensaje de error: si el
+            # propio generador agota max_iterations sin converger, lanza
+            # su LayoutGenerationError ANTES de llegar a la validacion
+            # compuesta de abajo -- ese mensaje no menciona la planta
+            # (a diferencia del que sigue, "para la planta 'X'"), asi que
+            # en un edificio de varias plantas no hay forma de saber CUAL
+            # fallo solo leyendo el error. Se relanza envuelto con el
+            # mismo formato que el resto de fallos por planta.
+            try:
+                layout = generator.generate(level_program, floor_lot, zones)
+            except LayoutGenerationError as e:
+                raise LayoutGenerationError(
+                    f"No se pudo generar un layout valido para la planta '{level.value}'. "
+                    f"Causa: {e}"
+                ) from e
 
             result = composite.validate(layout)
             if not result.is_valid:
@@ -178,7 +231,9 @@ class GenerateBuildingUseCase:
 
     @staticmethod
     def _shrink_for_next_floor(
-        previous_polygon: BaseGeometry, increment_m: Optional[float], level_rooms: List[Room],
+        previous_polygon: BaseGeometry,
+        increment_m: Optional[float],
+        level_rooms: List[Room],
     ) -> BaseGeometry:
         """Encoge el contorno de la planta anterior por `increment_m`
         (mismo mecanismo que `Lot.buildable_area`). Con red de
@@ -189,7 +244,17 @@ class GenerateBuildingUseCase:
         shrunk = previous_polygon.buffer(-increment_m)
         required_area = sum(r.dimensions.area_m2 for r in level_rooms)
         if shrunk.area < required_area:
-            return previous_polygon  # red de seguridad: copia exacta, no un area inviable
+            logger.warning(
+                "_shrink_for_next_floor: el encogimiento de %.2fm dejaria %.1fm2, por debajo "
+                "del area requerida (%.1fm2) para esta planta -- se ignora el incremento de "
+                "retranqueo pedido y esta planta conserva el contorno de la anterior",
+                increment_m,
+                shrunk.area,
+                required_area,
+            )
+            return (
+                previous_polygon  # red de seguridad: copia exacta, no un area inviable
+            )
         return shrunk
 
     @staticmethod
@@ -230,13 +295,17 @@ class GenerateBuildingUseCase:
         PLANTA -- la accesibilidad de un baño no se hereda de otra
         planta. Ver [ARCH:generate-building]."""
         any_bathroom_anywhere = any(
-            r.room_type == RoomType.BATHROOM for layout in building.floors.values() for r in layout.rooms
+            r.room_type == RoomType.BATHROOM
+            for layout in building.floors.values()
+            for r in layout.rooms
         )
         if not any_bathroom_anywhere:
             return  # ninguna planta tiene banos -- ViviendaMinimaValidator ya lo habria bloqueado antes
 
         for layout in building.floors.values():
-            has_bathroom_here = any(r.room_type == RoomType.BATHROOM for r in layout.rooms)
+            has_bathroom_here = any(
+                r.room_type == RoomType.BATHROOM for r in layout.rooms
+            )
             if not has_bathroom_here:
                 continue
             if self._bano_acceso_validator.validate(layout).is_valid:
@@ -249,7 +318,9 @@ class GenerateBuildingUseCase:
         )
 
     def _check_programa_minimo(self, building: Building) -> None:
-        all_rooms = [room for layout in building.floors.values() for room in layout.rooms]
+        all_rooms = [
+            room for layout in building.floors.values() for room in layout.rooms
+        ]
         synthetic_layout = Layout(
             lot=next(iter(building.floors.values())).lot,
             rooms=all_rooms,

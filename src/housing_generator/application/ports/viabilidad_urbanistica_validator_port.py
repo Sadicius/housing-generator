@@ -12,5 +12,6 @@ class ViabilidadUrbanisticaValidatorPort(ABC):
     [ARCH:viabilidad-urbanistica]."""
 
     @abstractmethod
-    def validate(self, program: Program, lot: Lot, num_plantas: int) -> ValidationResult:
-        ...
+    def validate(
+        self, program: Program, lot: Lot, num_plantas: int
+    ) -> ValidationResult: ...

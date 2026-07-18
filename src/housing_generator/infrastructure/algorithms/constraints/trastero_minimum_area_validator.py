@@ -1,9 +1,13 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
-from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
+from housing_generator.infrastructure.geometry.shapely_utils import (
+    evaluate_minimum_width,
+)
 
 # B.2.5: superficie fija. Ver [ARCH:trastero-minimum-area].
 TRASTERO_AREA_MIN_M2 = 4.00
@@ -28,7 +32,9 @@ class TrasteroMinimumAreaValidator(ConstraintValidatorPort):
                 )
             if room.is_placed:
                 v, w = evaluate_minimum_width(
-                    room.id, room.boundary.polygon, TRASTERO_ANCHO_LIBRE_MIN_M,
+                    room.id,
+                    room.boundary.polygon,
+                    TRASTERO_ANCHO_LIBRE_MIN_M,
                     violation_message=(
                         f"ancho libre por debajo del minimo de B.2.5 ({TRASTERO_ANCHO_LIBRE_MIN_M:.2f}m)"
                     ),

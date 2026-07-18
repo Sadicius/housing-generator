@@ -1,5 +1,7 @@
 from shapely.geometry import box
-from housing_generator.infrastructure.algorithms.constraints.altura_libre_validator import AlturaLibreValidator
+from housing_generator.infrastructure.algorithms.constraints.altura_libre_validator import (
+    AlturaLibreValidator,
+)
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.entities.lot import Lot
 from housing_generator.domain.entities.layout import Layout
@@ -13,7 +15,12 @@ def _dummy_lot() -> Lot:
 
 
 def test_missing_height_is_a_warning_not_a_violation():
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=20),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
 
     result = AlturaLibreValidator().validate(layout)
@@ -23,7 +30,9 @@ def test_missing_height_is_a_warning_not_a_violation():
 
 def test_living_room_at_2_50_or_above_passes_cleanly():
     living = Room(
-        id="living", name="Estar", room_type=RoomType.LIVING_ROOM,
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
         dimensions=Dimensions(area_m2=20, ceiling_height_m=2.50),
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
@@ -34,7 +43,9 @@ def test_living_room_at_2_50_or_above_passes_cleanly():
 
 def test_living_room_between_2_20_and_2_50_is_a_warning_not_a_violation():
     living = Room(
-        id="living", name="Estar", room_type=RoomType.LIVING_ROOM,
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
         dimensions=Dimensions(area_m2=20, ceiling_height_m=2.30),
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
@@ -47,7 +58,9 @@ def test_living_room_between_2_20_and_2_50_is_a_warning_not_a_violation():
 
 def test_living_room_below_2_20_is_a_hard_violation():
     living = Room(
-        id="living", name="Estar", room_type=RoomType.LIVING_ROOM,
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
         dimensions=Dimensions(area_m2=20, ceiling_height_m=2.00),
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
@@ -58,7 +71,9 @@ def test_living_room_below_2_20_is_a_hard_violation():
 
 def test_bathroom_allows_2_20_directly_without_warning():
     bath = Room(
-        id="b", name="Bano", room_type=RoomType.BATHROOM,
+        id="b",
+        name="Bano",
+        room_type=RoomType.BATHROOM,
         dimensions=Dimensions(area_m2=5, ceiling_height_m=2.20),
     )
     layout = Layout(lot=_dummy_lot(), rooms=[bath], zones=[])
@@ -69,7 +84,9 @@ def test_bathroom_allows_2_20_directly_without_warning():
 
 def test_bathroom_below_2_20_still_fails():
     bath = Room(
-        id="b", name="Bano", room_type=RoomType.BATHROOM,
+        id="b",
+        name="Bano",
+        room_type=RoomType.BATHROOM,
         dimensions=Dimensions(area_m2=5, ceiling_height_m=2.10),
     )
     layout = Layout(lot=_dummy_lot(), rooms=[bath], zones=[])
@@ -80,8 +97,12 @@ def test_bathroom_below_2_20_still_fails():
 
 def test_technical_room_is_out_of_scope():
     technical = Room(
-        id="t", name="Cuarto tecnico", room_type=RoomType.TECHNICAL_ROOM,
-        dimensions=Dimensions(area_m2=4, ceiling_height_m=1.80),  # muy bajo, pero fuera de alcance
+        id="t",
+        name="Cuarto tecnico",
+        room_type=RoomType.TECHNICAL_ROOM,
+        dimensions=Dimensions(
+            area_m2=4, ceiling_height_m=1.80
+        ),  # muy bajo, pero fuera de alcance
     )
     layout = Layout(lot=_dummy_lot(), rooms=[technical], zones=[])
 
@@ -99,12 +120,18 @@ def test_garage_gets_direct_reduction_like_vestibulo_or_bathroom():
     # pero esta seccion A.3.1.1 SI aplica). Ahora se comprueba igual que
     # vestibulo/pasillo/escaleras/bano/aseo/lavadero/tendedero.
     garage_bajo = Room(
-        id="g1", name="Garaje", room_type=RoomType.GARAGE,
+        id="g1",
+        name="Garaje",
+        room_type=RoomType.GARAGE,
         dimensions=Dimensions(area_m2=18, ceiling_height_m=1.80),  # por debajo de 2.20m
     )
     garage_ok = Room(
-        id="g2", name="Garaje", room_type=RoomType.GARAGE,
-        dimensions=Dimensions(area_m2=18, ceiling_height_m=2.20),  # exactamente el minimo reducido
+        id="g2",
+        name="Garaje",
+        room_type=RoomType.GARAGE,
+        dimensions=Dimensions(
+            area_m2=18, ceiling_height_m=2.20
+        ),  # exactamente el minimo reducido
     )
     layout = Layout(lot=_dummy_lot(), rooms=[garage_bajo, garage_ok], zones=[])
 
@@ -119,7 +146,9 @@ def test_staircase_gets_direct_reduction_too():
     # lista de A.3.1.1.b, y STAIRCASE no estaba en ninguna de las dos
     # listas (caia en el caso general mas estricto, 2.50m/excepcion 30%).
     stair_bajo = Room(
-        id="s", name="Escalera", room_type=RoomType.STAIRCASE,
+        id="s",
+        name="Escalera",
+        room_type=RoomType.STAIRCASE,
         dimensions=Dimensions(area_m2=4, ceiling_height_m=2.0),  # por debajo de 2.20m
     )
     layout = Layout(lot=_dummy_lot(), rooms=[stair_bajo], zones=[])

@@ -1,7 +1,11 @@
 from typing import List, Set
 import networkx as nx
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
-from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
+from housing_generator.application.ports.adjacency_graph_builder_port import (
+    AdjacencyGraphBuilderPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType, SpaceCategory
@@ -24,14 +28,18 @@ class PasilloTopologiaValidator(ConstraintValidatorPort):
         rooms_by_id = {r.id: r for r in layout.rooms if r.is_placed}
 
         circulation_ids: Set[str] = {
-            rid for rid in graph.nodes
+            rid
+            for rid in graph.nodes
             if rooms_by_id[rid].space_category == SpaceCategory.CIRCULACION
         }
         if not circulation_ids:
-            return ValidationResult()  # nada de circulacion en el grafo -- no hay nada que comprobar
+            return (
+                ValidationResult()
+            )  # nada de circulacion en el grafo -- no hay nada que comprobar
 
         protected_ids: Set[str] = {
-            rid for rid in graph.nodes
+            rid
+            for rid in graph.nodes
             if rooms_by_id[rid].space_category != SpaceCategory.CIRCULACION
             and rooms_by_id[rid].room_type not in EXENTOS_DE_LA_REGLA
         }

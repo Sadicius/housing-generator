@@ -2,6 +2,7 @@
 pestaña "Sección vertical") hacia un `Program` real utilizable por el
 generador. Ver [ARCH:seleccion-plantas-importer].
 """
+
 import json
 from pathlib import Path
 from typing import Dict, FrozenSet, List, NamedTuple, Optional, Union
@@ -9,7 +10,9 @@ from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.value_objects.dimensions import Dimensions
 from housing_generator.domain.enums import RoomType, NivelPlanta, DISPLAY_NAMES
-from housing_generator.domain.services.type_adjacency_catalog import build_adjacency_requirements
+from housing_generator.domain.services.type_adjacency_catalog import (
+    build_adjacency_requirements,
+)
 
 # Areas por defecto, genericas -- solo formato antiguo o entrada sin
 # area_m2 valida. Ver [ARCH:seleccion-plantas-importer].
@@ -44,6 +47,7 @@ class SeleccionImportada(NamedTuple):
     """Resultado de `import_seleccion_plantas`: el `Program` real, y los
     `medianera_sides` resueltos a partir de `tipo_vivienda` -- listos
     para pasarselos directamente a `Lot(medianera_sides=...)`."""
+
     program: Program
     medianera_sides: FrozenSet[str]
 
@@ -89,13 +93,15 @@ def import_seleccion_plantas(
                 display_name = DISPLAY_NAMES.get(room_type, room_type.value)
                 if count > 1:
                     display_name = f"{display_name} {i}"
-                rooms.append(Room(
-                    id=room_id,
-                    name=display_name,
-                    room_type=room_type,
-                    dimensions=Dimensions(area_m2=final_area),
-                    level=level,
-                ))
+                rooms.append(
+                    Room(
+                        id=room_id,
+                        name=display_name,
+                        room_type=room_type,
+                        dimensions=Dimensions(area_m2=final_area),
+                        level=level,
+                    )
+                )
 
     adjacency = build_adjacency_requirements(rooms)
     program = Program(rooms=rooms, adjacency_requirements=adjacency)

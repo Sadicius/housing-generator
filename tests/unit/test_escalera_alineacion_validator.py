@@ -15,7 +15,12 @@ def _dummy_lot() -> Lot:
 
 
 def _stair(room_id, polygon) -> Room:
-    r = Room(id=room_id, name=room_id, room_type=RoomType.STAIRCASE, dimensions=Dimensions(area_m2=polygon.area))
+    r = Room(
+        id=room_id,
+        name=room_id,
+        room_type=RoomType.STAIRCASE,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     r.boundary = Boundary(polygon=polygon)
     return r
 
@@ -25,7 +30,9 @@ def test_no_floor_below_at_all_means_not_applicable():
     stair = _stair("s", box(0, 0, 1, 3))
     layout = Layout(lot=_dummy_lot(), rooms=[stair], zones=[])
 
-    result = EscaleraAlineacionValidator(reference_boundary=None, floor_below_exists=False).validate(layout)
+    result = EscaleraAlineacionValidator(
+        reference_boundary=None, floor_below_exists=False
+    ).validate(layout)
     assert result.violations == []
 
 
@@ -37,29 +44,48 @@ def test_floor_below_exists_without_staircase_but_this_floor_has_one_fails():
     stair = _stair("s", box(0, 0, 1, 3))
     layout = Layout(lot=_dummy_lot(), rooms=[stair], zones=[])
 
-    violations = EscaleraAlineacionValidator(
-        reference_boundary=None, floor_below_exists=True,
-    ).validate(layout).violations
+    violations = (
+        EscaleraAlineacionValidator(
+            reference_boundary=None,
+            floor_below_exists=True,
+        )
+        .validate(layout)
+        .violations
+    )
     assert len(violations) == 1
     assert "no arranca" in violations[0]
 
 
 def test_floor_below_exists_without_staircase_and_this_floor_also_has_none_passes():
     # ninguna de las dos plantas tiene escalera -- correcto, no es un error
-    living = Room(id="l", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living = Room(
+        id="l",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=20),
+    )
     living.boundary = Boundary(polygon=box(0, 0, 4, 5))
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
 
-    result = EscaleraAlineacionValidator(reference_boundary=None, floor_below_exists=True).validate(layout)
+    result = EscaleraAlineacionValidator(
+        reference_boundary=None, floor_below_exists=True
+    ).validate(layout)
     assert result.violations == []
 
 
 def test_reference_exists_but_this_floor_has_no_staircase_fails():
-    living = Room(id="l", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living = Room(
+        id="l",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=20),
+    )
     living.boundary = Boundary(polygon=box(0, 0, 4, 5))
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
 
-    result = EscaleraAlineacionValidator(reference_boundary=box(0, 0, 1, 3)).validate(layout)
+    result = EscaleraAlineacionValidator(reference_boundary=box(0, 0, 1, 3)).validate(
+        layout
+    )
     assert len(result.violations) == 1
     assert "continuidad" in result.violations[0]
 
@@ -88,7 +114,9 @@ def test_barely_overlapping_footprint_fails():
     stair = _stair("s", box(0.8, 0, 1.8, 3))  # solo 20% de solape aprox
     layout = Layout(lot=_dummy_lot(), rooms=[stair], zones=[])
 
-    violations = EscaleraAlineacionValidator(reference_boundary=ref).validate(layout).violations
+    violations = (
+        EscaleraAlineacionValidator(reference_boundary=ref).validate(layout).violations
+    )
     assert len(violations) == 1
 
 
@@ -97,5 +125,7 @@ def test_completely_disjoint_footprint_fails():
     stair = _stair("s", box(10, 10, 11, 13))
     layout = Layout(lot=_dummy_lot(), rooms=[stair], zones=[])
 
-    violations = EscaleraAlineacionValidator(reference_boundary=ref).validate(layout).violations
+    violations = (
+        EscaleraAlineacionValidator(reference_boundary=ref).validate(layout).violations
+    )
     assert len(violations) == 1

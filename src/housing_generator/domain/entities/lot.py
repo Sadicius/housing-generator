@@ -6,15 +6,17 @@ from housing_generator.domain.value_objects.boundary import Boundary
 
 # Categorias reales de la Ley 2/2016 del suelo de Galicia (articulos
 # 16-30), verificadas contra el texto real antes de codificarlas.
-CLASIFICACIONES_SUELO_VALIDAS = frozenset({
-    "urbano_consolidado",
-    "urbano_no_consolidado",
-    "nucleo_rural_tradicional",
-    "nucleo_rural_comun",
-    "urbanizable",
-    "rustico_ordinario",
-    "rustico_especial_proteccion",
-})
+CLASIFICACIONES_SUELO_VALIDAS = frozenset(
+    {
+        "urbano_consolidado",
+        "urbano_no_consolidado",
+        "nucleo_rural_tradicional",
+        "nucleo_rural_comun",
+        "urbanizable",
+        "rustico_ordinario",
+        "rustico_especial_proteccion",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -115,8 +117,9 @@ class Lot:
 
     Ver [ARCH:lot].
     """
+
     boundary: Boundary
-    entrance_side: str = "south"   # north | south | east | west
+    entrance_side: str = "south"  # north | south | east | west
     street_side: str = "south"
     retranqueo_m: Optional[float] = None
     retranqueo_incremento_por_planta_m: Optional[float] = None
@@ -131,7 +134,9 @@ class Lot:
     fondo_edificacion_m: Optional[float] = None
     linea_edificacion_m: Optional[float] = None
 
-    def _clip_fondo_edificacion(self, poligono: Polygon, poligono_referencia: Polygon) -> Polygon:
+    def _clip_fondo_edificacion(
+        self, poligono: Polygon, poligono_referencia: Polygon
+    ) -> Polygon:
         """Recorta `poligono` para que no sobrepase `fondo_edificacion_m`
         medido desde el lindero de `street_side` de `poligono_referencia`
         (la parcela real, sin reducir por retranqueo -- el convenio
@@ -189,7 +194,9 @@ class Lot:
         por_lado_efectivo = self._por_lado_efectivo()
         if por_lado_efectivo:
             resultado = retranqueo_variable_por_lado(
-                self.poligono_real, por_lado_efectivo, self.retranqueo_m or 0.0,
+                self.poligono_real,
+                por_lado_efectivo,
+                self.retranqueo_m or 0.0,
             )
         else:
             r = self.retranqueo_m or 0.0
@@ -197,7 +204,11 @@ class Lot:
                 resultado = self.poligono_real
             else:
                 reducido = self.poligono_real.buffer(-r)
-                resultado = reducido if not reducido.is_empty and reducido.geom_type == "Polygon" else Polygon()
+                resultado = (
+                    reducido
+                    if not reducido.is_empty and reducido.geom_type == "Polygon"
+                    else Polygon()
+                )
 
         resultado = self._clip_fondo_edificacion(resultado, self.poligono_real)
         return Boundary(polygon=resultado)
@@ -254,13 +265,19 @@ class Lot:
             for lado in self.medianera_sides:
                 por_lado_efectivo[lado] = 0.0
             resultado = retranqueo_variable_por_lado(
-                self.boundary.polygon, por_lado_efectivo, self.retranqueo_m or 0.0,
+                self.boundary.polygon,
+                por_lado_efectivo,
+                self.retranqueo_m or 0.0,
             )
             resultado = self._clip_fondo_edificacion(resultado, self.boundary.polygon)
             return Boundary(polygon=resultado)
 
-        if (self.retranqueo_m is None or self.retranqueo_m <= 0) and not self.medianera_sides:
-            resultado = self._clip_fondo_edificacion(self.boundary.polygon, self.boundary.polygon)
+        if (
+            self.retranqueo_m is None or self.retranqueo_m <= 0
+        ) and not self.medianera_sides:
+            resultado = self._clip_fondo_edificacion(
+                self.boundary.polygon, self.boundary.polygon
+            )
             return Boundary(polygon=resultado)
 
         minx, miny, maxx, maxy = self.boundary.polygon.bounds
@@ -273,7 +290,9 @@ class Lot:
         if new_minx >= new_maxx or new_miny >= new_maxy:
             # retranqueo excesivo: colapsa a vacio, no a rectangulo invertido
             return Boundary(polygon=Polygon())
-        resultado = self._clip_fondo_edificacion(box(new_minx, new_miny, new_maxx, new_maxy), self.boundary.polygon)
+        resultado = self._clip_fondo_edificacion(
+            box(new_minx, new_miny, new_maxx, new_maxy), self.boundary.polygon
+        )
         return Boundary(polygon=resultado)
 
     def medianera_boundary_segments(self) -> List[LineString]:
@@ -290,7 +309,6 @@ class Lot:
         if "west" in self.medianera_sides:
             segments.append(LineString([(minx, miny), (minx, maxy)]))
         return segments
-
 
 
 def clasificar_lado_cardinal(p1, p2, centroide) -> str:
@@ -311,8 +329,11 @@ def clasificar_lado_cardinal(p1, p2, centroide) -> str:
     cx = centroide.x if hasattr(centroide, "x") else centroide[0]
     cy = centroide.y if hasattr(centroide, "y") else centroide[1]
     hacia_centroide = (cx - punto_medio[0], cy - punto_medio[1])
-    normal_saliente = normal_a if (normal_a[0] * hacia_centroide[0] + normal_a[1] * hacia_centroide[1]) < 0 \
+    normal_saliente = (
+        normal_a
+        if (normal_a[0] * hacia_centroide[0] + normal_a[1] * hacia_centroide[1]) < 0
         else (-normal_a[0], -normal_a[1])
+    )
     angulo_deg = math.degrees(math.atan2(normal_saliente[1], normal_saliente[0])) % 360
     if 45 <= angulo_deg < 135:
         return "north"
@@ -324,7 +345,9 @@ def clasificar_lado_cardinal(p1, p2, centroide) -> str:
 
 
 def retranqueo_variable_por_lado(
-    poligono: Polygon, retranqueo_por_lado: dict, retranqueo_default_m: float = 0.0,
+    poligono: Polygon,
+    retranqueo_por_lado: dict,
+    retranqueo_default_m: float = 0.0,
 ) -> Polygon:
     """Reduce `poligono` con un retranqueo DISTINTO por lado, en vez
     del retranqueo único que aplica `.buffer(-r)`. Hallazgo real del
@@ -356,7 +379,14 @@ def retranqueo_variable_por_lado(
         return Polygon()
 
     centroide = poligono.centroid
-    extension = max(poligono.bounds[2] - poligono.bounds[0], poligono.bounds[3] - poligono.bounds[1]) * 20 + 100
+    extension = (
+        max(
+            poligono.bounds[2] - poligono.bounds[0],
+            poligono.bounds[3] - poligono.bounds[1],
+        )
+        * 20
+        + 100
+    )
 
     resultado: Polygon = poligono
     n = len(coords)
@@ -374,8 +404,11 @@ def retranqueo_variable_por_lado(
         normal_a = (-dir_y, dir_x)
         punto_medio = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
         hacia_centroide = (centroide.x - punto_medio[0], centroide.y - punto_medio[1])
-        normal_saliente = normal_a if (normal_a[0] * hacia_centroide[0] + normal_a[1] * hacia_centroide[1]) < 0 \
+        normal_saliente = (
+            normal_a
+            if (normal_a[0] * hacia_centroide[0] + normal_a[1] * hacia_centroide[1]) < 0
             else (-normal_a[0], -normal_a[1])
+        )
 
         direccion = clasificar_lado_cardinal(p1, p2, centroide)
         retranqueo_lado = retranqueo_por_lado.get(direccion, retranqueo_default_m)
@@ -383,12 +416,24 @@ def retranqueo_variable_por_lado(
             continue
 
         normal_interior = (-normal_saliente[0], -normal_saliente[1])
-        offset_p1 = (p1[0] + normal_interior[0] * retranqueo_lado, p1[1] + normal_interior[1] * retranqueo_lado)
-        offset_p2 = (p2[0] + normal_interior[0] * retranqueo_lado, p2[1] + normal_interior[1] * retranqueo_lado)
+        offset_p1 = (
+            p1[0] + normal_interior[0] * retranqueo_lado,
+            p1[1] + normal_interior[1] * retranqueo_lado,
+        )
+        offset_p2 = (
+            p2[0] + normal_interior[0] * retranqueo_lado,
+            p2[1] + normal_interior[1] * retranqueo_lado,
+        )
         lejos_p1 = (offset_p1[0] - dir_x * extension, offset_p1[1] - dir_y * extension)
         lejos_p2 = (offset_p2[0] + dir_x * extension, offset_p2[1] + dir_y * extension)
-        lejos_p2_interior = (lejos_p2[0] + normal_interior[0] * extension, lejos_p2[1] + normal_interior[1] * extension)
-        lejos_p1_interior = (lejos_p1[0] + normal_interior[0] * extension, lejos_p1[1] + normal_interior[1] * extension)
+        lejos_p2_interior = (
+            lejos_p2[0] + normal_interior[0] * extension,
+            lejos_p2[1] + normal_interior[1] * extension,
+        )
+        lejos_p1_interior = (
+            lejos_p1[0] + normal_interior[0] * extension,
+            lejos_p1[1] + normal_interior[1] * extension,
+        )
         semiplano = Polygon([lejos_p1, lejos_p2, lejos_p2_interior, lejos_p1_interior])
 
         resultado = resultado.intersection(semiplano)

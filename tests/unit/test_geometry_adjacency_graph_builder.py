@@ -11,7 +11,12 @@ from housing_generator.domain.enums import RoomType
 
 
 def _placed_room(room_id: str, room_type: RoomType, polygon) -> Room:
-    room = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area))
+    room = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     room.boundary = Boundary(polygon=polygon)
     return room
 
@@ -22,7 +27,9 @@ def _dummy_lot() -> Lot:
 
 def test_rooms_sharing_a_full_wall_are_connected():
     room_a = _placed_room("a", RoomType.LIVING_ROOM, box(0, 0, 4, 4))
-    room_b = _placed_room("b", RoomType.DINING_ROOM, box(4, 0, 8, 4))  # comparten el lado x=4, longitud 4
+    room_b = _placed_room(
+        "b", RoomType.DINING_ROOM, box(4, 0, 8, 4)
+    )  # comparten el lado x=4, longitud 4
     layout = Layout(lot=_dummy_lot(), rooms=[room_a, room_b], zones=[])
 
     graph = GeometryAdjacencyGraphBuilder(min_shared_edge_m=0.1).build(layout)
@@ -33,7 +40,9 @@ def test_rooms_sharing_a_full_wall_are_connected():
 
 def test_rooms_touching_only_at_a_corner_are_not_connected():
     room_a = _placed_room("a", RoomType.LIVING_ROOM, box(0, 0, 2, 2))
-    room_b = _placed_room("b", RoomType.BEDROOM, box(2, 2, 4, 4))  # solo tocan en el punto (2,2)
+    room_b = _placed_room(
+        "b", RoomType.BEDROOM, box(2, 2, 4, 4)
+    )  # solo tocan en el punto (2,2)
     layout = Layout(lot=_dummy_lot(), rooms=[room_a, room_b], zones=[])
 
     graph = GeometryAdjacencyGraphBuilder(min_shared_edge_m=0.1).build(layout)
@@ -66,7 +75,12 @@ def test_threshold_filters_out_short_shared_edges():
 
 def test_unplaced_rooms_are_excluded_from_the_graph():
     room_a = _placed_room("a", RoomType.LIVING_ROOM, box(0, 0, 4, 4))
-    room_b = Room(id="b", name="Sin colocar", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=10))
+    room_b = Room(
+        id="b",
+        name="Sin colocar",
+        room_type=RoomType.BEDROOM,
+        dimensions=Dimensions(area_m2=10),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[room_a, room_b], zones=[])
 
     graph = GeometryAdjacencyGraphBuilder().build(layout)
@@ -86,7 +100,9 @@ def test_repeated_calls_with_the_same_layout_object_return_the_cached_result():
 
     builder = GeometryAdjacencyGraphBuilder()
     graph1 = builder.build(layout)
-    graph2 = builder.build(layout)  # MISMO objeto layout -- debe ser la cache, no recalculo
+    graph2 = builder.build(
+        layout
+    )  # MISMO objeto layout -- debe ser la cache, no recalculo
 
     assert graph1 is graph2  # misma referencia de objeto, no solo contenido igual
 
@@ -99,14 +115,18 @@ def test_different_layout_object_invalidates_the_cache_even_if_content_is_identi
     room_a = _placed_room("a", RoomType.LIVING_ROOM, box(0, 0, 4, 4))
     room_b = _placed_room("b", RoomType.KITCHEN, box(4, 0, 8, 4))
     layout1 = Layout(lot=_dummy_lot(), rooms=[room_a, room_b], zones=[])
-    layout2 = Layout(lot=_dummy_lot(), rooms=[room_a, room_b], zones=[])  # contenido igual, objeto distinto
+    layout2 = Layout(
+        lot=_dummy_lot(), rooms=[room_a, room_b], zones=[]
+    )  # contenido igual, objeto distinto
 
     builder = GeometryAdjacencyGraphBuilder()
     graph1 = builder.build(layout1)
     graph2 = builder.build(layout2)
 
     assert graph1 is not graph2  # NO debe reutilizar la cache de layout1
-    assert set(graph1.edges) == set(graph2.edges)  # pero el contenido calculado es correcto en ambos
+    assert set(graph1.edges) == set(
+        graph2.edges
+    )  # pero el contenido calculado es correcto en ambos
 
 
 def test_cache_survives_memory_address_reuse_after_garbage_collection():
@@ -140,7 +160,9 @@ def test_cache_survives_memory_address_reuse_after_garbage_collection():
 
     graph = builder.build(final_layout)
     assert set(graph.nodes) == {"a", "b"}
-    assert graph.has_edge("a", "b")  # deben aparecer como adyacentes de verdad, no datos de "temp"
+    assert graph.has_edge(
+        "a", "b"
+    )  # deben aparecer como adyacentes de verdad, no datos de "temp"
 
 
 def test_cache_does_not_return_stale_result_after_a_different_layout_in_between():
@@ -159,6 +181,10 @@ def test_cache_does_not_return_stale_result_after_a_different_layout_in_between(
     builder = GeometryAdjacencyGraphBuilder()
     first = builder.build(layout_a)
     builder.build(layout_b_distinto)  # invalida la cache de layout_a
-    third = builder.build(layout_a)  # mismo objeto que "first", pero cache ya invalidada
+    third = builder.build(
+        layout_a
+    )  # mismo objeto que "first", pero cache ya invalidada
 
-    assert set(first.edges) == set(third.edges)  # resultado correcto igualmente, aunque recalculado
+    assert set(first.edges) == set(
+        third.edges
+    )  # resultado correcto igualmente, aunque recalculado

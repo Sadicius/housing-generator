@@ -1,6 +1,8 @@
 from pathlib import Path
 import pytest
-from housing_generator.infrastructure.persistence.catastro_gml_importer import importar_parcela_gml
+from housing_generator.infrastructure.persistence.catastro_gml_importer import (
+    importar_parcela_gml,
+)
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "catastro"
 
@@ -62,7 +64,9 @@ def test_real_parcels_are_genuinely_irregular_not_rectangular():
     # SISTEMA coincide con el OBB por construccion, y ese ratio ya no
     # mide irregularidad.
     resultado = importar_parcela_gml(_leer("parcela_sin_edificar.gml"))
-    num_vertices = len(list(resultado.poligono.exterior.coords)) - 1  # sin contar el cierre repetido
+    num_vertices = (
+        len(list(resultado.poligono.exterior.coords)) - 1
+    )  # sin contar el cierre repetido
     assert num_vertices > 4  # un rectangulo real tendria exactamente 4
 
 
@@ -75,7 +79,9 @@ def test_oriented_rectangle_is_a_much_better_fit_than_axis_aligned():
     # inscrito optimo" (las 3 investigadas fueron descartadas).
     for nombre in ("parcela_sin_edificar.gml", "parcela_edificada.gml"):
         resultado = importar_parcela_gml(_leer(nombre))
-        aprovechamiento_obb = resultado.area_calculada_m2 / resultado.rectangulo_trabajo.area
+        aprovechamiento_obb = (
+            resultado.area_calculada_m2 / resultado.rectangulo_trabajo.area
+        )
         assert aprovechamiento_obb > 0.85, f"{nombre}: OBB deberia aprovechar >85%"
 
 
@@ -134,11 +140,14 @@ def test_working_rectangle_is_axis_aligned_matching_the_generators_own_frame():
         resultado = importar_parcela_gml(_leer(nombre))
         minx, miny, maxx, maxy = resultado.rectangulo_trabajo.bounds
         from shapely.geometry import box
+
         rect_alineado = box(minx, miny, maxx, maxy)
         # si el OBB ya esta alineado a ejes, su area coincide con la de
         # su propio rectangulo envolvente en ejes (serian el mismo
         # objeto geometrico)
-        assert resultado.rectangulo_trabajo.area == pytest.approx(rect_alineado.area, rel=0.001)
+        assert resultado.rectangulo_trabajo.area == pytest.approx(
+            rect_alineado.area, rel=0.001
+        )
         # y su esquina inferior izquierda esta en el origen (mismo
         # convenio que box(0,0,ancho_m,fondo_m) al construir el Lot real)
         assert minx == pytest.approx(0.0, abs=0.01)
@@ -170,7 +179,9 @@ def test_poligono_orientacion_real_preserves_true_rotation_unlike_the_aligned_ve
     # 0/90/180/270 grados) -- y que ambos representan la MISMA area
     # real (la rotacion no cambia el area).
     resultado = importar_parcela_gml(_leer("parcela_sin_edificar.gml"))
-    assert resultado.poligono_orientacion_real.area == pytest.approx(resultado.poligono.area, abs=0.5)
+    assert resultado.poligono_orientacion_real.area == pytest.approx(
+        resultado.poligono.area, abs=0.5
+    )
 
     # confirmar que de verdad son geometrias distintas (no el mismo
     # poligono devuelto dos veces por error) -- bounds diferentes
@@ -186,4 +197,6 @@ def test_rectangulo_trabajo_orientacion_real_still_covers_the_true_polygon():
     resultado = importar_parcela_gml(_leer("parcela_sin_edificar.gml"))
     rect_real = resultado.poligono_orientacion_real.minimum_rotated_rectangle
     interseccion = rect_real.intersection(resultado.poligono_orientacion_real)
-    assert interseccion.area == pytest.approx(resultado.poligono_orientacion_real.area, abs=1e-6)
+    assert interseccion.area == pytest.approx(
+        resultado.poligono_orientacion_real.area, abs=1e-6
+    )

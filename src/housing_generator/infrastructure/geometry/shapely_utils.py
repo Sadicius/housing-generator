@@ -4,12 +4,18 @@ Se deja como modulo separado para que los generadores de layout no
 dupliquen logica de particionado/interseccion cuando se anadan nuevas
 estrategias (CSP, genetico, etc.).
 """
+
+import logging
 import math
 from typing import List, Optional, Tuple
 from shapely.geometry import Polygon, LineString
 
+logger = logging.getLogger(__name__)
 
-def _rectangle_mrr_if_valid(polygon: Polygon, relative_tolerance: float = 0.01) -> Optional[Polygon]:
+
+def _rectangle_mrr_if_valid(
+    polygon: Polygon, relative_tolerance: float = 0.01
+) -> Optional[Polygon]:
     """Calcula `minimum_rotated_rectangle` UNA sola vez y comprueba si
     `polygon` es (aproximadamente) ese rectangulo -- devuelve el propio
     mrr si es valido, o None si no. Consolidado tras un hallazgo real
@@ -34,7 +40,9 @@ def _mrr_side_lengths(mrr: Polygon) -> Tuple[float, float]:
     return side_a, side_b
 
 
-def can_fit_rectangle(polygon: Polygon, side_a_m: float, side_b_m: float) -> Optional[bool]:
+def can_fit_rectangle(
+    polygon: Polygon, side_a_m: float, side_b_m: float
+) -> Optional[bool]:
     """¿Cabe un rectangulo de `side_a_m` x `side_b_m` dentro de `polygon`
     (en cualquiera de las dos orientaciones)?
 
@@ -46,7 +54,9 @@ def can_fit_rectangle(polygon: Polygon, side_a_m: float, side_b_m: float) -> Opt
     if mrr is None:
         return None
     width, height = _mrr_side_lengths(mrr)
-    return (width >= side_a_m and height >= side_b_m) or (width >= side_b_m and height >= side_a_m)
+    return (width >= side_a_m and height >= side_b_m) or (
+        width >= side_b_m and height >= side_a_m
+    )
 
 
 def can_inscribe_square(polygon: Polygon, side_length_m: float) -> Optional[bool]:
@@ -130,14 +140,53 @@ def polygon_to_shapes(geom) -> List[dict]:
     (sí puede producirlos). Ver [ARCH:shapely-utils], [ARCH:btree-partition].
 
     Formato: `[{"exterior": [[x,y],...], "interiors": [[[x,y],...], ...]}, ...]`
+
+    Robustez: una resta geometrica (`buildable.difference(...)`) puede
+    degenerar por precision de punto flotante en un `GeometryCollection`
+    con fragmentos sin area (`LineString`/`Point`) mezclados con el
+    `Polygon` real -- ninguno de esos fragmentos tiene `.exterior`, asi
+    que se descartan explicitamente en vez de asumir que todo lo que no
+    es `MultiPolygon` es un `Polygon` valido.
     """
-    if geom.is_empty:
+    if geom is None or geom.is_empty:
         return []
-    polygons = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
+
+    if geom.geom_type == "Polygon":
+        polygons = [geom]
+    elif geom.geom_type == "MultiPolygon":
+        polygons = list(geom.geoms)
+    elif geom.geom_type == "GeometryCollection":
+        polygons = []
+        for part in geom.geoms:
+            if part.is_empty:
+                continue
+            if part.geom_type == "Polygon":
+                polygons.append(part)
+            elif part.geom_type == "MultiPolygon":
+                polygons.extend(part.geoms)
+        descartados = len(list(geom.geoms)) - len(polygons)
+        if descartados:
+            logger.warning(
+                "polygon_to_shapes: %d fragmento(s) sin area (Point/LineString) "
+                "descartados de un GeometryCollection degenerado",
+                descartados,
+            )
+    else:
+        logger.warning(
+            "polygon_to_shapes: geometria degenerada de tipo '%s' sin area, "
+            "descartada sin dibujar nada",
+            geom.geom_type,
+        )
+        return []
+
     return [
         {
             "exterior": [list(coord) for coord in poly.exterior.coords],
-            "interiors": [[list(coord) for coord in interior.coords] for interior in poly.interiors],
+            "interiors": [
+                [list(coord) for coord in interior.coords]
+                for interior in poly.interiors
+            ],
         }
         for poly in polygons
+        if not poly.is_empty
     ]

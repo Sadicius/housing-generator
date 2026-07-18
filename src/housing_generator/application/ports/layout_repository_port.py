@@ -9,11 +9,11 @@ class LayoutRepositoryPort(ABC):
 
     @abstractmethod
     def save(
-        self, layout: Layout, path: str,
+        self,
+        layout: Layout,
+        path: str,
         adjacency_requirements: Optional[List[AdjacencyRequirement]] = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @abstractmethod
-    def load(self, path: str) -> Layout:
-        ...
+    def load(self, path: str) -> Layout: ...

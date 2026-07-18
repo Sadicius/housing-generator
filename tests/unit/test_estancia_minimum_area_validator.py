@@ -12,7 +12,12 @@ from housing_generator.domain.enums import RoomType
 
 
 def _room(room_id: str, room_type: RoomType, area_m2: float) -> Room:
-    return Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=area_m2))
+    return Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=area_m2),
+    )
 
 
 def _dummy_lot() -> Lot:
@@ -34,9 +39,9 @@ def test_minimo_estancia_uses_fixed_e1_e5_beyond_five_rooms():
 
 
 def test_passes_when_all_estancias_meet_their_rank_minimum():
-    living = _room("living", RoomType.LIVING_ROOM, 20)   # puesto 1 de 3 -> minimo 18
-    bed1 = _room("bed1", RoomType.MASTER_BEDROOM, 14)     # puesto 2 de 3 -> minimo 12
-    bed2 = _room("bed2", RoomType.BEDROOM, 9)             # puesto 3 de 3 -> minimo 8
+    living = _room("living", RoomType.LIVING_ROOM, 20)  # puesto 1 de 3 -> minimo 18
+    bed1 = _room("bed1", RoomType.MASTER_BEDROOM, 14)  # puesto 2 de 3 -> minimo 12
+    bed2 = _room("bed2", RoomType.BEDROOM, 9)  # puesto 3 de 3 -> minimo 8
 
     layout = Layout(lot=_dummy_lot(), rooms=[living, bed1, bed2], zones=[])
     result = EstanciaMinimumAreaValidator().validate(layout)
@@ -57,8 +62,12 @@ def test_reports_violation_when_an_estancia_is_below_its_rank_minimum():
 
 
 def test_kitchen_and_bathroom_do_not_count_as_estancia():
-    living = _room("living", RoomType.LIVING_ROOM, 25)   # unica estancia -> minimo 25 (fila 1)
-    kitchen = _room("kitchen", RoomType.KITCHEN, 3)       # muy pequena, pero es servicio, no cuenta aqui
+    living = _room(
+        "living", RoomType.LIVING_ROOM, 25
+    )  # unica estancia -> minimo 25 (fila 1)
+    kitchen = _room(
+        "kitchen", RoomType.KITCHEN, 3
+    )  # muy pequena, pero es servicio, no cuenta aqui
     bathroom = _room("bathroom", RoomType.BATHROOM, 2)
 
     layout = Layout(lot=_dummy_lot(), rooms=[living, kitchen, bathroom], zones=[])
@@ -76,7 +85,9 @@ def test_no_estancias_returns_no_violations():
 
 def test_largest_estancia_passes_when_square_fits_in_rectangular_room():
     living = _room("living", RoomType.LIVING_ROOM, 20)
-    living.boundary = Boundary(polygon=box(0, 0, 4.0, 5.0))  # 4m x 5m, cabe el cuadrado de 3.30m
+    living.boundary = Boundary(
+        polygon=box(0, 0, 4.0, 5.0)
+    )  # 4m x 5m, cabe el cuadrado de 3.30m
     bed = _room("bed", RoomType.BEDROOM, 12)
     bed.boundary = Boundary(polygon=box(4, 0, 8, 3.3))
 
@@ -89,7 +100,9 @@ def test_largest_estancia_passes_when_square_fits_in_rectangular_room():
 
 def test_largest_estancia_fails_when_square_does_not_fit_narrow_rectangular_room():
     living = _room("living", RoomType.LIVING_ROOM, 20)
-    living.boundary = Boundary(polygon=box(0, 0, 2.0, 10.0))  # 2m de ancho, no cabe el cuadrado de 3.30m
+    living.boundary = Boundary(
+        polygon=box(0, 0, 2.0, 10.0)
+    )  # 2m de ancho, no cabe el cuadrado de 3.30m
     bed = _room("bed", RoomType.BEDROOM, 10)
     bed.boundary = Boundary(polygon=box(2, 0, 5, 3.3))
 
@@ -132,19 +145,29 @@ def test_estancia_mayor_is_always_living_room_even_if_smaller_than_a_bedroom():
     # el dormitorio es mas grande en area que el salon, pero el cuadrado
     # inscribible debe comprobarse sobre el SALON, no sobre el dormitorio
     living = _room("living", RoomType.LIVING_ROOM, 16)
-    living.boundary = Boundary(polygon=box(0, 0, 2.0, 8.0))  # 2m de ancho: NO cabe el cuadrado de 3.30m
+    living.boundary = Boundary(
+        polygon=box(0, 0, 2.0, 8.0)
+    )  # 2m de ancho: NO cabe el cuadrado de 3.30m
     bed = _room("bed", RoomType.MASTER_BEDROOM, 20)
-    bed.boundary = Boundary(polygon=box(2, 0, 8, 8))  # mas grande en area, y SI cabe el cuadrado
+    bed.boundary = Boundary(
+        polygon=box(2, 0, 8, 8)
+    )  # mas grande en area, y SI cabe el cuadrado
 
     layout = Layout(lot=_dummy_lot(), rooms=[living, bed], zones=[])
     result = EstanciaMinimumAreaValidator().validate(layout)
 
-    assert any("'living'" in v and "cuadrado inscribible" in v for v in result.violations)
-    assert not any("'bed'" in v and "cuadrado inscribible" in v for v in result.violations)
+    assert any(
+        "'living'" in v and "cuadrado inscribible" in v for v in result.violations
+    )
+    assert not any(
+        "'bed'" in v and "cuadrado inscribible" in v for v in result.violations
+    )
 
 
 def test_fallback_to_largest_area_when_no_living_room_is_declared_and_warns():
-    bed1 = _room("bed1", RoomType.MASTER_BEDROOM, 20)  # la mas grande, sin salon en el programa
+    bed1 = _room(
+        "bed1", RoomType.MASTER_BEDROOM, 20
+    )  # la mas grande, sin salon en el programa
     bed1.boundary = Boundary(polygon=box(0, 0, 5, 4))
     bed2 = _room("bed2", RoomType.BEDROOM, 12)
     bed2.boundary = Boundary(polygon=box(5, 0, 8, 4))
@@ -161,13 +184,17 @@ def test_total_num_estancias_override_uses_building_wide_row_not_local_count():
     # estancia local, pero el EDIFICIO completo tiene 3 -- sin el
     # override, se aplicaria la fila de "vivienda de 1 estancia" (25m2);
     # con el override, la fila correcta de 3 estancias (18m2 para puesto 1).
-    bed = _room("bed", RoomType.BEDROOM, 20)  # pasaria fila-3 (18m2) pero no fila-1 (25m2)
+    bed = _room(
+        "bed", RoomType.BEDROOM, 20
+    )  # pasaria fila-3 (18m2) pero no fila-1 (25m2)
     layout = Layout(lot=_dummy_lot(), rooms=[bed], zones=[])
 
     sin_override = EstanciaMinimumAreaValidator().validate(layout)
     assert len(sin_override.violations) == 1  # 20m2 < 25m2 (fila de 1 estancia)
 
-    con_override = EstanciaMinimumAreaValidator(total_num_estancias_override=3).validate(layout)
+    con_override = EstanciaMinimumAreaValidator(
+        total_num_estancias_override=3
+    ).validate(layout)
     assert con_override.violations == []  # 20m2 >= 18m2 (fila de 3 estancias)
 
 
@@ -181,14 +208,17 @@ def test_global_rank_override_resolves_the_ranking_across_floors():
     layout = Layout(lot=_dummy_lot(), rooms=[small_room], zones=[])
 
     # sin ranking global: cae en el comportamiento anterior (puesto local = 1)
-    sin_ranking = EstanciaMinimumAreaValidator(total_num_estancias_override=3).validate(layout)
+    sin_ranking = EstanciaMinimumAreaValidator(total_num_estancias_override=3).validate(
+        layout
+    )
     assert len(sin_ranking.violations) == 1
     assert "puesto 1" in sin_ranking.violations[0]  # exige 18m2 (fila 3, puesto 1)
 
     # con ranking global: esta estancia es realmente la puesto 2 del
     # edificio (hay un salon mayor en otra planta) -> exige 12m2, no 18m2
     con_ranking = EstanciaMinimumAreaValidator(
-        total_num_estancias_override=3, global_rank_override={"small": 2},
+        total_num_estancias_override=3,
+        global_rank_override={"small": 2},
     ).validate(layout)
     assert con_ranking.violations == []  # 15m2 >= 12m2 (fila 3, puesto 2)
 
@@ -203,15 +233,20 @@ def test_no_living_room_on_this_floor_in_multi_planta_mode_does_not_substitute()
     # el cuadrado de 3.30m (algo que nunca deberia exigirsele) generaba
     # una VIOLACION FALSA, no solo un aviso enganoso.
     master = _room("master", RoomType.MASTER_BEDROOM, 14)  # deliberadamente < 3.30x3.30
-    master.boundary = Boundary(polygon=box(0, 0, 2, 7))  # rectangulo estrecho, NO cabe el cuadrado
+    master.boundary = Boundary(
+        polygon=box(0, 0, 2, 7)
+    )  # rectangulo estrecho, NO cabe el cuadrado
     bed2 = _room("bed2", RoomType.BEDROOM, 10)
     layout = Layout(lot=_dummy_lot(), rooms=[master, bed2], zones=[])
 
     result = EstanciaMinimumAreaValidator(
-        total_num_estancias_override=3, global_rank_override={"master": 2, "bed2": 3},
+        total_num_estancias_override=3,
+        global_rank_override={"master": 2, "bed2": 3},
     ).validate(layout)
 
-    assert result.violations == []  # ni de area (puesto correcto) ni de cuadrado inscribible
+    assert (
+        result.violations == []
+    )  # ni de area (puesto correcto) ni de cuadrado inscribible
     assert result.warnings == []  # tampoco el aviso enganoso de "sustituto"
 
 
@@ -226,7 +261,9 @@ def test_no_living_room_in_single_floor_mode_still_substitutes_with_warning():
     bed2.boundary = Boundary(polygon=box(5, 0, 8, 4))
 
     layout = Layout(lot=_dummy_lot(), rooms=[bed1, bed2], zones=[])
-    result = EstanciaMinimumAreaValidator().validate(layout)  # SIN override -- modo una planta
+    result = EstanciaMinimumAreaValidator().validate(
+        layout
+    )  # SIN override -- modo una planta
 
     assert len(result.warnings) == 1
     assert "bed1" in result.warnings[0] and "living_room" in result.warnings[0]

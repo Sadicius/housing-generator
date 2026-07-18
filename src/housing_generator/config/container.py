@@ -4,9 +4,14 @@ puertos. Este es el UNICO lugar del codebase que puede conocer a la vez
 las clases concretas y los puertos; el resto del sistema solo conoce
 interfaces (ports).
 """
+
 from typing import Optional, List
-from housing_generator.application.use_cases.generate_layout import GenerateLayoutUseCase
-from housing_generator.infrastructure.algorithms.zoning.treemap_zoning import TreemapZoningStrategy
+from housing_generator.application.use_cases.generate_layout import (
+    GenerateLayoutUseCase,
+)
+from housing_generator.infrastructure.algorithms.zoning.treemap_zoning import (
+    TreemapZoningStrategy,
+)
 from housing_generator.infrastructure.algorithms.layout_generation.btree_layout_generator import (
     BTreeLayoutGenerator,
 )
@@ -99,7 +104,9 @@ from housing_generator.infrastructure.algorithms.layout_generation.soft_constrai
 from housing_generator.infrastructure.algorithms.layout_generation.perimeter_core_layout_generator import (
     PerimeterCoreLayoutGenerator,
 )
-from housing_generator.application.use_cases.generate_building import GenerateBuildingUseCase
+from housing_generator.application.use_cases.generate_building import (
+    GenerateBuildingUseCase,
+)
 from housing_generator.infrastructure.algorithms.adjacency.geometry_adjacency_graph_builder import (
     GeometryAdjacencyGraphBuilder,
 )
@@ -110,7 +117,10 @@ ADJACENCY_MIN_SHARED_EDGE_M = 0.1
 
 
 def build_per_floor_validators(
-    adjacency_requirements, graph_builder, total_num_estancias=None, global_rank=None,
+    adjacency_requirements,
+    graph_builder,
+    total_num_estancias=None,
+    global_rank=None,
     vivienda_accesible: bool = False,
 ) -> List:
     """Validadores que se aplican a UNA sola planta (Layout). No
@@ -126,7 +136,8 @@ def build_per_floor_validators(
         build_night_zone_grouping_validator(graph_builder),
         build_service_zone_grouping_validator(graph_builder),
         EstanciaMinimumAreaValidator(
-            total_num_estancias_override=total_num_estancias, global_rank_override=global_rank,
+            total_num_estancias_override=total_num_estancias,
+            global_rank_override=global_rank,
         ),
         ServicioMinimumAreaValidator(total_num_estancias_override=total_num_estancias),
         DormitorioArmarioValidator(),
@@ -163,10 +174,14 @@ def build_generate_layout_use_case(
     el árbol B* converge mejor en todos los casos difíciles probados.
     Ver [ARCH:container], [ARCH:btree-generador-por-defecto].
     """
-    graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
+    graph_builder = GeometryAdjacencyGraphBuilder(
+        min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M
+    )
 
     validators = build_per_floor_validators(
-        adjacency_requirements, graph_builder, vivienda_accesible=vivienda_accesible,
+        adjacency_requirements,
+        graph_builder,
+        vivienda_accesible=vivienda_accesible,
     ) + [
         ViviendaMinimaValidator(),
         BanoAccesoGeneralValidator(graph_builder),
@@ -207,10 +222,14 @@ def build_generate_layout_use_case_v2(
     (`reference_stair`, escalera compartida) es la Fase 4, todavía sin
     construir. Ver [ARCH:container], [ARCH:perimeter-core-layout-generator].
     """
-    graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
+    graph_builder = GeometryAdjacencyGraphBuilder(
+        min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M
+    )
 
     validators = build_per_floor_validators(
-        adjacency_requirements, graph_builder, vivienda_accesible=vivienda_accesible,
+        adjacency_requirements,
+        graph_builder,
+        vivienda_accesible=vivienda_accesible,
     ) + [
         ViviendaMinimaValidator(),
         BanoAccesoGeneralValidator(graph_builder),
@@ -254,17 +273,28 @@ def build_generate_building_use_case(
     a lo largo de la sesión, no solo el original. Ver [ARCH:container],
     [ARCH:btree-generador-por-defecto].
     """
-    graph_builder = GeometryAdjacencyGraphBuilder(min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M)
+    graph_builder = GeometryAdjacencyGraphBuilder(
+        min_shared_edge_m=ADJACENCY_MIN_SHARED_EDGE_M
+    )
 
     def per_floor_validators_factory(
-        level_adjacency, reference_stair, reference_wet, total_num_estancias, global_rank, floor_below_exists,
+        level_adjacency,
+        reference_stair,
+        reference_wet,
+        total_num_estancias,
+        global_rank,
+        floor_below_exists,
     ):
         validators = build_per_floor_validators(
-            level_adjacency, graph_builder, total_num_estancias, global_rank,
+            level_adjacency,
+            graph_builder,
+            total_num_estancias,
+            global_rank,
             vivienda_accesible=vivienda_accesible,
         ) + [
             EscaleraAlineacionValidator(
-                reference_boundary=reference_stair, floor_below_exists=floor_below_exists,
+                reference_boundary=reference_stair,
+                floor_below_exists=floor_below_exists,
             ),
             NucleoHumedoVerticalValidator(reference_wet_boundaries=reference_wet),
         ]

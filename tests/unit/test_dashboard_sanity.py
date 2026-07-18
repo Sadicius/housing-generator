@@ -6,6 +6,7 @@ la sesión que nunca se convirtieron en test permanente, aplicando la
 propia convención del proyecto (ver docs/CONTINUIDAD.md, "ninguna
 verificación exploratoria cuenta como comprobado").
 """
+
 import json
 import re
 from pathlib import Path
@@ -78,9 +79,9 @@ def test_zones_structure_matches_tabs_and_panels():
     # cronograma y parcela no tienen tab propio a proposito: son el
     # unico panel de su zona, sin sub-navegacion necesaria.
     panels_con_tab_esperado = set(panels) - {"cronograma", "parcela"}
-    assert set(tabs) == panels_con_tab_esperado, (
-        f"tabs sin panel o paneles sin tab: {set(tabs) ^ panels_con_tab_esperado}"
-    )
+    assert (
+        set(tabs) == panels_con_tab_esperado
+    ), f"tabs sin panel o paneles sin tab: {set(tabs) ^ panels_con_tab_esperado}"
 
 
 def test_matriz_and_sinergias_merged_with_view_toggle():
@@ -145,7 +146,9 @@ def test_redesign_uses_the_new_typefaces_not_the_old_ones():
     html = _read(HTML_PATH)
     css = _read(CSS_PATH)
     assert "IBM Plex" not in html
-    assert "IBM Plex" not in css.replace("sustituye IBM Plex", "")  # exceptua el propio comentario que lo explica
+    assert "IBM Plex" not in css.replace(
+        "sustituye IBM Plex", ""
+    )  # exceptua el propio comentario que lo explica
     assert "Space+Grotesk" in html or "Space Grotesk" in html
     assert "Space Grotesk" in css
     assert "Archivo" in css
@@ -161,14 +164,35 @@ def test_redesign_css_variable_names_preserved_for_javascript():
     # defecto del navegador, sin error visible).
     css = _read(CSS_PATH)
     required_var_names = [
-        "--bg:", "--bg-panel:", "--bg-panel-2:", "--line:", "--line-soft:",
-        "--ink:", "--ink-dim:", "--ink-faint:", "--cyan:", "--cyan-dim:",
-        "--oc:", "--ol:", "--cat-estancia:", "--pc:", "--pa:", "--n:", "--cond:",
-        "--zone-day:", "--zone-night:", "--zone-service:", "--zone-circulation:",
-        "--ok:", "--warn:", "--bad:",
+        "--bg:",
+        "--bg-panel:",
+        "--bg-panel-2:",
+        "--line:",
+        "--line-soft:",
+        "--ink:",
+        "--ink-dim:",
+        "--ink-faint:",
+        "--cyan:",
+        "--cyan-dim:",
+        "--oc:",
+        "--ol:",
+        "--cat-estancia:",
+        "--pc:",
+        "--pa:",
+        "--n:",
+        "--cond:",
+        "--zone-day:",
+        "--zone-night:",
+        "--zone-service:",
+        "--zone-circulation:",
+        "--ok:",
+        "--warn:",
+        "--bad:",
     ]
     for name in required_var_names:
-        assert name in css, f"variable CSS {name} no encontrada -- el JS podria depender de ella"
+        assert (
+            name in css
+        ), f"variable CSS {name} no encontrada -- el JS podria depender de ella"
 
 
 def test_pyodide_bundle_contains_the_bridge_and_key_modules():
@@ -192,8 +216,45 @@ def test_pyodide_cdn_script_tag_present_with_a_pinned_version():
     # oficial de Pyodide en el momento de construir esto -- una URL sin
     # version fija podria cambiar de comportamiento sin aviso.
     html = _read(HTML_PATH)
-    match = re.search(r'<script src="https://cdn\.jsdelivr\.net/pyodide/(v[\d.]+)/full/pyodide\.js"></script>', html)
+    match = re.search(
+        r'<script src="https://cdn\.jsdelivr\.net/pyodide/(v[\d.]+)/full/pyodide\.js"></script>',
+        html,
+    )
     assert match, "no se encontro el script de Pyodide con una version fija (vX.Y.Z)"
+
+
+def test_pyodide_runs_in_a_web_worker_not_the_main_thread():
+    # BUG REAL: la busqueda de recocido simulado (hasta miles de
+    # iteraciones) se ejecutaba SINCRONAMENTE en el hilo principal --
+    # la pestana se congelaba entera, sin barra de progreso real y sin
+    # forma de cancelar. Corregido moviendo la ejecucion a un Web
+    # Worker construido desde un Blob URL (un `new Worker('archivo.js')`
+    # normal no arranca desde `file://` en Chromium, mismo bloqueo que
+    # ya afecto a fetch()/modulos ES -- ver test_html_references_js_files_
+    # via_classic_tags_in_order). Con camino de respaldo al hilo
+    # principal si el Worker no llega a arrancar. Ver [ARCH:browser-bridge].
+    js = _read(JS_DIR / "06-pyodide.js")
+    assert "new Worker(" in js
+    assert "Blob(" in js
+    assert "PYODIDE_WORKER_SOURCE" in js
+    assert "importScripts(" in js
+    assert (
+        "initPyodideMainThreadFallback" in js
+    )  # red de seguridad si el Worker no arranca
+
+
+def test_worker_pyodide_cdn_version_matches_the_html_pinned_version():
+    # evita que la version del <script> del <head> y la de importScripts()
+    # dentro del Worker (06-pyodide.js) diverjan en silencio en un
+    # futuro bump de version.
+    html = _read(HTML_PATH)
+    js = _read(JS_DIR / "06-pyodide.js")
+    match = re.search(r"pyodide/(v[\d.]+)/full/pyodide\.js", html)
+    assert match, "no se encontro la version de Pyodide en el HTML"
+    assert match.group(1) in js, (
+        f"la version de Pyodide del HTML ({match.group(1)}) no aparece en 06-pyodide.js "
+        f"-- la URL de importScripts() dentro del Worker puede haberse quedado desactualizada"
+    )
 
 
 def test_html_references_js_files_via_classic_tags_in_order():
@@ -208,18 +269,30 @@ def test_html_references_js_files_via_classic_tags_in_order():
     # funciones de todos los demas al arrancar, incluido 07-cronograma
     # y 08-catalogo).
     html = _read(HTML_PATH)
-    assert 'rel="stylesheet" href="relaciones_espaciales.css"' in html or \
-        'href="relaciones_espaciales.css" rel="stylesheet"' in html
+    assert (
+        'rel="stylesheet" href="relaciones_espaciales.css"' in html
+        or 'href="relaciones_espaciales.css" rel="stylesheet"' in html
+    )
     assert '<script src="py_bundle.js"></script>' in html
     assert 'type="module"' not in html
 
     expected_order = [
-        "py_bundle.js", "js/00-shared.js", "js/01-matriz.js", "js/02-seccion.js",
-        "js/03-fichas.js", "js/04-sinergias.js", "js/05-visor.js", "js/06-pyodide.js",
-        "js/07-cronograma.js", "js/08-catalogo.js", "js/09-init.js",
+        "py_bundle.js",
+        "js/00-shared.js",
+        "js/01-matriz.js",
+        "js/02-seccion.js",
+        "js/03-fichas.js",
+        "js/04-sinergias.js",
+        "js/05-visor.js",
+        "js/06-pyodide.js",
+        "js/07-cronograma.js",
+        "js/08-catalogo.js",
+        "js/09-init.js",
     ]
     positions = [html.index(f'<script src="{name}">') for name in expected_order]
-    assert positions == sorted(positions), "los scripts JS no estan en el orden esperado en el HTML"
+    assert positions == sorted(
+        positions
+    ), "los scripts JS no estan en el orden esperado en el HTML"
 
 
 def test_generate_now_button_and_status_area_exist():
@@ -277,7 +350,9 @@ def test_retranqueo_none_case_does_not_rely_on_pyodide_null_conversion():
     assert "retranqueoLiteral" in js
     assert "retranqueoIncrementoLiteral" in js
     assert "`    retranqueo_m=${retranqueoLiteral}," in js
-    assert "`    retranqueo_incremento_por_planta_m=${retranqueoIncrementoLiteral}," in js
+    assert (
+        "`    retranqueo_incremento_por_planta_m=${retranqueoIncrementoLiteral}," in js
+    )
 
 
 def test_mirror_mode_controls_exist():
@@ -288,8 +363,15 @@ def test_mirror_mode_controls_exist():
 
 def test_cronograma_controls_exist():
     html = _read(HTML_PATH)
-    for control_id in ["gantt-start-date", "gantt-fase-nombre", "gantt-fase-categoria",
-                        "gantt-fase-duracion", "gantt-add-fase", "gantt-table", "gantt-chart-content"]:
+    for control_id in [
+        "gantt-start-date",
+        "gantt-fase-nombre",
+        "gantt-fase-categoria",
+        "gantt-fase-duracion",
+        "gantt-add-fase",
+        "gantt-table",
+        "gantt-chart-content",
+    ]:
         assert f'id="{control_id}"' in html
 
 
@@ -305,14 +387,19 @@ def test_catalogo_constructivo_has_expected_items_per_category():
     assert match, "no se pudo extraer CATALOGO_CONSTRUCTIVO de 08-catalogo.js"
     data = json.loads(match.group(1))
     expected_categorias = {
-        "fachadas": 10, "cubiertas": 10, "forjados": 10, "huecos": 10,
-        "particionesVerticales": 10, "particionesHorizontales": 10, "puentesTermicos": 13,
+        "fachadas": 10,
+        "cubiertas": 10,
+        "forjados": 10,
+        "huecos": 10,
+        "particionesVerticales": 10,
+        "particionesHorizontales": 10,
+        "puentesTermicos": 13,
     }
     assert set(data.keys()) == set(expected_categorias.keys())
     for categoria, expected_n in expected_categorias.items():
-        assert len(data[categoria]) == expected_n, (
-            f"{categoria} tiene {len(data[categoria])} elementos, se esperaban {expected_n}"
-        )
+        assert (
+            len(data[categoria]) == expected_n
+        ), f"{categoria} tiene {len(data[categoria])} elementos, se esperaban {expected_n}"
 
 
 def test_catalogo_constructivo_meets_passivhaus_thresholds():
@@ -331,18 +418,24 @@ def test_catalogo_constructivo_meets_passivhaus_thresholds():
     for categoria in ("fachadas", "cubiertas"):
         for elem in data[categoria]:
             u = elem["transmitancia_u"]
-            assert 0.08 <= u <= 0.16, f"{categoria}/{elem['id']}: U={u} fuera del rango Passivhaus (0.08-0.16)"
+            assert (
+                0.08 <= u <= 0.16
+            ), f"{categoria}/{elem['id']}: U={u} fuera del rango Passivhaus (0.08-0.16)"
 
     for hueco in data["huecos"]:
         uw = hueco["transmitancia_u_global"]
-        assert uw <= 0.80, f"{hueco['id']}: Uw={uw} no cumple el umbral Passivhaus (<=0.80 W/m2K)"
+        assert (
+            uw <= 0.80
+        ), f"{hueco['id']}: Uw={uw} no cumple el umbral Passivhaus (<=0.80 W/m2K)"
 
     for pt in data["puentesTermicos"]:
         assert pt["psi_passivhaus"] < pt["psi_estandar"], (
             f"{pt['id']}: el valor Passivhaus ({pt['psi_passivhaus']}) deberia ser menor que "
             f"el estandar ({pt['psi_estandar']}) -- principio de construccion libre de puentes termicos"
         )
-        assert pt["psi_passivhaus"] <= 0.15, f"{pt['id']}: Psi Passivhaus={pt['psi_passivhaus']} demasiado alto"
+        assert (
+            pt["psi_passivhaus"] <= 0.15
+        ), f"{pt['id']}: Psi Passivhaus={pt['psi_passivhaus']} demasiado alto"
 
 
 def test_pyodide_bundle_is_not_stale_against_the_real_source():
@@ -402,8 +495,12 @@ def test_install_scripts_exist_and_shell_syntax_is_valid():
     assert sh_path.exists(), "instalar.sh deberia existir en la raiz del proyecto"
     assert bat_path.exists(), "instalar.bat deberia existir en la raiz del proyecto"
 
-    result = subprocess.run(["bash", "-n", str(sh_path)], capture_output=True, text=True)
-    assert result.returncode == 0, f"instalar.sh tiene un error de sintaxis: {result.stderr}"
+    result = subprocess.run(
+        ["bash", "-n", str(sh_path)], capture_output=True, text=True
+    )
+    assert (
+        result.returncode == 0
+    ), f"instalar.sh tiene un error de sintaxis: {result.stderr}"
 
 
 def test_scope_notes_moved_to_dedicated_panel_not_always_visible():
@@ -419,7 +516,13 @@ def test_scope_notes_moved_to_dedicated_panel_not_always_visible():
     # anadidas despues, mismo patron.
     assert 'id="panel-notas"' in html
     assert 'data-tab="notas"' in html
-    anclas = ["nota-relaciones", "nota-catalogo", "nota-cronograma", "nota-ancho-practico", "nota-parcela"]
+    anclas = [
+        "nota-relaciones",
+        "nota-catalogo",
+        "nota-cronograma",
+        "nota-ancho-practico",
+        "nota-parcela",
+    ]
     for ancla in anclas:
         assert f'id="{ancla}"' in html
 
@@ -459,6 +562,7 @@ def test_docs_readme_links_point_to_real_files():
     # -- confirma que sus enlaces (locales, no http) apuntan a archivos
     # que existen de verdad, mismo patron que test_inicio_launcher.
     import re
+
     root = Path(__file__).parents[2]
     readme_path = root / "docs" / "README.md"
     assert readme_path.exists()
@@ -483,8 +587,11 @@ def test_js_pairs_hard_relationships_match_the_real_python_catalog():
     # proxima vez que cambie el catalogo Python, el dashboard se quede
     # desincronizado en silencio otra vez.
     import sys
+
     sys.path.insert(0, str(Path(__file__).parents[2] / "src"))
-    from housing_generator.domain.services.type_adjacency_catalog import DEFAULT_TYPE_ADJACENCY
+    from housing_generator.domain.services.type_adjacency_catalog import (
+        DEFAULT_TYPE_ADJACENCY,
+    )
     from housing_generator.domain.enums import AdjacencyStrength
 
     js = _read(JS_DIR / "00-shared.js")
@@ -495,12 +602,12 @@ def test_js_pairs_hard_relationships_match_the_real_python_catalog():
 
     discrepancias = []
     todos_los_pares_relevantes = set()
-    for (type_a, type_b) in DEFAULT_TYPE_ADJACENCY.keys():
+    for type_a, type_b in DEFAULT_TYPE_ADJACENCY.keys():
         key = frozenset((type_a.value.upper(), type_b.value.upper()))
         if key in js_relation_by_pair:
             todos_los_pares_relevantes.add((type_a, type_b))
 
-    for (type_a, type_b) in todos_los_pares_relevantes:
+    for type_a, type_b in todos_los_pares_relevantes:
         strength = DEFAULT_TYPE_ADJACENCY[(type_a, type_b)]
         key = frozenset((type_a.value.upper(), type_b.value.upper()))
         js_relation = js_relation_by_pair.get(key, "")
@@ -509,13 +616,27 @@ def test_js_pairs_hard_relationships_match_the_real_python_catalog():
         es_cerca_en_js = js_dice_obligatorio and not es_lejos_en_js
 
         if strength == AdjacencyStrength.MUST_BE_NEAR and not es_cerca_en_js:
-            discrepancias.append(f"{type_a.value}-{type_b.value}: Python=MUST_BE_NEAR, JS='{js_relation}'")
+            discrepancias.append(
+                f"{type_a.value}-{type_b.value}: Python=MUST_BE_NEAR, JS='{js_relation}'"
+            )
         elif strength == AdjacencyStrength.MUST_BE_AWAY and not es_lejos_en_js:
-            discrepancias.append(f"{type_a.value}-{type_b.value}: Python=MUST_BE_AWAY, JS='{js_relation}'")
-        elif strength not in (AdjacencyStrength.MUST_BE_NEAR, AdjacencyStrength.MUST_BE_AWAY) and js_dice_obligatorio:
-            discrepancias.append(f"{type_a.value}-{type_b.value}: Python={strength.value} (NO obligatorio), pero JS='{js_relation}'")
+            discrepancias.append(
+                f"{type_a.value}-{type_b.value}: Python=MUST_BE_AWAY, JS='{js_relation}'"
+            )
+        elif (
+            strength
+            not in (AdjacencyStrength.MUST_BE_NEAR, AdjacencyStrength.MUST_BE_AWAY)
+            and js_dice_obligatorio
+        ):
+            discrepancias.append(
+                f"{type_a.value}-{type_b.value}: Python={strength.value} (NO obligatorio), pero JS='{js_relation}'"
+            )
 
-    assert not discrepancias, "PAIRS en 00-shared.js desincronizado del catalogo Python real:\n" + "\n".join(discrepancias)
+    assert (
+        not discrepancias
+    ), "PAIRS en 00-shared.js desincronizado del catalogo Python real:\n" + "\n".join(
+        discrepancias
+    )
 
 
 def test_zona_parcela_controls_exist_with_correct_ids():
@@ -527,9 +648,15 @@ def test_zona_parcela_controls_exist_with_correct_ids():
     assert 'id="zona-parcela"' in html
     assert 'data-zona="parcela"' in html
     for control_id in (
-        "gen-lot-w", "gen-lot-h", "gen-street-side", "gen-retranqueo",
-        "gen-retranqueo-incremento", "gen-edificabilidad", "gen-ocupacion-maxima",
-        "gen-altura-maxima", "gen-frente-minimo",
+        "gen-lot-w",
+        "gen-lot-h",
+        "gen-street-side",
+        "gen-retranqueo",
+        "gen-retranqueo-incremento",
+        "gen-edificabilidad",
+        "gen-ocupacion-maxima",
+        "gen-altura-maxima",
+        "gen-frente-minimo",
     ):
         assert f'id="{control_id}"' in html, f"falta el control {control_id}"
     assert 'id="parcela-preview"' in html
@@ -637,7 +764,10 @@ def test_real_polygon_reaches_generation_not_just_the_preview():
 
     # eslabon 3: se pasa el poligono EN BRUTO (no zona_afeccion) --
     # confirma que no se aplica el retranqueo dos veces
-    assert "PARCELA_IMPORTADA.zona_afeccion" not in js_pyodide.split("handleGenerateNow")[1].split("async function")[0]
+    assert (
+        "PARCELA_IMPORTADA.zona_afeccion"
+        not in js_pyodide.split("handleGenerateNow")[1].split("async function")[0]
+    )
 
 
 def test_seed_and_iterations_are_automatic_not_manual_fields():
@@ -679,7 +809,7 @@ def test_plano_viewer_includes_north_arrow_and_scale_bar():
     js = _read(JS_DIR / "05-visor.js")
     assert "norteSvg" in js
     assert "escalaSvg" in js
-    assert "text-anchor=\"middle\" fill=\"var(--ink-faint)\">N</text>" in js
+    assert 'text-anchor="middle" fill="var(--ink-faint)">N</text>' in js
     # la escala se redondea a un multiplo razonable segun el ancho del
     # plano, no un numero arbitrario fijo
     assert "escalaBaseM = vbW > 30 ? 5 : vbW > 12 ? 2 : 1" in js
@@ -693,13 +823,23 @@ def test_redesign_preserves_every_css_variable_name_the_js_references():
     # quedarian silenciosamente rotas (var() sin definir no falla,
     # simplemente no pinta nada).
     css = _read(CSS_PATH)
-    js_all = "".join(_read(JS_DIR / f) for f in [
-        "00-shared.js", "01-matriz.js", "04-sinergias.js", "05-visor.js", "07-cronograma.js",
-    ])
+    js_all = "".join(
+        _read(JS_DIR / f)
+        for f in [
+            "00-shared.js",
+            "01-matriz.js",
+            "04-sinergias.js",
+            "05-visor.js",
+            "07-cronograma.js",
+        ]
+    )
     import re
+
     nombres_referenciados = set(re.findall(r"--[a-z][a-z-]*[a-z]\b", js_all))
     for nombre in nombres_referenciados:
-        assert f"{nombre}:" in css, f"variable {nombre} referenciada desde JS mais ya no definida en el CSS"
+        assert (
+            f"{nombre}:" in css
+        ), f"variable {nombre} referenciada desde JS mais ya no definida en el CSS"
 
 
 def test_header_content_reflects_the_whole_tool_not_just_the_original_matrix():
@@ -716,6 +856,7 @@ def test_header_content_reflects_the_whole_tool_not_just_the_original_matrix():
     assert "árbol B*" in html or "arbol B*" in html
     # cifras citadas en el bloque meta deben coincidir con la realidad
     from housing_generator.domain.enums import RoomType
+
     assert f"<div><span>tipos de estancia</span>{len(list(RoomType))}</div>" in html
 
 
@@ -725,7 +866,10 @@ def test_nota_indicador_button_lives_inside_its_own_panel_not_orphaned():
     # zona), resto de cuando la pagina entera era la matriz. Movido
     # dentro de #panel-relaciones, mismo patron que Parcela/Cronograma.
     html = _read(HTML_PATH)
-    assert 'id="panel-relaciones"><button class="nota-indicador" data-nota="nota-relaciones"' in html
+    assert (
+        'id="panel-relaciones"><button class="nota-indicador" data-nota="nota-relaciones"'
+        in html
+    )
 
 
 def test_stale_tab_name_seccion_vertical_does_not_appear_anywhere():
@@ -760,7 +904,7 @@ def test_header_has_real_navigation_not_just_a_fixed_sign():
     assert 'id="titleblock-home"' in html
     assert 'href="../docs/GUIA_USO.md"' in html
     assert "getElementById('titleblock-home')" in js
-    assert "dataset.zona" in js or "data-zona=\"parcela\"" in js
+    assert "dataset.zona" in js or 'data-zona="parcela"' in js
 
 
 def test_confirmar_parcela_button_connects_zona_0_to_zona_1():
@@ -770,7 +914,7 @@ def test_confirmar_parcela_button_connects_zona_0_to_zona_1():
     js = _read(JS_DIR / "09-init.js")
     assert 'id="confirmar-parcela"' in html
     assert "getElementById('confirmar-parcela')" in js
-    assert "data-zona=\"diseno\"" in js
+    assert 'data-zona="diseno"' in js
 
 
 def test_parcela_preview_draws_true_orientation_not_the_generator_aligned_version():
@@ -801,7 +945,9 @@ def test_zona_parcela_uses_a_two_column_layout_plano_and_form():
     idx_svg = html.index('id="parcela-preview"')
     idx_resumen = html.index('id="parcela-resumen"')
     assert idx_col_plano < idx_svg < idx_col_form, "el svg deberia estar en col-plano"
-    assert idx_col_form < idx_resumen, "el resumen deberia estar en col-form, junto al formulario"
+    assert (
+        idx_col_form < idx_resumen
+    ), "el resumen deberia estar en col-form, junto al formulario"
     assert ".parcela-layout{display:grid" in css
 
 
@@ -812,9 +958,13 @@ def test_clasificacion_suelo_checkboxes_exist_with_verified_categories():
     # 16-30), no inventadas.
     html = _read(HTML_PATH)
     for valor in (
-        "urbano_consolidado", "urbano_no_consolidado",
-        "nucleo_rural_tradicional", "nucleo_rural_comun",
-        "urbanizable", "rustico_ordinario", "rustico_especial_proteccion",
+        "urbano_consolidado",
+        "urbano_no_consolidado",
+        "nucleo_rural_tradicional",
+        "nucleo_rural_comun",
+        "urbanizable",
+        "rustico_ordinario",
+        "rustico_especial_proteccion",
     ):
         assert f'value="{valor}"' in html, f"falta la categoria {valor}"
 

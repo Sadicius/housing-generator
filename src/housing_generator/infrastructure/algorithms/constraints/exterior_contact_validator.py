@@ -1,5 +1,7 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.infrastructure.geometry.shapely_utils import count_exterior_sides
@@ -29,7 +31,9 @@ class ExteriorContactValidator(ConstraintValidatorPort):
                 continue
 
             lados = count_exterior_sides(
-                room.boundary.polygon, lot_polygon, EXTERIOR_MIN_CONTACT_M,
+                room.boundary.polygon,
+                lot_polygon,
+                EXTERIOR_MIN_CONTACT_M,
                 excluded_segments=excluded_segments,
             )
 

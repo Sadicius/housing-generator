@@ -12,7 +12,9 @@ TOLERANCIA_AREA = 0.15  # mismo criterio que AreaObjetivoValidator, NO normativo
 
 
 def _room(id_, room_type, area_m2):
-    return Room(id=id_, name=id_, room_type=room_type, dimensions=Dimensions(area_m2=area_m2))
+    return Room(
+        id=id_, name=id_, room_type=room_type, dimensions=Dimensions(area_m2=area_m2)
+    )
 
 
 def test_empty_rooms_returns_polygon_unchanged():
@@ -85,7 +87,7 @@ def test_no_overlap_between_bites():
 
     ids = list(bites.keys())
     for i, id_a in enumerate(ids):
-        for id_b in ids[i + 1:]:
+        for id_b in ids[i + 1 :]:
             overlap = bites[id_a].intersection(bites[id_b]).area
             assert overlap < 1e-6, f"{id_a} y {id_b} se solapan en {overlap}m2"
 
@@ -151,15 +153,23 @@ def test_medianera_side_gives_no_room_its_only_exterior_contact():
         _room("study", RoomType.STUDY, 6),
     ]
     bites, core = carve_perimeter(
-        polygon, rooms, medianera_sides=frozenset({"east"}), entrance_side="south",
+        polygon,
+        rooms,
+        medianera_sides=frozenset({"east"}),
+        entrance_side="south",
     )
 
     east_edge_segment = [LineString([(20, 0), (20, 20)])]
     for room in rooms:
         lados = count_exterior_sides(
-            bites[room.id], polygon, 0.3, excluded_segments=east_edge_segment,
+            bites[room.id],
+            polygon,
+            0.3,
+            excluded_segments=east_edge_segment,
         )
-        assert lados is not None and lados >= 1, f"{room.id}: {lados} lados reales (excluyendo medianera)"
+        assert (
+            lados is not None and lados >= 1
+        ), f"{room.id}: {lados} lados reales (excluyendo medianera)"
 
     # el nucleo tambien queda estrictamente dentro del poligono de trabajo
     assert core.within(polygon.buffer(1e-6))
@@ -171,7 +181,10 @@ def test_entrance_side_falls_back_when_it_is_a_medianera():
     polygon = box(0, 0, 10, 10)
     rooms = [_room("entrance", RoomType.ENTRANCE_HALL, 4)]
     bites, core = carve_perimeter(
-        polygon, rooms, medianera_sides=frozenset({"south", "east", "west"}), entrance_side="south",
+        polygon,
+        rooms,
+        medianera_sides=frozenset({"south", "east", "west"}),
+        entrance_side="south",
     )
     assert "entrance" in bites
     north_edge = LineString([(0, 10), (10, 10)])
@@ -183,7 +196,8 @@ def test_all_sides_medianera_raises():
     rooms = [_room("entrance", RoomType.ENTRANCE_HALL, 4)]
     with pytest.raises(ValueError):
         carve_perimeter(
-            polygon, rooms,
+            polygon,
+            rooms,
             medianera_sides=frozenset({"north", "south", "east", "west"}),
             entrance_side="south",
         )
@@ -199,12 +213,18 @@ def test_irregular_polygon_near_cut_corner_still_meets_area_tolerance():
     # del RECTANGULO ENVOLVENTE, no con el area real ya recortada por
     # el poligono. carve_perimeter debe calibrar la profundidad contra
     # el area real (biseccion), no solo dividir.
-    irregular = Polygon([(0, 0), (16, 0), (16, 11), (11, 16), (0, 16)])  # esquina NE cortada
+    irregular = Polygon(
+        [(0, 0), (16, 0), (16, 11), (11, 16), (0, 16)]
+    )  # esquina NE cortada
     rooms = [
         _room("entrance", RoomType.ENTRANCE_HALL, 4),
-        _room("living", RoomType.LIVING_ROOM, 20),   # cae en el lado este, junto al corte
-        _room("kitchen", RoomType.KITCHEN, 10),        # lado oeste, lejos del corte
-        _room("master", RoomType.MASTER_BEDROOM, 13),  # cae en el lado norte, junto al corte
+        _room(
+            "living", RoomType.LIVING_ROOM, 20
+        ),  # cae en el lado este, junto al corte
+        _room("kitchen", RoomType.KITCHEN, 10),  # lado oeste, lejos del corte
+        _room(
+            "master", RoomType.MASTER_BEDROOM, 13
+        ),  # cae en el lado norte, junto al corte
     ]
     bites, _ = carve_perimeter(irregular, rooms, entrance_side="south")
 

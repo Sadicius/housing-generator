@@ -11,7 +11,9 @@ from housing_generator.infrastructure.algorithms.constraints.adjacency_validator
 # [ARCH:door-graph].
 
 
-def build_door_graph(layout: Layout, adjacency_requirements: List[AdjacencyRequirement]) -> nx.Graph:
+def build_door_graph(
+    layout: Layout, adjacency_requirements: List[AdjacencyRequirement]
+) -> nx.Graph:
     """Subconjunto disperso del grafo de adyacencia geométrica: solo
     pares con MUST_BE_NEAR declarado Y satisfecho por la geometría
     final. No modela geometría de puertas (posición/ancho/apertura).
@@ -35,7 +37,9 @@ def build_door_graph(layout: Layout, adjacency_requirements: List[AdjacencyRequi
         shared_length = room_a.boundary.polygon.boundary.intersection(
             room_b.boundary.polygon.boundary
         ).length
-        if shared_length >= MUST_BE_NEAR_MIN_SHARED_LENGTH_M:  # mismo umbral que AdjacencyConstraintValidator
+        if (
+            shared_length >= MUST_BE_NEAR_MIN_SHARED_LENGTH_M
+        ):  # mismo umbral que AdjacencyConstraintValidator
             graph.add_edge(req.room_a_id, req.room_b_id, shared_length_m=shared_length)
 
     return graph

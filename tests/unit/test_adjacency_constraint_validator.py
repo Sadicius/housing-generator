@@ -12,7 +12,12 @@ from housing_generator.domain.enums import RoomType, AdjacencyStrength
 
 
 def _placed_room(room_id: str, polygon) -> Room:
-    room = Room(id=room_id, name=room_id, room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=polygon.area))
+    room = Room(
+        id=room_id,
+        name=room_id,
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     room.boundary = Boundary(polygon=polygon)
     return room
 
@@ -57,8 +62,8 @@ def test_must_be_near_fails_when_rooms_do_not_touch_at_all():
 
 def test_must_be_away_still_works_alongside_must_be_near():
     a = _placed_room("a", box(0, 0, 4, 4))
-    b = _placed_room("b", box(4, 0, 8, 4))       # cerca de a (cumple must_be_near)
-    c = _placed_room("c", box(50, 50, 54, 54))   # lejos de a (cumple must_be_away)
+    b = _placed_room("b", box(4, 0, 8, 4))  # cerca de a (cumple must_be_near)
+    c = _placed_room("c", box(50, 50, 54, 54))  # lejos de a (cumple must_be_away)
     reqs = [
         AdjacencyRequirement("a", "b", AdjacencyStrength.MUST_BE_NEAR),
         AdjacencyRequirement("a", "c", AdjacencyStrength.MUST_BE_AWAY),
@@ -70,7 +75,12 @@ def test_must_be_away_still_works_alongside_must_be_near():
 
 def test_unplaced_rooms_are_reported_and_requirements_involving_them_are_skipped():
     a = _placed_room("a", box(0, 0, 4, 4))
-    b = Room(id="b", name="b", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=10))  # sin colocar
+    b = Room(
+        id="b",
+        name="b",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=10),
+    )  # sin colocar
     req = [AdjacencyRequirement("a", "b", AdjacencyStrength.MUST_BE_NEAR)]
 
     layout = Layout(lot=_dummy_lot(), rooms=[a, b], zones=[])

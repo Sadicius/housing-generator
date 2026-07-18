@@ -14,9 +14,9 @@ def test_compute_positions_matches_hand_calculation():
     # este modulo de produccion -- misma verificacion, ahora contra el
     # codigo real. A(4x2) raiz, B hijo izquierdo (pegado a la derecha),
     # C hijo derecho (misma X, encima).
-    A = BStarNode(room_id="A", aspect_ratio=2.0)   # area 8, ratio 2 -> w=4,h=2
-    B = BStarNode(room_id="B", aspect_ratio=1.0)   # area 9, ratio 1 -> w=3,h=3
-    C = BStarNode(room_id="C", aspect_ratio=0.5)   # area 8, ratio 0.5 -> w=2,h=4
+    A = BStarNode(room_id="A", aspect_ratio=2.0)  # area 8, ratio 2 -> w=4,h=2
+    B = BStarNode(room_id="B", aspect_ratio=1.0)  # area 9, ratio 1 -> w=3,h=3
+    C = BStarNode(room_id="C", aspect_ratio=0.5)  # area 8, ratio 0.5 -> w=2,h=4
     A.left = B
     A.right = C
     areas = {"A": 8.0, "B": 9.0, "C": 8.0}
@@ -41,16 +41,22 @@ def test_compute_positions_produces_a_non_rectangular_silhouette():
     # propio empaquetado.
     from shapely.ops import unary_union
 
-    A = BStarNode("salon", aspect_ratio=5 / 3)      # area 15 -> 5x3
-    B = BStarNode("cocina", aspect_ratio=1.0)        # area 9 -> 3x3
+    A = BStarNode("salon", aspect_ratio=5 / 3)  # area 15 -> 5x3
+    B = BStarNode("cocina", aspect_ratio=1.0)  # area 9 -> 3x3
     C = BStarNode("dormitorio", aspect_ratio=3 / 2.5)  # area 7.5 -> 3x2.5
-    D = BStarNode("bano", aspect_ratio=1.0)          # area 4 -> 2x2
-    E = BStarNode("lavadero", aspect_ratio=1.0)      # area 4 -> 2x2
+    D = BStarNode("bano", aspect_ratio=1.0)  # area 4 -> 2x2
+    E = BStarNode("lavadero", aspect_ratio=1.0)  # area 4 -> 2x2
     A.left = B
     A.right = C
     B.left = D
     C.left = E
-    areas = {"salon": 15.0, "cocina": 9.0, "dormitorio": 7.5, "bano": 4.0, "lavadero": 4.0}
+    areas = {
+        "salon": 15.0,
+        "cocina": 9.0,
+        "dormitorio": 7.5,
+        "bano": 4.0,
+        "lavadero": 4.0,
+    }
 
     positions = compute_positions(A, areas)
     rects = list(positions.values())
@@ -73,7 +79,9 @@ def test_compute_positions_no_overlaps_for_random_trees():
         positions = compute_positions(tree, areas)
         rects = list(positions.values())
         union = unary_union(rects)
-        assert union.area == pytest.approx(sum(r.area for r in rects)), f"solape en seed {seed}"
+        assert union.area == pytest.approx(
+            sum(r.area for r in rects)
+        ), f"solape en seed {seed}"
 
 
 def test_build_random_tree_contains_every_room_exactly_once():
@@ -102,12 +110,16 @@ def test_build_random_tree_produces_varied_topologies_across_seeds():
     for seed in range(20):
         tree = build_random_tree(room_ids, random.Random(seed))
         # "forma" simplificada: para cada nodo, que lados tiene ocupados
-        forma = tuple(sorted(
-            (n.room_id, n.left is not None, n.right is not None)
-            for n in tree.nodes()
-        ))
+        forma = tuple(
+            sorted(
+                (n.room_id, n.left is not None, n.right is not None)
+                for n in tree.nodes()
+            )
+        )
         formas.add(forma)
-    assert len(formas) > 1, "todas las semillas dieron la misma topologia -- no es aleatorio de verdad"
+    assert (
+        len(formas) > 1
+    ), "todas las semillas dieron la misma topologia -- no es aleatorio de verdad"
 
 
 def _arbol_simple():
@@ -121,7 +133,10 @@ def _arbol_simple():
 
 
 def test_swap_modules_exchanges_identity_not_shape():
-    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import swap_modules
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        swap_modules,
+    )
+
     tree = _arbol_simple()
     nuevo = swap_modules(tree, "salon", "cocina")
     ids_antes = {n.room_id for n in tree.nodes()}
@@ -134,8 +149,10 @@ def test_move_module_restructures_the_tree():
     # el mismo caso verificado en el prototipo: mover 'trastero' de
     # colgar de 'cocina' a colgar de 'dormitorio' cambia su posicion real.
     from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
-        move_module, compute_positions,
+        move_module,
+        compute_positions,
     )
+
     salon = BStarNode("salon")
     cocina = BStarNode("cocina")
     dormitorio = BStarNode("dormitorio")
@@ -162,7 +179,10 @@ def test_move_module_restructures_the_tree():
 
 
 def test_move_module_never_loses_or_duplicates_rooms():
-    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import move_module
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        move_module,
+    )
+
     salon = BStarNode("salon")
     cocina = BStarNode("cocina")
     dormitorio = BStarNode("dormitorio")
@@ -174,13 +194,18 @@ def test_move_module_never_loses_or_duplicates_rooms():
     for seed in range(30):
         nuevo = move_module(salon, "trastero", random.Random(seed))
         ids_despues = {n.room_id for n in nuevo.nodes()}
-        assert ids_despues == ids_antes, f"seed {seed}: se perdio o duplico una estancia"
+        assert (
+            ids_despues == ids_antes
+        ), f"seed {seed}: se perdio o duplico una estancia"
 
 
 def test_move_module_is_a_noop_for_nodes_with_children():
     # mover un nodo CON descendientes queda fuera de alcance -- debe
     # devolver el arbol sin cambios, no fallar ni corromper la estructura.
-    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import move_module
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        move_module,
+    )
+
     tree = _arbol_simple()  # 'cocina' tiene un hijo (trastero)
     nuevo = move_module(tree, "cocina", random.Random(1))
     ids_antes = {n.room_id for n in tree.nodes()}
@@ -190,8 +215,10 @@ def test_move_module_is_a_noop_for_nodes_with_children():
 
 def test_resize_module_preserves_area():
     from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
-        resize_module, compute_positions,
+        resize_module,
+        compute_positions,
     )
+
     tree = BStarNode("a", aspect_ratio=1.0)
     areas = {"a": 20.0}
     for seed in range(20):
@@ -201,7 +228,10 @@ def test_resize_module_preserves_area():
 
 
 def test_resize_module_stays_within_safety_bounds():
-    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import resize_module
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        resize_module,
+    )
+
     tree = BStarNode("a", aspect_ratio=1.0)
     for _ in range(300):
         tree = resize_module(tree, "a", random.Random())
@@ -210,8 +240,10 @@ def test_resize_module_stays_within_safety_bounds():
 
 def test_reset_aspect_ratio_returns_to_square():
     from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
-        resize_module, reset_aspect_ratio,
+        resize_module,
+        reset_aspect_ratio,
     )
+
     tree = BStarNode("a", aspect_ratio=1.0)
     for seed in range(10):
         tree = resize_module(tree, "a", random.Random(seed))
@@ -221,11 +253,16 @@ def test_reset_aspect_ratio_returns_to_square():
 
 
 def test_force_aspect_ratio_sets_an_exact_value():
-    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import force_aspect_ratio
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        force_aspect_ratio,
+    )
+
     tree = BStarNode("a", aspect_ratio=1.0)
     forzado = force_aspect_ratio(tree, "a", 3.5)
     assert forzado.aspect_ratio == 3.5
-    assert tree.aspect_ratio == 1.0  # no muta el original, mismo convenio que el resto de movimientos
+    assert (
+        tree.aspect_ratio == 1.0
+    )  # no muta el original, mismo convenio que el resto de movimientos
 
 
 def test_force_aspect_ratio_survives_being_reapplied_after_any_mutation():
@@ -235,8 +272,10 @@ def test_force_aspect_ratio_survives_being_reapplied_after_any_mutation():
     # debe devolver siempre la proporcion objetivo, sin importar que
     # movimiento ocurrio ni que nodo represente ahora esa estancia.
     from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
-        force_aspect_ratio, random_neighbor,
+        force_aspect_ratio,
+        random_neighbor,
     )
+
     tree = BStarNode("stair", aspect_ratio=2.0)
     tree.left = BStarNode("bed", aspect_ratio=1.0)
     tree.right = BStarNode("bath", aspect_ratio=1.0)
@@ -251,7 +290,10 @@ def test_force_aspect_ratio_survives_being_reapplied_after_any_mutation():
 
 
 def test_swap_children_exchanges_left_and_right():
-    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import swap_children
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        swap_children,
+    )
+
     salon = BStarNode("salon")
     cocina = BStarNode("cocina")
     dormitorio = BStarNode("dormitorio")
@@ -263,7 +305,10 @@ def test_swap_children_exchanges_left_and_right():
 
 
 def test_random_neighbor_never_loses_or_duplicates_rooms():
-    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import random_neighbor
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        random_neighbor,
+    )
+
     room_ids = ["a", "b", "c", "d", "e"]
     areas = {rid: 10.0 for rid in room_ids}
     tree = build_random_tree(room_ids, random.Random(1))
@@ -278,8 +323,10 @@ def test_random_neighbor_locking_rejects_real_collateral_displacement():
     # que 'trastero' cuelga como hijo derecho, apoyada en su contorno)
     # -- el movimiento debe rechazarse, no aplicarse.
     from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
-        random_neighbor, compute_positions,
+        random_neighbor,
+        compute_positions,
     )
+
     salon = BStarNode("salon")
     cocina = BStarNode("cocina")
     trastero = BStarNode("trastero")
@@ -291,7 +338,9 @@ def test_random_neighbor_locking_rejects_real_collateral_displacement():
     pos_antes = compute_positions(salon, areas)
     cambios_reales = 0
     for seed in range(200):
-        nuevo = random_neighbor(salon, random.Random(seed), areas, locked_room_ids=bloqueadas)
+        nuevo = random_neighbor(
+            salon, random.Random(seed), areas, locked_room_ids=bloqueadas
+        )
         pos_despues = compute_positions(nuevo, areas)
         if pos_antes["trastero"].bounds != pos_despues["trastero"].bounds:
             cambios_reales += 1
@@ -303,7 +352,10 @@ def test_random_neighbor_locking_rejects_real_collateral_displacement():
 
 
 def test_random_neighbor_locking_none_preserves_previous_behavior():
-    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import random_neighbor
+    from housing_generator.infrastructure.algorithms.layout_generation.btree_partition import (
+        random_neighbor,
+    )
+
     room_ids = ["a", "b", "c"]
     areas = {rid: 10.0 for rid in room_ids}
     tree = build_random_tree(room_ids, random.Random(1))

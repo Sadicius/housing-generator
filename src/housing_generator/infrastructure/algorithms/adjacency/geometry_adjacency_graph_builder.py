@@ -1,6 +1,8 @@
 from typing import Optional
 import networkx as nx
-from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
+from housing_generator.application.ports.adjacency_graph_builder_port import (
+    AdjacencyGraphBuilderPort,
+)
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.entities.room import Room
 
@@ -35,7 +37,7 @@ class GeometryAdjacencyGraphBuilder(AdjacencyGraphBuilderPort):
             )
 
         for i, room_a in enumerate(placed_rooms):
-            for room_b in placed_rooms[i + 1:]:
+            for room_b in placed_rooms[i + 1 :]:
                 shared_length = self._shared_boundary_length(room_a, room_b)
                 if shared_length >= self._min_shared_edge_m:
                     graph.add_edge(room_a.id, room_b.id, shared_length_m=shared_length)

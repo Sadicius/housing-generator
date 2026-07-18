@@ -8,7 +8,12 @@ from housing_generator.domain.exceptions import InvalidProgramError
 
 
 def _room(room_id, area) -> Room:
-    return Room(id=room_id, name=room_id, room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=area))
+    return Room(
+        id=room_id,
+        name=room_id,
+        room_type=RoomType.BEDROOM,
+        dimensions=Dimensions(area_m2=area),
+    )
 
 
 def test_total_area_m2_sums_all_rooms():
@@ -42,5 +47,7 @@ def test_adjacency_requirement_referencing_unknown_room_is_rejected():
     with pytest.raises(InvalidProgramError):
         Program(
             rooms=[_room("a", 10)],
-            adjacency_requirements=[AdjacencyRequirement("a", "no_existe", AdjacencyStrength.MUST_BE_NEAR)],
+            adjacency_requirements=[
+                AdjacencyRequirement("a", "no_existe", AdjacencyStrength.MUST_BE_NEAR)
+            ],
         )

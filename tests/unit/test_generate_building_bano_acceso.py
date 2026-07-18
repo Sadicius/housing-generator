@@ -1,6 +1,8 @@
 import pytest
 from shapely.geometry import box
-from housing_generator.application.use_cases.generate_building import GenerateBuildingUseCase
+from housing_generator.application.use_cases.generate_building import (
+    GenerateBuildingUseCase,
+)
 from housing_generator.infrastructure.algorithms.constraints.bano_acceso_validator import (
     BanoAccesoGeneralValidator,
 )
@@ -22,7 +24,12 @@ def _lot():
 
 
 def _placed(room_id, room_type, polygon):
-    r = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area))
+    r = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     r.boundary = Boundary(polygon=polygon)
     return r
 
@@ -36,7 +43,9 @@ def _use_case():
         layout_generator_factory=None,
         zoning_strategy=None,
         programa_minimo_validator=None,
-        bano_acceso_validator=BanoAccesoGeneralValidator(GeometryAdjacencyGraphBuilder()),
+        bano_acceso_validator=BanoAccesoGeneralValidator(
+            GeometryAdjacencyGraphBuilder()
+        ),
     )
 
 
@@ -54,7 +63,9 @@ def test_all_bathrooms_captured_in_bedrooms_on_every_floor_raises():
     # sea real ("capturado"), no "no aplica por falta de circulacion".
     bed_pb = _placed("bed_pb", RoomType.BEDROOM, box(0, 0, 3, 4))
     bath_pb = _placed("bath_pb", RoomType.BATHROOM, box(3, 0, 5, 4))
-    corridor_pb = _placed("corridor_pb", RoomType.CORRIDOR, box(0, 4, 3, 6))  # toca a bed_pb, no a bath_pb
+    corridor_pb = _placed(
+        "corridor_pb", RoomType.CORRIDOR, box(0, 4, 3, 6)
+    )  # toca a bed_pb, no a bath_pb
     layout_pb = Layout(lot=_lot(), rooms=[bed_pb, bath_pb, corridor_pb], zones=[])
 
     # planta superior: mismo problema, otro bano tambien capturado
@@ -63,10 +74,12 @@ def test_all_bathrooms_captured_in_bedrooms_on_every_floor_raises():
     corridor_ps = _placed("corridor_ps", RoomType.CORRIDOR, box(0, 4, 3, 6))
     layout_ps = Layout(lot=_lot(), rooms=[bed_ps, bath_ps, corridor_ps], zones=[])
 
-    building = Building(floors={
-        NivelPlanta.PLANTA_BAJA: layout_pb,
-        NivelPlanta.PLANTA_SUPERIOR: layout_ps,
-    })
+    building = Building(
+        floors={
+            NivelPlanta.PLANTA_BAJA: layout_pb,
+            NivelPlanta.PLANTA_SUPERIOR: layout_ps,
+        }
+    )
 
     with pytest.raises(LayoutGenerationError, match="Ninguna planta"):
         _use_case()._check_bano_acceso_general(building)
@@ -84,10 +97,12 @@ def test_one_floor_with_accessible_bathroom_is_enough_for_the_whole_building():
     bath_ps = _placed("bath_ps", RoomType.BATHROOM, box(3, 0, 5, 4))
     layout_ps = Layout(lot=_lot(), rooms=[bed_ps, bath_ps], zones=[])
 
-    building = Building(floors={
-        NivelPlanta.PLANTA_BAJA: layout_pb,
-        NivelPlanta.PLANTA_SUPERIOR: layout_ps,
-    })
+    building = Building(
+        floors={
+            NivelPlanta.PLANTA_BAJA: layout_pb,
+            NivelPlanta.PLANTA_SUPERIOR: layout_ps,
+        }
+    )
 
     _use_case()._check_bano_acceso_general(building)  # no debe lanzar
 

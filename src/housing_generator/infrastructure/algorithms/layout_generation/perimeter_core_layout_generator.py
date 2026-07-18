@@ -6,15 +6,22 @@ probadas por separado (Fase 0: `RoomOverlapValidator`; Fase 1:
 docs/referencia/generador/contacto-exterior-y-envolvente.md,
 [ARCH:perimeter-core-layout-generator].
 """
+
 import math
 import random
 from typing import Callable, List, Optional, Set, Tuple
 
 import networkx as nx
 
-from housing_generator.application.ports.layout_generator_port import LayoutGeneratorPort
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
-from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
+from housing_generator.application.ports.layout_generator_port import (
+    LayoutGeneratorPort,
+)
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
+from housing_generator.application.ports.adjacency_graph_builder_port import (
+    AdjacencyGraphBuilderPort,
+)
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.lot import Lot
 from housing_generator.domain.entities.room import Room
@@ -104,17 +111,23 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
         self._graph_builder = graph_builder
 
     def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout:
-        rng = random.Random(self._seed)  # recreado en cada llamada, seed reproducible siempre
+        rng = random.Random(
+            self._seed
+        )  # recreado en cada llamada, seed reproducible siempre
         all_room_ids = [room.id for room in program.rooms]
         areas = {room.id: room.dimensions.area_m2 for room in program.rooms}
         entrance_hall_id = find_entrance_hall_id(program)
 
-        tallable = tallable_length_per_side(lot.area_edificable_real.polygon, lot.medianera_sides)
+        tallable = tallable_length_per_side(
+            lot.area_edificable_real.polygon, lot.medianera_sides
+        )
         available_sides = [side for side, length in tallable.items() if length > 0]
 
         current_state = build_initial_perimeter_core_state(program, lot, rng)
         current_layout = materialize_perimeter_core(current_state, program, lot)
-        current_hard, current_soft, current_locked = self._evaluate(current_layout, all_room_ids)
+        current_hard, current_soft, current_locked = self._evaluate(
+            current_layout, all_room_ids
+        )
 
         best_layout = current_layout
         best_hard, best_soft = current_hard, current_soft
@@ -125,11 +138,17 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
                 break
 
             candidate_state = random_neighbor_perimeter_core(
-                current_state, rng, areas, entrance_hall_id, available_sides,
+                current_state,
+                rng,
+                areas,
+                entrance_hall_id,
+                available_sides,
                 locked_room_ids=current_locked,
             )
             candidate_layout = materialize_perimeter_core(candidate_state, program, lot)
-            candidate_hard, candidate_soft, candidate_locked = self._evaluate(candidate_layout, all_room_ids)
+            candidate_hard, candidate_soft, candidate_locked = self._evaluate(
+                candidate_layout, all_room_ids
+            )
 
             # comparacion lexicografica: si lo duro cambia, decide solo
             # el delta duro; lo blando solo cuenta si empata. Ver
@@ -141,10 +160,16 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
             else:
                 delta = candidate_soft - current_soft
 
-            accepted = delta <= 0 or rng.random() < math.exp(-delta / max(temperature, 1e-9))
+            accepted = delta <= 0 or rng.random() < math.exp(
+                -delta / max(temperature, 1e-9)
+            )
             if accepted:
                 current_state, current_layout = candidate_state, candidate_layout
-                current_hard, current_soft, current_locked = candidate_hard, candidate_soft, candidate_locked
+                current_hard, current_soft, current_locked = (
+                    candidate_hard,
+                    candidate_soft,
+                    candidate_locked,
+                )
                 if (current_hard, current_soft) < (best_hard, best_soft):
                     best_layout = current_layout
                     best_hard, best_soft = current_hard, current_soft
@@ -162,7 +187,9 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
         best_layout.metadata["soft_penalty"] = best_soft
         return best_layout
 
-    def _evaluate(self, layout: Layout, all_room_ids: List[str]) -> Tuple[int, float, Set[str]]:
+    def _evaluate(
+        self, layout: Layout, all_room_ids: List[str]
+    ) -> Tuple[int, float, Set[str]]:
         """Una sola validación por layout, reutilizada para la
         puntuación (duro/blando) Y el bloqueo progresivo -- mismo
         patrón que `BTreeLayoutGenerator._evaluate`."""
@@ -171,7 +198,8 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
         soft = self._soft_scorer.score(layout) if self._soft_scorer else 0.0
         soft += self._grouping_proximity_penalty(layout)
         violating_ids = {
-            room_id for room_id in all_room_ids
+            room_id
+            for room_id in all_room_ids
             if any(f"'{room_id}'" in v for v in violations)
         }
         locked = set(all_room_ids) - violating_ids
@@ -199,10 +227,15 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
         if self._graph_builder is None:
             return 0.0
         graph = self._graph_builder.build(layout)
-        return sum(
-            self._component_gap_penalty(graph, [r for r in layout.rooms if r.is_placed and predicate(r)])
-            for predicate, _label in GROUPING_PREDICATES
-        ) * CORE_PROXIMITY_WEIGHT
+        return (
+            sum(
+                self._component_gap_penalty(
+                    graph, [r for r in layout.rooms if r.is_placed and predicate(r)]
+                )
+                for predicate, _label in GROUPING_PREDICATES
+            )
+            * CORE_PROXIMITY_WEIGHT
+        )
 
     @staticmethod
     def _component_gap_penalty(graph: nx.Graph, members: List[Room]) -> float:
@@ -222,7 +255,9 @@ class PerimeterCoreLayoutGenerator(LayoutGeneratorPort):
         polygons_by_id = {r.id: r.boundary.polygon for r in members}
 
         def component_gap(a: Set[str], b: Set[str]) -> float:
-            return min(polygons_by_id[i].distance(polygons_by_id[j]) for i in a for j in b)
+            return min(
+                polygons_by_id[i].distance(polygons_by_id[j]) for i in a for j in b
+            )
 
         connected = [components[0]]
         remaining = components[1:]

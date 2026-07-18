@@ -1,9 +1,13 @@
 from typing import List, Set
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
-from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
+from housing_generator.infrastructure.geometry.shapely_utils import (
+    evaluate_minimum_width,
+)
 
 # NO NORMATIVO -- criterio de ingenieria practica, confirmado
 # explicitamente con el usuario. Ver [ARCH:ancho-libre-practico].
@@ -49,9 +53,15 @@ class AnchoLibrePracticoValidator(ConstraintValidatorPort):
         for room in layout.rooms:
             if room.room_type not in TIPOS_SIN_ANCHO_NORMATIVO or not room.is_placed:
                 continue
-            umbral = ANCHO_LIBRE_REDUCIDO_M if room.room_type in TIPOS_CON_ANCHO_REDUCIDO else ANCHO_LIBRE_PRACTICO_M
+            umbral = (
+                ANCHO_LIBRE_REDUCIDO_M
+                if room.room_type in TIPOS_CON_ANCHO_REDUCIDO
+                else ANCHO_LIBRE_PRACTICO_M
+            )
             v, w = evaluate_minimum_width(
-                room.id, room.boundary.polygon, umbral,
+                room.id,
+                room.boundary.polygon,
+                umbral,
                 violation_message=(
                     f"ancho libre por debajo del minimo practico de ingenieria "
                     f"({umbral:.2f}m, NO normativo -- el Decreto 29/2010 "

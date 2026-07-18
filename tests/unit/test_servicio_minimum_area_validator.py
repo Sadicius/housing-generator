@@ -12,7 +12,12 @@ from housing_generator.domain.enums import RoomType
 
 
 def _room(room_id: str, room_type: RoomType, area_m2: float) -> Room:
-    return Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=area_m2))
+    return Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=area_m2),
+    )
 
 
 def _dummy_lot() -> Lot:
@@ -24,7 +29,9 @@ def test_tabla_servicios_para_matches_source_for_known_row_counts():
     assert tabla_servicios_para(2)["cocina"] == 7
     assert tabla_servicios_para(4)["aseo"] == 1.5
     assert "aseo" not in tabla_servicios_para(2)  # no exigido con <4 estancias
-    assert tabla_servicios_para(8) == tabla_servicios_para(6)  # ambos usan la fila "mas de cinco"
+    assert tabla_servicios_para(8) == tabla_servicios_para(
+        6
+    )  # ambos usan la fila "mas de cinco"
 
 
 def test_passes_when_services_meet_their_minimum_for_the_room_count():
@@ -67,9 +74,13 @@ def test_toilet_from_four_estancias_onward_is_checked():
     bed1 = _room("bed1", RoomType.MASTER_BEDROOM, 12)
     bed2 = _room("bed2", RoomType.BEDROOM, 8)
     bed3 = _room("bed3", RoomType.BEDROOM, 8)  # 4 estancias en total
-    toilet = _room("toilet", RoomType.TOILET, 0.5)  # exige 1.5m2 a partir de 4 estancias
+    toilet = _room(
+        "toilet", RoomType.TOILET, 0.5
+    )  # exige 1.5m2 a partir de 4 estancias
 
-    layout = Layout(lot=_dummy_lot(), rooms=[living, bed1, bed2, bed3, toilet], zones=[])
+    layout = Layout(
+        lot=_dummy_lot(), rooms=[living, bed1, bed2, bed3, toilet], zones=[]
+    )
     violations = ServicioMinimumAreaValidator().validate(layout).violations
 
     assert len(violations) == 1
@@ -77,7 +88,9 @@ def test_toilet_from_four_estancias_onward_is_checked():
 
 
 def test_rooms_without_service_subtype_are_ignored():
-    living = _room("living", RoomType.LIVING_ROOM, 3)  # muy pequena, pero no es servicio
+    living = _room(
+        "living", RoomType.LIVING_ROOM, 3
+    )  # muy pequena, pero no es servicio
     hall = _room("hall", RoomType.ENTRANCE_HALL, 1)
 
     layout = Layout(lot=_dummy_lot(), rooms=[living, hall], zones=[])
@@ -90,8 +103,11 @@ def test_integrated_kitchen_is_excluded_from_tabla_2_own_check():
     living = _room("living", RoomType.LIVING_ROOM, 20)
     bed = _room("bed", RoomType.BEDROOM, 12)
     kitchen = Room(
-        id="kitchen", name="Cocina", room_type=RoomType.KITCHEN,
-        dimensions=Dimensions(area_m2=1), integrated_in_largest_room=True,
+        id="kitchen",
+        name="Cocina",
+        room_type=RoomType.KITCHEN,
+        dimensions=Dimensions(area_m2=1),
+        integrated_in_largest_room=True,
     )
     layout = Layout(lot=_dummy_lot(), rooms=[living, bed, kitchen], zones=[])
     assert ServicioMinimumAreaValidator().validate(layout).violations == []
@@ -107,7 +123,11 @@ def test_total_num_estancias_override_uses_building_wide_row_not_local_count():
     layout = Layout(lot=_dummy_lot(), rooms=[kitchen], zones=[])
 
     sin_override = ServicioMinimumAreaValidator().validate(layout)
-    assert sin_override.violations == []  # 6m2 >= 5m2 (fila de 1 estancia, local_count=0 -> TABLA_2[1])
+    assert (
+        sin_override.violations == []
+    )  # 6m2 >= 5m2 (fila de 1 estancia, local_count=0 -> TABLA_2[1])
 
-    con_override = ServicioMinimumAreaValidator(total_num_estancias_override=3).validate(layout)
+    con_override = ServicioMinimumAreaValidator(
+        total_num_estancias_override=3
+    ).validate(layout)
     assert len(con_override.violations) == 1  # 6m2 < 7m2 (fila real de 3 estancias)

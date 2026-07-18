@@ -39,6 +39,7 @@ de profundidad muy distinta en el mismo lado) -- consecuencia
 aceptada, más realista que forzar una banda uniforme; sigue estando
 protegido por `RoomOverlapValidator` (Fase 0) como red de seguridad.
 """
+
 import math
 from typing import Dict, FrozenSet, List, Tuple
 from shapely.geometry import Polygon, box
@@ -93,7 +94,9 @@ def _min_width_for_room(room: Room) -> float:
     return ANCHO_LIBRE_PRACTICO_M
 
 
-def _ideal_room_footprint(room: Room, aspect_ratio_override: float = None) -> Tuple[float, float]:
+def _ideal_room_footprint(
+    room: Room, aspect_ratio_override: float = None
+) -> Tuple[float, float]:
     """(profundidad, frente) "ideal" de `room`: área declarada
     repartida a `TARGET_ASPECT_RATIO` (o `aspect_ratio_override` si se
     da -- usado por las mutaciones de `perimeter_core_partition.py`,
@@ -103,7 +106,11 @@ def _ideal_room_footprint(room: Room, aspect_ratio_override: float = None) -> Tu
     encima de `room.dimensions.max_aspect_ratio` (2.5 por defecto, ya
     normativo del proyecto). Ver [ARCH:perimeter-carving]."""
     area = room.dimensions.area_m2
-    base_ar = aspect_ratio_override if aspect_ratio_override is not None else TARGET_ASPECT_RATIO
+    base_ar = (
+        aspect_ratio_override
+        if aspect_ratio_override is not None
+        else TARGET_ASPECT_RATIO
+    )
     target_ar = min(base_ar, room.dimensions.max_aspect_ratio)
     depth = math.sqrt(area / target_ar)
 
@@ -119,7 +126,9 @@ def _ideal_room_footprint(room: Room, aspect_ratio_override: float = None) -> Tu
     return depth, frontage
 
 
-def tallable_length_per_side(polygon: Polygon, medianera_sides: FrozenSet[str]) -> Dict[str, float]:
+def tallable_length_per_side(
+    polygon: Polygon, medianera_sides: FrozenSet[str]
+) -> Dict[str, float]:
     """Longitud real de los lados del polígono clasificados por
     dirección cardinal (mismo criterio que `Lot.frente_actual_m`),
     excluyendo los tramos en `medianera_sides` -- nunca tallables,
@@ -140,7 +149,9 @@ def tallable_length_per_side(polygon: Polygon, medianera_sides: FrozenSet[str]) 
 
 
 def assign_rooms_to_sides(
-    rooms: List[Room], tallable_length: Dict[str, float], entrance_side: str,
+    rooms: List[Room],
+    tallable_length: Dict[str, float],
+    entrance_side: str,
 ) -> Dict[str, List[str]]:
     """Reparte `rooms` entre los lados con longitud tallable>0, por
     `room.id` (no por objeto `Room` -- mismo convenio que `BStarNode`
@@ -172,7 +183,9 @@ def assign_rooms_to_sides(
     entrance_rooms = [r for r in remaining if r.room_type == RoomType.ENTRANCE_HALL]
     remaining = [r for r in remaining if r.room_type != RoomType.ENTRANCE_HALL]
 
-    entrance_target = entrance_side if entrance_side in available_sides else available_sides[0]
+    entrance_target = (
+        entrance_side if entrance_side in available_sides else available_sides[0]
+    )
     for room in entrance_rooms:
         _, frontage = _ideal_room_footprint(room)
         assignment[entrance_target].append(room.id)
@@ -188,8 +201,14 @@ def assign_rooms_to_sides(
 
 
 def _room_box(
-    side: str, offset: float, frontage: float, depth: float,
-    minx: float, miny: float, maxx: float, maxy: float,
+    side: str,
+    offset: float,
+    frontage: float,
+    depth: float,
+    minx: float,
+    miny: float,
+    maxx: float,
+    maxy: float,
 ) -> Polygon:
     """Rectángulo de una estancia individual, con su cara exterior
     pegada al lado `side` del rectángulo de trabajo actual y su
@@ -205,9 +224,18 @@ def _room_box(
 
 
 def _solve_room_depth(
-    side: str, offset: float, frontage: float, target_area: float,
-    remaining: Polygon, minx: float, miny: float, maxx: float, maxy: float,
-    initial_depth: float, tol: float = 1e-4, max_iter: int = 40,
+    side: str,
+    offset: float,
+    frontage: float,
+    target_area: float,
+    remaining: Polygon,
+    minx: float,
+    miny: float,
+    maxx: float,
+    maxy: float,
+    initial_depth: float,
+    tol: float = 1e-4,
+    max_iter: int = 40,
 ) -> float:
     """Profundidad que hace que `_room_box(...).intersection(remaining)`
     tenga área `target_area`, por bisección a partir de `initial_depth`
@@ -217,12 +245,21 @@ def _solve_room_depth(
     tallada en el mismo lado. Ver [ARCH:perimeter-carving]."""
     lo, hi = 0.0, max(initial_depth, 0.5)
     for _ in range(max_iter):
-        if _room_box(side, offset, frontage, hi, minx, miny, maxx, maxy).intersection(remaining).area >= target_area:
+        if (
+            _room_box(side, offset, frontage, hi, minx, miny, maxx, maxy)
+            .intersection(remaining)
+            .area
+            >= target_area
+        ):
             break
         hi *= 1.5
     for _ in range(max_iter):
         mid = (lo + hi) / 2
-        area = _room_box(side, offset, frontage, mid, minx, miny, maxx, maxy).intersection(remaining).area
+        area = (
+            _room_box(side, offset, frontage, mid, minx, miny, maxx, maxy)
+            .intersection(remaining)
+            .area
+        )
         if abs(area - target_area) <= tol:
             return mid
         if area < target_area:
@@ -282,8 +319,16 @@ def carve_from_assignment(
             room = rooms_by_id[room_id]
             ideal_depth, frontage = _ideal_room_footprint(room, overrides.get(room_id))
             depth = _solve_room_depth(
-                side, offset, frontage, room.dimensions.area_m2,
-                remaining, minx, miny, maxx, maxy, ideal_depth,
+                side,
+                offset,
+                frontage,
+                room.dimensions.area_m2,
+                remaining,
+                minx,
+                miny,
+                maxx,
+                maxy,
+                ideal_depth,
             )
             room_box = _room_box(side, offset, frontage, depth, minx, miny, maxx, maxy)
             bites[room_id] = room_box.intersection(remaining)

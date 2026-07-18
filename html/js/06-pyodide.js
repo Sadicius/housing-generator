@@ -10,8 +10,83 @@
 // el changelog oficial antes de construir esto, no asumido); scipy/numpy
 // son parte del stack cientifico estandar; networkx es Python puro, se
 // instala via micropip sin problema.
-let PYODIDE_INSTANCE = null;
-let PYODIDE_LOADING = null;
+//
+// Ejecucion en un Web Worker, no en el hilo principal: una busqueda de
+// recocido simulado de miles de iteraciones bloqueaba la pestana entera
+// sin forma de cancelar -- identificado en una auditoria de la
+// herramienta, corregido a peticion del usuario. Un Worker normal
+// (`new Worker('archivo.js')`) no arranca desde `file://` en Chromium
+// (mismo bloqueo de origen que ya afecto a fetch()/modulos ES,
+// investigado y documentado en docs/GUIA_USO.md -- por eso el dashboard
+// entero usa <script src=""> clasicos) -- se sortea construyendo el
+// Worker desde un Blob URL (contenido ya en memoria, nunca se llega a
+// pedir un recurso file://), la tecnica estandar para exactamente este
+// caso. Si el Worker no llega a arrancar (entorno no previsto), se cae
+// automaticamente al camino de siempre (Pyodide en el hilo principal,
+// `initPyodideMainThreadFallback`) en vez de dejar la herramienta rota.
+const PYODIDE_WORKER_SOURCE = [
+  "importScripts('https://cdn.jsdelivr.net/pyodide/v314.0.2/full/pyodide.js');",
+  '',
+  'let pyodide = null;',
+  '',
+  'async function initPyodideInWorker(bundle){',
+  "  postMessage({type: 'progress', message: 'Cargando Python en el navegador (Pyodide, primera vez tarda unos segundos)...'});",
+  '  pyodide = await loadPyodide();',
+  '',
+  "  postMessage({type: 'progress', message: 'Instalando shapely, numpy, scipy...'});",
+  "  await pyodide.loadPackage(['shapely', 'numpy', 'scipy']);",
+  '',
+  "  postMessage({type: 'progress', message: 'Instalando networkx...'});",
+  "  await pyodide.loadPackage('micropip');",
+  "  const micropip = pyodide.pyimport('micropip');",
+  "  await micropip.install('networkx');",
+  '',
+  "  postMessage({type: 'progress', message: 'Cargando housing_generator...'});",
+  "  pyodide.FS.mkdirTree('/home/pyodide/src');",
+  '  for(const relPath in bundle){',
+  '    const content = bundle[relPath];',
+  "    const fullPath = '/home/pyodide/src/' + relPath;",
+  "    const dir = fullPath.substring(0, fullPath.lastIndexOf('/'));",
+  '    pyodide.FS.mkdirTree(dir);',
+  '    pyodide.FS.writeFile(fullPath, content);',
+  '  }',
+  '  pyodide.runPython("import sys");',
+  '  pyodide.runPython("sys.path.insert(0, \'/home/pyodide/src\')");',
+  '}',
+  '',
+  'self.onmessage = async function(ev){',
+  '  const msg = ev.data;',
+  "  if(msg.type === 'init'){",
+  '    try{',
+  '      await initPyodideInWorker(msg.bundle);',
+  "      postMessage({type: 'ready'});",
+  '    } catch(err){',
+  "      postMessage({type: 'error', id: null, message: (err && err.message) ? err.message : String(err)});",
+  '    }',
+  '    return;',
+  '  }',
+  "  if(msg.type === 'run'){",
+  '    try{',
+  '      for(const key in msg.globals){',
+  '        pyodide.globals.set(key, msg.globals[key]);',
+  '      }',
+  '      const value = await pyodide.runPythonAsync(msg.code);',
+  "      postMessage({type: 'result', id: msg.id, value: value});",
+  '    } catch(err){',
+  "      postMessage({type: 'error', id: msg.id, message: (err && err.message) ? err.message : String(err)});",
+  '    }',
+  '  }',
+  '};',
+].join('\n');
+
+let PYODIDE_MODE = null;               // 'worker' | 'fallback' -- decidido UNA vez
+let PYODIDE_BACKEND_READY = null;      // promesa singleton de "listo" (worker o fallback)
+let PYODIDE_WORKER = null;
+let PYODIDE_FALLBACK_INSTANCE = null;  // pyodide en el hilo principal, solo si el Worker no arranco
+let pyodideCallCounter = 0;
+const pyodidePendingCalls = new Map(); // id -> {resolve, reject}
+let pyodideCurrentOnProgress = null;
+let pyodideDispatchQueue = Promise.resolve(); // serializa el ENVIO de cada llamada, ver runPyodideCode
 
 function setGenerateStatus(msg, kind){
   const el = document.getElementById('generate-status');
@@ -19,54 +94,172 @@ function setGenerateStatus(msg, kind){
   el.innerHTML = kind === 'loading' ? '<span class="bar"></span>' + escapeXml(msg) : escapeXml(msg);
 }
 
-async function ensurePyodideReady(onProgress){
-  if(PYODIDE_INSTANCE) return PYODIDE_INSTANCE;
-  if(PYODIDE_LOADING) return PYODIDE_LOADING;
-
-  PYODIDE_LOADING = (async () => {
-    onProgress('Cargando Python en el navegador (Pyodide, primera vez tarda unos segundos)...');
-    const pyodide = await loadPyodide();
-
-    onProgress('Instalando shapely, numpy, scipy...');
-    await pyodide.loadPackage(['shapely', 'numpy', 'scipy']);
-
-    onProgress('Instalando networkx...');
-    await pyodide.loadPackage('micropip');
-    const micropip = pyodide.pyimport('micropip');
-    await micropip.install('networkx');
-
-    onProgress('Cargando housing_generator...');
-    pyodide.FS.mkdirTree('/home/pyodide/src');
-    for(const [relPath, content] of Object.entries(PY_BUNDLE)){
-      const fullPath = '/home/pyodide/src/' + relPath;
-      const dir = fullPath.substring(0, fullPath.lastIndexOf('/'));
-      pyodide.FS.mkdirTree(dir);
-      pyodide.FS.writeFile(fullPath, content);
+function tryInitPyodideWorker(onProgress){
+  return new Promise((resolve, reject) => {
+    let worker;
+    try{
+      const blob = new Blob([PYODIDE_WORKER_SOURCE], {type: 'application/javascript'});
+      worker = new Worker(URL.createObjectURL(blob));
+    } catch(err){
+      reject(err);
+      return;
     }
-    pyodide.runPython("import sys\nsys.path.insert(0, '/home/pyodide/src')\n");
 
-    PYODIDE_INSTANCE = pyodide;
-    return pyodide;
-  })();
+    worker.onerror = (ev) => {
+      worker.terminate();
+      reject(new Error(ev && ev.message ? ev.message : 'fallo desconocido arrancando el Worker de Pyodide'));
+    };
+    worker.onmessage = (ev) => {
+      const msg = ev.data;
+      if(msg.type === 'progress'){
+        onProgress(msg.message);
+      } else if(msg.type === 'ready'){
+        PYODIDE_WORKER = worker;
+        PYODIDE_MODE = 'worker';
+        worker.onmessage = handlePyodideWorkerMessage;
+        worker.onerror = handlePyodideWorkerCrash;
+        resolve();
+      } else if(msg.type === 'error'){
+        worker.terminate();
+        reject(new Error(msg.message));
+      }
+    };
+    worker.postMessage({type: 'init', bundle: PY_BUNDLE});
+  });
+}
 
-  return PYODIDE_LOADING;
+async function initPyodideMainThreadFallback(onProgress){
+  // Camino de respaldo: identico al que usaba siempre esta herramienta
+  // antes de mover la ejecucion a un Worker -- Pyodide en el hilo
+  // principal, sin proteccion frente al bloqueo de la pestana. Solo se
+  // usa si tryInitPyodideWorker() no consigue arrancar (entorno donde
+  // el Worker via Blob no esta disponible por algun motivo no previsto)
+  // -- preferible a dejar la herramienta rota.
+  onProgress('Cargando Python en el navegador (Pyodide, primera vez tarda unos segundos)...');
+  const pyodide = await loadPyodide();
+
+  onProgress('Instalando shapely, numpy, scipy...');
+  await pyodide.loadPackage(['shapely', 'numpy', 'scipy']);
+
+  onProgress('Instalando networkx...');
+  await pyodide.loadPackage('micropip');
+  const micropip = pyodide.pyimport('micropip');
+  await micropip.install('networkx');
+
+  onProgress('Cargando housing_generator...');
+  pyodide.FS.mkdirTree('/home/pyodide/src');
+  for(const [relPath, content] of Object.entries(PY_BUNDLE)){
+    const fullPath = '/home/pyodide/src/' + relPath;
+    const dir = fullPath.substring(0, fullPath.lastIndexOf('/'));
+    pyodide.FS.mkdirTree(dir);
+    pyodide.FS.writeFile(fullPath, content);
+  }
+  pyodide.runPython("import sys\nsys.path.insert(0, '/home/pyodide/src')\n");
+
+  PYODIDE_FALLBACK_INSTANCE = pyodide;
+  PYODIDE_MODE = 'fallback';
+}
+
+function handlePyodideWorkerMessage(ev){
+  const msg = ev.data;
+  if(msg.type === 'progress'){
+    if(pyodideCurrentOnProgress) pyodideCurrentOnProgress(msg.message);
+    return;
+  }
+  const pending = pyodidePendingCalls.get(msg.id);
+  if(!pending) return;
+  pyodidePendingCalls.delete(msg.id);
+  if(msg.type === 'result'){
+    pending.resolve(msg.value);
+  } else if(msg.type === 'error'){
+    pending.reject(new Error(msg.message));
+  }
+}
+
+function handlePyodideWorkerCrash(ev){
+  // el Worker ya estaba confirmado y funcionando (post-ready) -- si se
+  // cae a mitad de una ejecucion, cualquier llamada pendiente se
+  // quedaria esperando una respuesta que nunca llega (el mismo
+  // "congelado" que se queria evitar con todo este cambio). Se
+  // rechazan todas explicitamente en vez de dejarlas colgadas.
+  console.error('handlePyodideWorkerCrash: el Worker de Pyodide se detuvo inesperadamente', ev);
+  const error = new Error('El Worker de Pyodide se detuvo inesperadamente: ' + (ev && ev.message ? ev.message : ev));
+  for(const pending of pyodidePendingCalls.values()){
+    pending.reject(error);
+  }
+  pyodidePendingCalls.clear();
+}
+
+function ensurePyodideBackendReady(onProgress){
+  if(PYODIDE_BACKEND_READY) return PYODIDE_BACKEND_READY;
+
+  PYODIDE_BACKEND_READY = tryInitPyodideWorker(onProgress).catch((err) => {
+    console.warn('ensurePyodideBackendReady: el Worker de Pyodide no arranco, usando el hilo principal como respaldo', err);
+    return initPyodideMainThreadFallback(onProgress);
+  });
+
+  return PYODIDE_BACKEND_READY;
+}
+
+async function runPyodideCode(pyCode, globalsToSet, onProgress){
+  await ensurePyodideBackendReady(onProgress);
+
+  const id = ++pyodideCallCounter;
+  const resultPromise = new Promise((resolve, reject) => {
+    pyodidePendingCalls.set(id, {resolve, reject});
+  });
+
+  // serializa el ENVIO real de cada llamada -- dos llamadas a Pyodide
+  // (p.ej. reanalizarZonaAfeccionSiHayImportada disparandose en cada
+  // pulsacion de tecla del campo de retranqueo) no deben solaparse
+  // contra la MISMA instancia compartida (Worker o hilo principal):
+  // compartir pyodide.globals entre dos ejecuciones en vuelo a la vez
+  // ya era una condicion de carrera real antes de este cambio, no solo
+  // teorica.
+  pyodideDispatchQueue = pyodideDispatchQueue.then(() => {
+    pyodideCurrentOnProgress = onProgress;
+    if(PYODIDE_MODE === 'worker'){
+      PYODIDE_WORKER.postMessage({type: 'run', id, code: pyCode, globals: globalsToSet});
+    } else {
+      for(const [key, value] of Object.entries(globalsToSet)){
+        PYODIDE_FALLBACK_INSTANCE.globals.set(key, value);
+      }
+      PYODIDE_FALLBACK_INSTANCE.runPythonAsync(pyCode)
+        .then((value) => {
+          const pending = pyodidePendingCalls.get(id);
+          if(pending){ pyodidePendingCalls.delete(id); pending.resolve(value); }
+        })
+        .catch((err) => {
+          const pending = pyodidePendingCalls.get(id);
+          if(pending){ pyodidePendingCalls.delete(id); pending.reject(err); }
+        });
+    }
+    // no dejar que un fallo de ESTA llamada bloquee el envio de la
+    // siguiente en la cola -- resultPromise ya propaga el error a
+    // quien hizo esta llamada concreta.
+    return resultPromise.catch(() => {});
+  });
+
+  return resultPromise;
 }
 
 async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterations, retrySeeds, viviendaAccesible, retranqueoM, retranqueoIncremento, edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide, poligonoRealCoords, clasificacionSuelo, retranqueoPorLado, fondoEdificacion, lineaEdificacion, onProgress){
-  const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Buscando una distribucion valida (puede reintentar varias semillas)...');
 
-  pyodide.globals.set('payload_json_str', JSON.stringify(seleccionPayload));
-  pyodide.globals.set('lot_w_js', lotW);
-  pyodide.globals.set('lot_h_js', lotH);
-  pyodide.globals.set('seed_js', seed);
-  pyodide.globals.set('max_it_js', maxIterations);
-  pyodide.globals.set('retry_js', retrySeeds);
-  pyodide.globals.set('accesible_js', viviendaAccesible);
   // street_side es un string fijo (viene de un <select> con opciones
   // controladas, no puede ser null/vacio) -- sin el riesgo de JsNull
-  // que afecta a los valores numericos opcionales, seguro via globals.set().
-  pyodide.globals.set('street_side_js', streetSide || 'south');
+  // que afecta a los valores numericos opcionales, seguro via globals.set()
+  // (aplicado dentro del Worker/fallback, ver runPyodideCode).
+  const globalsToSet = {
+    payload_json_str: JSON.stringify(seleccionPayload),
+    lot_w_js: lotW,
+    lot_h_js: lotH,
+    seed_js: seed,
+    max_it_js: maxIterations,
+    retry_js: retrySeeds,
+    accesible_js: viviendaAccesible,
+    street_side_js: streetSide || 'south',
+  };
 
   // BUG REAL encontrado probando en un navegador real (Pyodide de
   // verdad, no accesible en este entorno de desarrollo -- CDN
@@ -130,9 +323,12 @@ async function generarEdificioReal(seleccionPayload, lotW, lotH, seed, maxIterat
     `    fondo_edificacion_m=${fondoEdificacionLiteral},`,
     `    linea_edificacion_m=${lineaEdificacionLiteral},`,
     ')',
-    'json.dumps(resultado)',
+    // allow_nan=False: si algun NaN/Infinity de coma flotante se coló en
+    // la geometria generada, falla aqui con un error claro en vez de
+    // mandar al navegador un JSON no-estandar que JSON.parse no puede leer.
+    'json.dumps(resultado, allow_nan=False)',
   ].join('\n');
-  const resultStr = await pyodide.runPythonAsync(pyCode);
+  const resultStr = await runPyodideCode(pyCode, globalsToSet, onProgress);
   return JSON.parse(resultStr);
 }
 
@@ -144,19 +340,18 @@ async function analizarParcelaCatastroReal(gmlContent, retranqueoM, onProgress){
   // NULL, no a strings). retranqueoM SI puede ser null (campo
   // opcional) -- mismo patron anti-JsNull ya probado: literal Python
   // directo, no pyodide.globals.set() con null. Ver [ARCH:catastro-gml-importer].
-  const pyodide = await ensurePyodideReady(onProgress);
   onProgress('Analizando el archivo catastral...');
 
-  pyodide.globals.set('gml_content_js', gmlContent);
+  const globalsToSet = {gml_content_js: gmlContent};
   const retranqueoLiteral = (retranqueoM !== null && retranqueoM !== undefined && !isNaN(retranqueoM))
     ? `float(${JSON.stringify(retranqueoM)})` : 'None';
   const pyCode = [
     'import json',
     'from housing_generator.interface.browser.bridge import analizar_parcela_catastro',
     `resultado = analizar_parcela_catastro(gml_content_js, retranqueo_m=${retranqueoLiteral})`,
-    'json.dumps(resultado)',
+    'json.dumps(resultado, allow_nan=False)',
   ].join('\n');
-  const resultStr = await pyodide.runPythonAsync(pyCode);
+  const resultStr = await runPyodideCode(pyCode, globalsToSet, onProgress);
   return JSON.parse(resultStr);
 }
 
@@ -225,9 +420,17 @@ async function handleGenerateNow(){
 
   btn.disabled = true;
   setGenerateStatus('Iniciando...', 'loading');
+  // 10 -> 20 reintentos: medido con datos reales que la vivienda
+  // multi-planta con escalera compartida puede tener una tasa de
+  // exito por semilla de solo 10-20% incluso con un programa completo
+  // (con distribuidor) -- con 10 intentos la probabilidad de fallo
+  // total rondaba el 11-35%, con 20 baja a 1-12%. Barato para los
+  // casos que ya convergen (corta en el primer exito). Ver
+  // docs/CONTINUIDAD.md.
+  const RETRY_SEEDS = 20;
   try{
     const result = await generarEdificioReal(
-      payload, lotW, lotH, seed, maxIterations, 10, accesible,
+      payload, lotW, lotH, seed, maxIterations, RETRY_SEEDS, accesible,
       retranqueoM, retranqueoIncremento,
       edificabilidad, ocupacionMaxima, alturaMaxima, frenteMinimo, streetSide,
       poligonoRealCoords, clasificacionSuelo, retranqueoPorLado, fondoEdificacion, lineaEdificacion,
@@ -256,6 +459,7 @@ async function handleGenerateNow(){
     renderPlanoTabs();
     renderPlano();
   } catch(err){
+    console.error('handleGenerateNow: fallo inesperado generando el edificio', err);
     setGenerateStatus('Error inesperado: ' + (err && err.message ? err.message : err), 'error');
   } finally {
     btn.disabled = false;

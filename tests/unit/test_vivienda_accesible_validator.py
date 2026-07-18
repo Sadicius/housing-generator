@@ -18,7 +18,12 @@ def _dummy_lot() -> Lot:
 
 
 def _placed(room_id, room_type, polygon) -> Room:
-    r = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area))
+    r = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     r.boundary = Boundary(polygon=polygon)
     return r
 
@@ -26,7 +31,9 @@ def _placed(room_id, room_type, polygon) -> Room:
 def test_inactive_by_default_produces_no_violations_even_when_room_is_too_small():
     # OPT-IN: por defecto (activo=False), ni siquiera una estancia
     # claramente insuficiente para el circulo de giro debe generar avisos
-    dormitorio = _placed("dorm", RoomType.BEDROOM, box(0, 0, 2.5, 2.5))  # < 1.50m no, pero probemos mas pequeno
+    dormitorio = _placed(
+        "dorm", RoomType.BEDROOM, box(0, 0, 2.5, 2.5)
+    )  # < 1.50m no, pero probemos mas pequeno
     dormitorio_pequeno = _placed("dorm2", RoomType.BEDROOM, box(0, 0, 1.0, 3.0))
     layout = Layout(lot=_dummy_lot(), rooms=[dormitorio, dormitorio_pequeno], zones=[])
 
@@ -64,7 +71,9 @@ def test_active_checks_corridor_width_more_strictly_than_the_general_1m():
 
 
 def test_active_corridor_at_1_2_passes():
-    pasillo = _placed("pasillo", RoomType.CORRIDOR, box(0, 0, 4.0, PASILLO_ACCESIBLE_ANCHO_M))
+    pasillo = _placed(
+        "pasillo", RoomType.CORRIDOR, box(0, 0, 4.0, PASILLO_ACCESIBLE_ANCHO_M)
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[pasillo], zones=[])
 
     result = ViviendaAccesibleValidator(activo=True).validate(layout)
@@ -83,21 +92,31 @@ def test_types_not_in_scope_are_ignored_even_when_small():
 
 def test_all_expected_types_are_in_scope():
     expected = {
-        RoomType.LIVING_ROOM, RoomType.DINING_ROOM, RoomType.BEDROOM,
-        RoomType.MASTER_BEDROOM, RoomType.KITCHEN, RoomType.BATHROOM,
+        RoomType.LIVING_ROOM,
+        RoomType.DINING_ROOM,
+        RoomType.BEDROOM,
+        RoomType.MASTER_BEDROOM,
+        RoomType.KITCHEN,
+        RoomType.BATHROOM,
     }
     assert TIPOS_CON_CIRCULO_GIRO == expected
 
 
 def test_exactly_at_threshold_passes():
-    room = _placed("r", RoomType.LIVING_ROOM, box(0, 0, CIRCULO_GIRO_ACCESIBLE_M, CIRCULO_GIRO_ACCESIBLE_M))
+    room = _placed(
+        "r",
+        RoomType.LIVING_ROOM,
+        box(0, 0, CIRCULO_GIRO_ACCESIBLE_M, CIRCULO_GIRO_ACCESIBLE_M),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[room], zones=[])
     result = ViviendaAccesibleValidator(activo=True).validate(layout)
     assert result.violations == []
 
 
 def test_unplaced_room_is_skipped_not_crashed():
-    room = Room(id="r", name="r", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12))
+    room = Room(
+        id="r", name="r", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=12)
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[room], zones=[])
     result = ViviendaAccesibleValidator(activo=True).validate(layout)
     assert result.violations == []

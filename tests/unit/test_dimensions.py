@@ -3,7 +3,9 @@ from housing_generator.domain.value_objects.dimensions import Dimensions
 
 
 def test_valid_dimensions_construct_without_error():
-    d = Dimensions(area_m2=10, min_width_m=2.0, max_aspect_ratio=2.5, ceiling_height_m=2.5)
+    d = Dimensions(
+        area_m2=10, min_width_m=2.0, max_aspect_ratio=2.5, ceiling_height_m=2.5
+    )
     assert d.area_m2 == 10
 
 

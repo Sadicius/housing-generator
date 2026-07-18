@@ -1,7 +1,11 @@
 from housing_generator.application.dto.generation_request import GenerationRequest
 from housing_generator.application.ports.zoning_strategy_port import ZoningStrategyPort
-from housing_generator.application.ports.layout_generator_port import LayoutGeneratorPort
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.layout_generator_port import (
+    LayoutGeneratorPort,
+)
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.exceptions import LayoutGenerationError
 
@@ -27,7 +31,9 @@ class GenerateLayoutUseCase:
 
         last_result = None
         for _ in range(max(1, request.max_attempts)):
-            layout = self._layout_generator.generate(request.program, request.lot, zones)
+            layout = self._layout_generator.generate(
+                request.program, request.lot, zones
+            )
             result = self._constraint_validator.validate(layout)
             if result.is_valid:
                 layout.metadata["violations"] = 0

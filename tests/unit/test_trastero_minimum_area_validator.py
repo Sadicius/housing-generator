@@ -15,7 +15,12 @@ def _dummy_lot() -> Lot:
 
 
 def test_trastero_below_fixed_minimum_fails():
-    trastero = Room(id="t", name="Trastero", room_type=RoomType.STORAGE_ROOM, dimensions=Dimensions(area_m2=3))
+    trastero = Room(
+        id="t",
+        name="Trastero",
+        room_type=RoomType.STORAGE_ROOM,
+        dimensions=Dimensions(area_m2=3),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[trastero], zones=[])
 
     violations = TrasteroMinimumAreaValidator().validate(layout).violations
@@ -24,7 +29,12 @@ def test_trastero_below_fixed_minimum_fails():
 
 
 def test_trastero_at_or_above_fixed_minimum_passes():
-    trastero = Room(id="t", name="Trastero", room_type=RoomType.STORAGE_ROOM, dimensions=Dimensions(area_m2=4))
+    trastero = Room(
+        id="t",
+        name="Trastero",
+        room_type=RoomType.STORAGE_ROOM,
+        dimensions=Dimensions(area_m2=4),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[trastero], zones=[])
 
     assert TrasteroMinimumAreaValidator().validate(layout).violations == []
@@ -34,15 +44,27 @@ def test_almacenamiento_general_is_not_affected_by_trastero_rule():
     # "almacenamiento" (STORAGE) tiene su propio minimo en Tabla 2, que
     # escala con el numero de estancias -- no debe verse afectado por el
     # minimo fijo de trastero, aunque tenga menos de 4.00m2
-    storage = Room(id="s", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=1))
+    storage = Room(
+        id="s",
+        name="Almacen",
+        room_type=RoomType.STORAGE,
+        dimensions=Dimensions(area_m2=1),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[storage], zones=[])
 
     assert TrasteroMinimumAreaValidator().validate(layout).violations == []
 
 
 def test_trastero_narrower_than_ancho_libre_fails():
-    trastero = Room(id="t", name="Trastero", room_type=RoomType.STORAGE_ROOM, dimensions=Dimensions(area_m2=5))
-    trastero.boundary = Boundary(polygon=box(0, 0, 1.2, 4.2))  # 1.2m de ancho, por debajo de 1.60m
+    trastero = Room(
+        id="t",
+        name="Trastero",
+        room_type=RoomType.STORAGE_ROOM,
+        dimensions=Dimensions(area_m2=5),
+    )
+    trastero.boundary = Boundary(
+        polygon=box(0, 0, 1.2, 4.2)
+    )  # 1.2m de ancho, por debajo de 1.60m
 
     layout = Layout(lot=_dummy_lot(), rooms=[trastero], zones=[])
     violations = TrasteroMinimumAreaValidator().validate(layout).violations
@@ -51,7 +73,12 @@ def test_trastero_narrower_than_ancho_libre_fails():
 
 
 def test_trastero_meeting_ancho_libre_passes():
-    trastero = Room(id="t", name="Trastero", room_type=RoomType.STORAGE_ROOM, dimensions=Dimensions(area_m2=5))
+    trastero = Room(
+        id="t",
+        name="Trastero",
+        room_type=RoomType.STORAGE_ROOM,
+        dimensions=Dimensions(area_m2=5),
+    )
     trastero.boundary = Boundary(polygon=box(0, 0, 1.60, 3.2))
 
     layout = Layout(lot=_dummy_lot(), rooms=[trastero], zones=[])
@@ -62,8 +89,14 @@ def test_trastero_meeting_ancho_libre_passes():
 
 def test_trastero_non_rectangular_is_unverifiable_not_violated():
     from shapely.geometry import Polygon
+
     l_shape = Polygon([(0, 0), (3, 0), (3, 1.5), (1.5, 1.5), (1.5, 3), (0, 3)])
-    trastero = Room(id="t", name="Trastero", room_type=RoomType.STORAGE_ROOM, dimensions=Dimensions(area_m2=l_shape.area))
+    trastero = Room(
+        id="t",
+        name="Trastero",
+        room_type=RoomType.STORAGE_ROOM,
+        dimensions=Dimensions(area_m2=l_shape.area),
+    )
     trastero.boundary = Boundary(polygon=l_shape)
 
     layout = Layout(lot=_dummy_lot(), rooms=[trastero], zones=[])

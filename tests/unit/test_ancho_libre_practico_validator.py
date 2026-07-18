@@ -17,7 +17,12 @@ def _dummy_lot() -> Lot:
 
 
 def _placed(room_id, room_type, polygon) -> Room:
-    r = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area))
+    r = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+    )
     r.boundary = Boundary(polygon=polygon)
     return r
 
@@ -81,15 +86,23 @@ def test_storage_room_trastero_already_covered_elsewhere_is_ignored():
 
 def test_all_nine_uncovered_types_are_included():
     expected = {
-        RoomType.DINING_ROOM, RoomType.STUDY, RoomType.TOILET, RoomType.LAUNDRY,
-        RoomType.DRYING_AREA, RoomType.STORAGE, RoomType.ENTRANCE_HALL,
-        RoomType.GARAGE, RoomType.TECHNICAL_ROOM,
+        RoomType.DINING_ROOM,
+        RoomType.STUDY,
+        RoomType.TOILET,
+        RoomType.LAUNDRY,
+        RoomType.DRYING_AREA,
+        RoomType.STORAGE,
+        RoomType.ENTRANCE_HALL,
+        RoomType.GARAGE,
+        RoomType.TECHNICAL_ROOM,
     }
     assert TIPOS_SIN_ANCHO_NORMATIVO == expected
 
 
 def test_unplaced_room_is_skipped_not_crashed():
-    room = Room(id="r", name="r", room_type=RoomType.STUDY, dimensions=Dimensions(area_m2=6))
+    room = Room(
+        id="r", name="r", room_type=RoomType.STUDY, dimensions=Dimensions(area_m2=6)
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[room], zones=[])
     result = AnchoLibrePracticoValidator().validate(layout)
     assert result.violations == []
@@ -104,7 +117,9 @@ def test_toilet_at_legal_minimum_1_5m2_now_fits_with_reduced_threshold():
     # usuario: relajar SOLO aseo y tendedero (no lavadero, que
     # necesita hueco para lavadora) a 0.90m. A 1.5m2 y 0.90m de ancho,
     # 1.67m de fondo -- mucho mas comodo. Ver [ARCH:ancho-libre-practico].
-    aseo = _placed("aseo", RoomType.TOILET, box(0, 0, 1.5, 1.0))  # 1.0m < 1.20m antiguo, > 0.90m nuevo
+    aseo = _placed(
+        "aseo", RoomType.TOILET, box(0, 0, 1.5, 1.0)
+    )  # 1.0m < 1.20m antiguo, > 0.90m nuevo
     layout = Layout(lot=_dummy_lot(), rooms=[aseo], zones=[])
     result = AnchoLibrePracticoValidator().validate(layout)
     assert result.violations == []

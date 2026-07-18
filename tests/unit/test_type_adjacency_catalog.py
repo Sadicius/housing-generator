@@ -11,7 +11,12 @@ from housing_generator.domain.enums import RoomType, AdjacencyStrength
 
 
 def _room(room_id, room_type, area=10) -> Room:
-    return Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=area))
+    return Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=area),
+    )
 
 
 def test_catalog_has_82_real_entries():
@@ -37,11 +42,26 @@ def test_known_hard_pairs_map_correctly():
     # relajaron a preferencia tras revision explicita con el usuario:
     # "vamos a modificar las relaciones obligatorias pensando en
     # realmente si son obligatorias". Ver [ARCH:relaciones-obligatorias-revisadas].
-    assert get_type_adjacency(RoomType.LIVING_ROOM, RoomType.DINING_ROOM) == AdjacencyStrength.MUST_BE_NEAR
-    assert get_type_adjacency(RoomType.DINING_ROOM, RoomType.KITCHEN) == AdjacencyStrength.MUST_BE_NEAR
-    assert get_type_adjacency(RoomType.LIVING_ROOM, RoomType.ENTRANCE_HALL) == AdjacencyStrength.SHOULD_BE_NEAR
-    assert get_type_adjacency(RoomType.LAUNDRY, RoomType.DRYING_AREA) == AdjacencyStrength.SHOULD_BE_NEAR
-    assert get_type_adjacency(RoomType.LIVING_ROOM, RoomType.GARAGE) == AdjacencyStrength.SHOULD_BE_AWAY
+    assert (
+        get_type_adjacency(RoomType.LIVING_ROOM, RoomType.DINING_ROOM)
+        == AdjacencyStrength.MUST_BE_NEAR
+    )
+    assert (
+        get_type_adjacency(RoomType.DINING_ROOM, RoomType.KITCHEN)
+        == AdjacencyStrength.MUST_BE_NEAR
+    )
+    assert (
+        get_type_adjacency(RoomType.LIVING_ROOM, RoomType.ENTRANCE_HALL)
+        == AdjacencyStrength.SHOULD_BE_NEAR
+    )
+    assert (
+        get_type_adjacency(RoomType.LAUNDRY, RoomType.DRYING_AREA)
+        == AdjacencyStrength.SHOULD_BE_NEAR
+    )
+    assert (
+        get_type_adjacency(RoomType.LIVING_ROOM, RoomType.GARAGE)
+        == AdjacencyStrength.SHOULD_BE_AWAY
+    )
 
 
 def test_generate_requirements_for_a_realistic_program():
@@ -60,7 +80,9 @@ def test_generate_requirements_for_a_realistic_program():
     assert frozenset(("living", "entrance")) in pairs_generated
     assert frozenset(("living", "garage")) in pairs_generated
 
-    living_garage = next(r for r in reqs if {r.room_a_id, r.room_b_id} == {"living", "garage"})
+    living_garage = next(
+        r for r in reqs if {r.room_a_id, r.room_b_id} == {"living", "garage"}
+    )
     assert living_garage.strength == AdjacencyStrength.SHOULD_BE_AWAY
 
 
@@ -97,7 +119,10 @@ def test_generate_requirements_applies_same_relation_to_multiple_instances_of_a_
 
 
 def test_generate_requirements_consistent_with_get_type_adjacency():
-    rooms = [_room("garage", RoomType.GARAGE), _room("technical", RoomType.TECHNICAL_ROOM)]
+    rooms = [
+        _room("garage", RoomType.GARAGE),
+        _room("technical", RoomType.TECHNICAL_ROOM),
+    ]
     strength = get_type_adjacency(RoomType.GARAGE, RoomType.TECHNICAL_ROOM)
     reqs = build_adjacency_requirements(rooms)
     if strength is None:
@@ -107,7 +132,9 @@ def test_generate_requirements_consistent_with_get_type_adjacency():
 
 
 def test_build_program_with_auto_adjacency_produces_a_valid_program():
-    from housing_generator.domain.services.type_adjacency_catalog import build_program_with_auto_adjacency
+    from housing_generator.domain.services.type_adjacency_catalog import (
+        build_program_with_auto_adjacency,
+    )
 
     rooms = [
         _room("living", RoomType.LIVING_ROOM),
@@ -117,9 +144,13 @@ def test_build_program_with_auto_adjacency_produces_a_valid_program():
     program = build_program_with_auto_adjacency(rooms)
 
     assert program.rooms == rooms
-    assert len(program.adjacency_requirements) == len(build_adjacency_requirements(rooms))
+    assert len(program.adjacency_requirements) == len(
+        build_adjacency_requirements(rooms)
+    )
     # el Program resultante debe pasar su propia validacion interna
     # (todo AdjacencyRequirement referencia estancias que existen)
-    pairs = {frozenset((r.room_a_id, r.room_b_id)) for r in program.adjacency_requirements}
+    pairs = {
+        frozenset((r.room_a_id, r.room_b_id)) for r in program.adjacency_requirements
+    }
     assert frozenset(("living", "dining")) in pairs
     assert frozenset(("living", "garage")) in pairs

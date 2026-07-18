@@ -30,14 +30,54 @@ CARDINAL_SIDES = ["south", "east", "north", "west"]
 
 def _sample_program() -> Program:
     rooms = [
-        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
-        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=22)),
-        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=10)),
-        Room(id="master", name="Dorm ppal", room_type=RoomType.MASTER_BEDROOM, dimensions=Dimensions(area_m2=14)),
-        Room(id="bedroom", name="Dormitorio", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=10)),
-        Room(id="bath", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
-        Room(id="corridor", name="Pasillo", room_type=RoomType.CORRIDOR, dimensions=Dimensions(area_m2=6)),
-        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=3)),
+        Room(
+            id="entrance",
+            name="Recibidor",
+            room_type=RoomType.ENTRANCE_HALL,
+            dimensions=Dimensions(area_m2=4),
+        ),
+        Room(
+            id="living",
+            name="Estar",
+            room_type=RoomType.LIVING_ROOM,
+            dimensions=Dimensions(area_m2=22),
+        ),
+        Room(
+            id="kitchen",
+            name="Cocina",
+            room_type=RoomType.KITCHEN,
+            dimensions=Dimensions(area_m2=10),
+        ),
+        Room(
+            id="master",
+            name="Dorm ppal",
+            room_type=RoomType.MASTER_BEDROOM,
+            dimensions=Dimensions(area_m2=14),
+        ),
+        Room(
+            id="bedroom",
+            name="Dormitorio",
+            room_type=RoomType.BEDROOM,
+            dimensions=Dimensions(area_m2=10),
+        ),
+        Room(
+            id="bath",
+            name="Bano",
+            room_type=RoomType.BATHROOM,
+            dimensions=Dimensions(area_m2=5),
+        ),
+        Room(
+            id="corridor",
+            name="Pasillo",
+            room_type=RoomType.CORRIDOR,
+            dimensions=Dimensions(area_m2=6),
+        ),
+        Room(
+            id="storage",
+            name="Almacen",
+            room_type=RoomType.STORAGE,
+            dimensions=Dimensions(area_m2=3),
+        ),
     ]
     return Program(rooms=rooms)
 
@@ -69,18 +109,26 @@ def test_entrance_hall_assigned_to_entrance_side_initially():
 
 
 def test_swap_sides_preserves_all_ids_and_swaps_identity():
-    state = PerimeterState(assignment={"south": ["a", "b"], "east": ["c"], "north": [], "west": []})
+    state = PerimeterState(
+        assignment={"south": ["a", "b"], "east": ["c"], "north": [], "west": []}
+    )
     nuevo = swap_sides(state, "a", "c")
 
     assert nuevo.assignment["south"][0] == "c"
     assert nuevo.assignment["east"][0] == "a"
-    assert sorted(v for ids in nuevo.assignment.values() for v in ids) == ["a", "b", "c"]
+    assert sorted(v for ids in nuevo.assignment.values() for v in ids) == [
+        "a",
+        "b",
+        "c",
+    ]
     # el estado original no se muta
     assert state.assignment["south"][0] == "a"
 
 
 def test_move_to_side_moves_room_to_a_different_side():
-    state = PerimeterState(assignment={"south": ["a", "b"], "east": [], "north": [], "west": []})
+    state = PerimeterState(
+        assignment={"south": ["a", "b"], "east": [], "north": [], "west": []}
+    )
     rng = random.Random(1)
     nuevo = move_to_side(state, "a", rng, CARDINAL_SIDES)
 
@@ -90,13 +138,17 @@ def test_move_to_side_moves_room_to_a_different_side():
 
 
 def test_move_to_side_is_noop_with_a_single_available_side():
-    state = PerimeterState(assignment={"south": ["a"], "east": [], "north": [], "west": []})
+    state = PerimeterState(
+        assignment={"south": ["a"], "east": [], "north": [], "west": []}
+    )
     nuevo = move_to_side(state, "a", random.Random(1), ["south"])
     assert nuevo.assignment == state.assignment
 
 
 def test_resize_room_only_touches_target_room():
-    state = PerimeterState(assignment={"south": ["a", "b"], "east": [], "north": [], "west": []})
+    state = PerimeterState(
+        assignment={"south": ["a", "b"], "east": [], "north": [], "west": []}
+    )
     nuevo = resize_room(state, "a", random.Random(1))
 
     assert "a" in nuevo.aspect_overrides
@@ -114,20 +166,26 @@ def test_reset_room_aspect_ratio_removes_override():
 
 
 def test_reorder_within_side_swaps_two_positions():
-    state = PerimeterState(assignment={"south": ["a", "b", "c"], "east": [], "north": [], "west": []})
+    state = PerimeterState(
+        assignment={"south": ["a", "b", "c"], "east": [], "north": [], "west": []}
+    )
     rng = random.Random(2)
     nuevo = reorder_within_side(state, "south", rng)
     assert sorted(nuevo.assignment["south"]) == ["a", "b", "c"]
 
 
 def test_reorder_within_side_noop_with_fewer_than_two_rooms():
-    state = PerimeterState(assignment={"south": ["a"], "east": [], "north": [], "west": []})
+    state = PerimeterState(
+        assignment={"south": ["a"], "east": [], "north": [], "west": []}
+    )
     nuevo = reorder_within_side(state, "south", random.Random(1))
     assert nuevo.assignment == state.assignment
 
 
 def test_random_neighbor_perimeter_never_moves_entrance_hall_off_its_side():
-    state = PerimeterState(assignment={"south": ["entrance"], "east": ["a"], "north": ["b"], "west": ["c"]})
+    state = PerimeterState(
+        assignment={"south": ["entrance"], "east": ["a"], "north": ["b"], "west": ["c"]}
+    )
     rng = random.Random(7)
     for _ in range(300):
         state = random_neighbor_perimeter(state, rng, "entrance", CARDINAL_SIDES)
@@ -143,7 +201,9 @@ def test_random_neighbor_perimeter_core_preserves_all_ids_over_many_mutations():
     areas = {r.id: r.dimensions.area_m2 for r in program.rooms}
 
     for _ in range(500):
-        state = random_neighbor_perimeter_core(state, rng, areas, entrance_id, CARDINAL_SIDES)
+        state = random_neighbor_perimeter_core(
+            state, rng, areas, entrance_id, CARDINAL_SIDES
+        )
         ids = _all_perimeter_core_ids(state)
         assert sorted(ids) == sorted(r.id for r in program.rooms)
         assert entrance_id in state.perimeter.assignment[lot.entrance_side]
@@ -158,7 +218,9 @@ def test_random_neighbor_perimeter_core_fuzz_many_seeds_no_crash():
         entrance_id = find_entrance_hall_id(program)
         areas = {r.id: r.dimensions.area_m2 for r in program.rooms}
         for _ in range(50):
-            state = random_neighbor_perimeter_core(state, rng, areas, entrance_id, CARDINAL_SIDES)
+            state = random_neighbor_perimeter_core(
+                state, rng, areas, entrance_id, CARDINAL_SIDES
+            )
         materialize_perimeter_core(state, program, lot)  # no debe lanzar
 
 
@@ -178,8 +240,18 @@ def test_materialize_without_core_rooms_has_no_overlaps():
     # el tallado perimetral por si solo (Fase 1, ya probado) no debe
     # producir solapes.
     rooms = [
-        Room(id="entrance", name="Recibidor", room_type=RoomType.ENTRANCE_HALL, dimensions=Dimensions(area_m2=4)),
-        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=16)),
+        Room(
+            id="entrance",
+            name="Recibidor",
+            room_type=RoomType.ENTRANCE_HALL,
+            dimensions=Dimensions(area_m2=4),
+        ),
+        Room(
+            id="living",
+            name="Estar",
+            room_type=RoomType.LIVING_ROOM,
+            dimensions=Dimensions(area_m2=16),
+        ),
     ]
     program = Program(rooms=rooms)
     lot = _sample_lot()
@@ -236,4 +308,6 @@ def test_materialize_core_overlap_when_residual_is_fragmented_is_caught_by_room_
     layout = materialize_perimeter_core(state, program, lot)
 
     result = RoomOverlapValidator().validate(layout)
-    assert len(result.violations) > 0  # confirma que el hallazgo sigue reproducible y que el validador lo atrapa
+    assert (
+        len(result.violations) > 0
+    )  # confirma que el hallazgo sigue reproducible y que el validador lo atrapa

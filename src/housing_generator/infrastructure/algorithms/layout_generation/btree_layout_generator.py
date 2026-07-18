@@ -8,8 +8,12 @@ from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 
-from housing_generator.application.ports.layout_generator_port import LayoutGeneratorPort
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.layout_generator_port import (
+    LayoutGeneratorPort,
+)
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.lot import Lot
 from housing_generator.domain.entities.zone import Zone
@@ -28,7 +32,6 @@ from housing_generator.infrastructure.algorithms.layout_generation.btree_partiti
 from housing_generator.infrastructure.algorithms.layout_generation.soft_constraint_scorer import (
     SoftConstraintScorer,
 )
-
 
 ORIENTACIONES = [(False, False), (True, False), (False, True), (True, True)]
 ORIENTATION_MOVE_PROBABILITY = 0.1  # NO normativo, mismo criterio que
@@ -84,17 +87,25 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         self._reference_stair = reference_stair
 
     def generate(self, program: Program, lot: Lot, zones: List[Zone]) -> Layout:
-        rng = random.Random(self._seed)  # recreado en cada llamada, seed reproducible siempre
+        rng = random.Random(
+            self._seed
+        )  # recreado en cada llamada, seed reproducible siempre
         room_ids = [room.id for room in program.rooms]
         areas = {room.id: room.dimensions.area_m2 for room in program.rooms}
-        stair_room_id = self._stair_room_id(program) if self._reference_stair is not None else None
+        stair_room_id = (
+            self._stair_room_id(program) if self._reference_stair is not None else None
+        )
 
         current_tree = build_random_tree(room_ids, rng)
         if stair_room_id is not None:
             current_tree = self._anchor_stair_shape(current_tree, stair_room_id)
         current_orientation = (False, False)
-        current_layout = self._materialize(current_tree, program, lot, areas, stair_room_id, current_orientation)
-        current_hard, current_soft, current_locked = self._evaluate(current_layout, room_ids)
+        current_layout = self._materialize(
+            current_tree, program, lot, areas, stair_room_id, current_orientation
+        )
+        current_hard, current_soft, current_locked = self._evaluate(
+            current_layout, room_ids
+        )
 
         best_layout = current_layout
         best_hard, best_soft = current_hard, current_soft
@@ -113,18 +124,34 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
             # barato para que el resto de estancias aun puedan encontrar
             # una orientacion que si toque el exterior. Ver
             # [ARCH:escalera-compartida].
-            if stair_room_id is not None and rng.random() < ORIENTATION_MOVE_PROBABILITY:
+            if (
+                stair_room_id is not None
+                and rng.random() < ORIENTATION_MOVE_PROBABILITY
+            ):
                 candidate_tree = current_tree
-                candidate_orientation = self._random_other_orientation(current_orientation, rng)
+                candidate_orientation = self._random_other_orientation(
+                    current_orientation, rng
+                )
             else:
-                candidate_tree = random_neighbor(current_tree, rng, areas, locked_room_ids=current_locked)
+                candidate_tree = random_neighbor(
+                    current_tree, rng, areas, locked_room_ids=current_locked
+                )
                 if stair_room_id is not None:
-                    candidate_tree = self._anchor_stair_shape(candidate_tree, stair_room_id)
+                    candidate_tree = self._anchor_stair_shape(
+                        candidate_tree, stair_room_id
+                    )
                 candidate_orientation = current_orientation
             candidate_layout = self._materialize(
-                candidate_tree, program, lot, areas, stair_room_id, candidate_orientation,
+                candidate_tree,
+                program,
+                lot,
+                areas,
+                stair_room_id,
+                candidate_orientation,
             )
-            candidate_hard, candidate_soft, candidate_locked = self._evaluate(candidate_layout, room_ids)
+            candidate_hard, candidate_soft, candidate_locked = self._evaluate(
+                candidate_layout, room_ids
+            )
 
             # comparacion lexicografica: si lo duro cambia, decide solo
             # el delta duro; lo blando solo cuenta si empata. Ver
@@ -135,10 +162,20 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
             else:
                 delta = candidate_soft - current_soft
 
-            accepted = delta <= 0 or rng.random() < math.exp(-delta / max(temperature, 1e-9))
+            accepted = delta <= 0 or rng.random() < math.exp(
+                -delta / max(temperature, 1e-9)
+            )
             if accepted:
-                current_tree, current_orientation, current_layout = candidate_tree, candidate_orientation, candidate_layout
-                current_hard, current_soft, current_locked = candidate_hard, candidate_soft, candidate_locked
+                current_tree, current_orientation, current_layout = (
+                    candidate_tree,
+                    candidate_orientation,
+                    candidate_layout,
+                )
+                current_hard, current_soft, current_locked = (
+                    candidate_hard,
+                    candidate_soft,
+                    candidate_locked,
+                )
                 if (current_hard, current_soft) < (best_hard, best_soft):
                     best_layout = current_layout
                     best_hard, best_soft = current_hard, current_soft
@@ -160,8 +197,13 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         return best_layout
 
     def _materialize(
-        self, tree: BStarNode, program: Program, lot: Lot, areas: Dict[str, float],
-        stair_room_id: Optional[str] = None, orientation: Tuple[bool, bool] = (False, False),
+        self,
+        tree: BStarNode,
+        program: Program,
+        lot: Lot,
+        areas: Dict[str, float],
+        stair_room_id: Optional[str] = None,
+        orientation: Tuple[bool, bool] = (False, False),
     ) -> Layout:
         # a diferencia del arbol de particion (huella decidida de
         # antemano, ver footprint.py), aqui la huella es el RESULTADO
@@ -173,21 +215,31 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         buildable_polygon = lot.buildable_area.polygon
         if stair_room_id is not None and self._reference_stair is not None:
             offset_x, offset_y = self._anchor_offset_to_reference_stair(
-                positions[stair_room_id], self._reference_stair,
+                positions[stair_room_id],
+                self._reference_stair,
             )
         else:
-            offset_x, offset_y = self._anchor_offset(buildable_polygon, positions, lot.entrance_side)
+            offset_x, offset_y = self._anchor_offset(
+                buildable_polygon, positions, lot.entrance_side
+            )
 
         placed_rooms = []
         for room in program.rooms:
-            placed_room = copy.copy(room)  # copia superficial: no muta el Room del Program original
-            placed_room.boundary = Boundary(polygon=translate(positions[room.id], offset_x, offset_y))
+            placed_room = copy.copy(
+                room
+            )  # copia superficial: no muta el Room del Program original
+            placed_room.boundary = Boundary(
+                polygon=translate(positions[room.id], offset_x, offset_y)
+            )
             placed_rooms.append(placed_room)
 
         zones_map: Dict = {}
         for room in placed_rooms:
             zones_map.setdefault(room.zone, []).append(room.id)
-        built_zones = [Zone(zone_type=zone_type, room_ids=ids) for zone_type, ids in zones_map.items()]
+        built_zones = [
+            Zone(zone_type=zone_type, room_ids=ids)
+            for zone_type, ids in zones_map.items()
+        ]
 
         layout = Layout(lot=lot, rooms=placed_rooms, zones=built_zones)
         # VACIO: aqui incluye tanto el exterior (alrededor de la huella)
@@ -202,7 +254,9 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
 
     @staticmethod
     def _anchor_offset(
-        buildable_polygon: Polygon, positions: Dict[str, Polygon], entrance_side: str,
+        buildable_polygon: Polygon,
+        positions: Dict[str, Polygon],
+        entrance_side: str,
     ) -> Tuple[float, float]:
         """Traslada el empaquetado (que siempre parte de (0,0)) para
         anclarlo al lado de entrada de la parcela, centrado en el eje
@@ -230,7 +284,8 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
 
     @staticmethod
     def _anchor_offset_to_reference_stair(
-        own_stair: Polygon, reference_stair: BaseGeometry,
+        own_stair: Polygon,
+        reference_stair: BaseGeometry,
     ) -> Tuple[float, float]:
         """Traslada el empaquetado para que la escalera de ESTA planta
         (`own_stair`, en las coordenadas crudas del arbol, siempre con
@@ -250,7 +305,9 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         planta no tiene escalera propia -- en ese caso no hay nada que
         anclar a la referencia, se usa el anclaje normal por
         `entrance_side`. Ver [ARCH:escalera-compartida]."""
-        return next((r.id for r in program.rooms if r.room_type == RoomType.STAIRCASE), None)
+        return next(
+            (r.id for r in program.rooms if r.room_type == RoomType.STAIRCASE), None
+        )
 
     def _anchor_stair_shape(self, tree: BStarNode, stair_room_id: str) -> BStarNode:
         """Fuerza la escalera del arbol a la MISMA proporcion (ancho/alto)
@@ -269,7 +326,8 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
 
     @staticmethod
     def _mirror_positions(
-        positions: Dict[str, Polygon], orientation: Tuple[bool, bool],
+        positions: Dict[str, Polygon],
+        orientation: Tuple[bool, bool],
     ) -> Dict[str, Polygon]:
         """Espeja TODO el empaquetado (horizontal y/o vertical) alrededor
         del centro del conjunto -- conserva la forma y el area de cada
@@ -287,7 +345,8 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
 
     @staticmethod
     def _random_other_orientation(
-        current: Tuple[bool, bool], rng: random.Random,
+        current: Tuple[bool, bool],
+        rng: random.Random,
     ) -> Tuple[bool, bool]:
         opciones = [o for o in ORIENTACIONES if o != current]
         return rng.choice(opciones)
@@ -305,7 +364,14 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         preferir ahi. Distancia continua (no 0/1) a proposito: da
         gradiente real a la busqueda, a diferencia de un validador duro
         que solo sabe "cumple/no cumple". Ver [ARCH:escalera-compartida]."""
-        stair = next((r for r in layout.rooms if r.room_type == RoomType.STAIRCASE and r.is_placed), None)
+        stair = next(
+            (
+                r
+                for r in layout.rooms
+                if r.room_type == RoomType.STAIRCASE and r.is_placed
+            ),
+            None,
+        )
         if stair is None:
             return 0.0
         minx, miny, maxx, maxy = layout.lot.buildable_area.polygon.bounds
@@ -314,7 +380,9 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         distancia_minima = min(math.hypot(cx - ex, cy - ey) for ex, ey in esquinas)
         return distancia_minima * STAIR_CORNER_PREFERENCE_WEIGHT
 
-    def _evaluate(self, layout: Layout, all_room_ids: List[str]) -> Tuple[int, float, set]:
+    def _evaluate(
+        self, layout: Layout, all_room_ids: List[str]
+    ) -> Tuple[int, float, set]:
         """Una sola validacion por layout, reutilizada para la
         puntuacion (duro/blando) Y el bloqueo progresivo -- mismo
         patron que `SimulatedAnnealingLayoutGenerator._evaluate`."""
@@ -324,7 +392,8 @@ class BTreeLayoutGenerator(LayoutGeneratorPort):
         if self._reference_stair is None:
             soft += self._stair_corner_penalty(layout)
         violating_ids = {
-            room_id for room_id in all_room_ids
+            room_id
+            for room_id in all_room_ids
             if any(f"'{room_id}'" in v for v in violations)
         }
         locked = set(all_room_ids) - violating_ids

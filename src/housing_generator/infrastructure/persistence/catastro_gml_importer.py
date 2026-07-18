@@ -13,11 +13,15 @@ de formatos complejos, que no es lo que hace falta aquí.
 
 Ver [ARCH:catastro-gml-importer].
 """
+
+import logging
 import math
 import xml.etree.ElementTree as ET
 from typing import NamedTuple
 from shapely.geometry import Polygon
 from shapely.affinity import rotate, translate
+
+logger = logging.getLogger(__name__)
 
 NS = {
     "gml": "http://www.opengis.net/gml/3.2",
@@ -54,6 +58,7 @@ class ParcelaImportada(NamedTuple):
     propios ficheros (la superficie declarada debe coincidir,
     redondeada al m², con la superficie de la geometría).
     """
+
     referencia_catastral: str
     area_declarada_m2: float
     area_calculada_m2: float
@@ -65,7 +70,11 @@ class ParcelaImportada(NamedTuple):
     def discrepancia_area_pct(self) -> float:
         if self.area_declarada_m2 <= 0:
             return 0.0
-        return abs(self.area_calculada_m2 - self.area_declarada_m2) / self.area_declarada_m2 * 100
+        return (
+            abs(self.area_calculada_m2 - self.area_declarada_m2)
+            / self.area_declarada_m2
+            * 100
+        )
 
 
 def importar_parcela_gml(contenido: str) -> ParcelaImportada:
@@ -105,12 +114,44 @@ def importar_parcela_gml(contenido: str) -> ParcelaImportada:
         )
 
     valores = pos_list_el.text.split()
-    coords_utm = [(float(valores[i]), float(valores[i + 1])) for i in range(0, len(valores), 2)]
+    if len(valores) % 2 != 0:
+        raise ValueError(
+            f"<gml:posList> tiene un numero impar de valores ({len(valores)}) -- "
+            "no se puede agrupar en pares (x,y), el archivo esta corrupto o truncado."
+        )
+    try:
+        coords_utm = [
+            (float(valores[i]), float(valores[i + 1]))
+            for i in range(0, len(valores), 2)
+        ]
+    except ValueError as e:
+        raise ValueError(f"<gml:posList> contiene un valor no numerico: {e}") from e
+
+    if len(coords_utm) < 3:
+        raise ValueError(
+            f"<gml:posList> solo tiene {len(coords_utm)} punto(s) -- "
+            "hacen falta al menos 3 para formar un poligono."
+        )
+
     poligono_utm = Polygon(coords_utm)
+    if not poligono_utm.is_valid or poligono_utm.area <= 0:
+        raise ValueError(
+            "El poligono descrito por <gml:posList> es invalido o tiene area nula "
+            "(puntos colineales o duplicados) -- no se puede usar como parcela."
+        )
 
     minx, miny, _, _ = poligono_utm.bounds
     poligono_local = translate(poligono_utm, xoff=-minx, yoff=-miny)
     rectangulo_trabajo = poligono_local.minimum_rotated_rectangle
+    if rectangulo_trabajo.geom_type != "Polygon":
+        # poligono degenerado (practicamente una linea) -- el rectangulo
+        # minimo orientado colapsa a Point/LineString, sin `.exterior.coords`
+        # en 5 puntos utilizable mas abajo.
+        raise ValueError(
+            f"El rectangulo de trabajo calculado es '{rectangulo_trabajo.geom_type}', "
+            "no un poligono -- la parcela es geometricamente degenerada (practicamente "
+            "una linea), no se puede usar."
+        )
 
     # BUG REAL encontrado al verificar la generacion de extremo a
     # extremo (confirmado con un caso real: estancias generadas fuera
@@ -128,9 +169,12 @@ def importar_parcela_gml(contenido: str) -> ParcelaImportada:
     # (0,0) -- el mismo sistema que usara `box(0,0,ancho_m,fondo_m)`
     # al construir el Lot real. Ver [ARCH:parcela-real].
     obb_coords = list(rectangulo_trabajo.exterior.coords)
-    angulo_obb_deg = math.degrees(math.atan2(
-        obb_coords[1][1] - obb_coords[0][1], obb_coords[1][0] - obb_coords[0][0],
-    ))
+    angulo_obb_deg = math.degrees(
+        math.atan2(
+            obb_coords[1][1] - obb_coords[0][1],
+            obb_coords[1][0] - obb_coords[0][0],
+        )
+    )
     origen_rotacion = obb_coords[0]
     poligono_rotado = rotate(poligono_local, -angulo_obb_deg, origin=origen_rotacion)
     obb_rotado = rotate(rectangulo_trabajo, -angulo_obb_deg, origin=origen_rotacion)
@@ -140,8 +184,16 @@ def importar_parcela_gml(contenido: str) -> ParcelaImportada:
     obb_alineado = translate(obb_rotado, xoff=-minx2, yoff=-miny2)
 
     return ParcelaImportada(
-        referencia_catastral=referencia_el.text if referencia_el is not None and referencia_el.text else "",
-        area_declarada_m2=float(area_el.text) if area_el is not None and area_el.text else poligono_alineado.area,
+        referencia_catastral=(
+            referencia_el.text
+            if referencia_el is not None and referencia_el.text
+            else ""
+        ),
+        area_declarada_m2=(
+            float(area_el.text)
+            if area_el is not None and area_el.text
+            else poligono_alineado.area
+        ),
         area_calculada_m2=poligono_alineado.area,
         poligono=poligono_alineado,
         rectangulo_trabajo=obb_alineado,

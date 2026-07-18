@@ -1,4 +1,3 @@
-import pytest
 from shapely.geometry import box
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
@@ -34,12 +33,26 @@ def test_stair_lands_exactly_on_the_reference_when_shape_and_area_match():
     # anclaje solo tradujera sin forzar la proporcion, una escalera con
     # otra forma no encajaria exactamente por mucho que se traslade.
     reference_stair = box(5, 5, 9, 7)
-    program = Program(rooms=[
-        Room(id="stair", name="Escalera", room_type=RoomType.STAIRCASE, dimensions=Dimensions(area_m2=8)),
-        Room(id="bed", name="Dormitorio", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=10)),
-    ])
+    program = Program(
+        rooms=[
+            Room(
+                id="stair",
+                name="Escalera",
+                room_type=RoomType.STAIRCASE,
+                dimensions=Dimensions(area_m2=8),
+            ),
+            Room(
+                id="bed",
+                name="Dormitorio",
+                room_type=RoomType.BEDROOM,
+                dimensions=Dimensions(area_m2=10),
+            ),
+        ]
+    )
     generator = BTreeLayoutGenerator(
-        constraint_validator=_ValidadorSiempreValido(), seed=1, reference_stair=reference_stair,
+        constraint_validator=_ValidadorSiempreValido(),
+        seed=1,
+        reference_stair=reference_stair,
     )
     layout = generator.generate(program, _lot(), zones=[])
 
@@ -48,14 +61,30 @@ def test_stair_lands_exactly_on_the_reference_when_shape_and_area_match():
 
 
 def test_without_reference_stair_behaves_like_before():
-    program = Program(rooms=[
-        Room(id="stair", name="Escalera", room_type=RoomType.STAIRCASE, dimensions=Dimensions(area_m2=4)),
-        Room(id="bed", name="Dormitorio", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=10)),
-    ])
-    generator = BTreeLayoutGenerator(constraint_validator=_ValidadorSiempreValido(), seed=1)
+    program = Program(
+        rooms=[
+            Room(
+                id="stair",
+                name="Escalera",
+                room_type=RoomType.STAIRCASE,
+                dimensions=Dimensions(area_m2=4),
+            ),
+            Room(
+                id="bed",
+                name="Dormitorio",
+                room_type=RoomType.BEDROOM,
+                dimensions=Dimensions(area_m2=10),
+            ),
+        ]
+    )
+    generator = BTreeLayoutGenerator(
+        constraint_validator=_ValidadorSiempreValido(), seed=1
+    )
     layout = generator.generate(program, _lot(), zones=[])
 
-    assert all(r.is_placed for r in layout.rooms)  # genera con normalidad, sin reference_stair
+    assert all(
+        r.is_placed for r in layout.rooms
+    )  # genera con normalidad, sin reference_stair
 
 
 def test_floor_without_its_own_staircase_ignores_the_reference_without_crashing():
@@ -64,11 +93,20 @@ def test_floor_without_its_own_staircase_ignores_the_reference_without_crashing(
     # generate_building.py igualmente le pasaria el reference_stair de
     # la planta de abajo. No debe fallar ni intentar anclar nada.
     reference_stair = box(5, 5, 7, 7)
-    program = Program(rooms=[
-        Room(id="bed", name="Dormitorio", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=10)),
-    ])
+    program = Program(
+        rooms=[
+            Room(
+                id="bed",
+                name="Dormitorio",
+                room_type=RoomType.BEDROOM,
+                dimensions=Dimensions(area_m2=10),
+            ),
+        ]
+    )
     generator = BTreeLayoutGenerator(
-        constraint_validator=_ValidadorSiempreValido(), seed=1, reference_stair=reference_stair,
+        constraint_validator=_ValidadorSiempreValido(),
+        seed=1,
+        reference_stair=reference_stair,
     )
     layout = generator.generate(program, _lot(), zones=[])
 
@@ -87,18 +125,42 @@ def test_stair_shape_stays_locked_even_after_many_mutations():
     reference_stair = box(5, 5, 7, 7)
     program = Program(
         rooms=[
-            Room(id="stair", name="Escalera", room_type=RoomType.STAIRCASE, dimensions=Dimensions(area_m2=4)),
-            Room(id="bed", name="Dormitorio", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=10)),
-            Room(id="bath", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
+            Room(
+                id="stair",
+                name="Escalera",
+                room_type=RoomType.STAIRCASE,
+                dimensions=Dimensions(area_m2=4),
+            ),
+            Room(
+                id="bed",
+                name="Dormitorio",
+                room_type=RoomType.BEDROOM,
+                dimensions=Dimensions(area_m2=10),
+            ),
+            Room(
+                id="bath",
+                name="Bano",
+                room_type=RoomType.BATHROOM,
+                dimensions=Dimensions(area_m2=5),
+            ),
         ],
         adjacency_requirements=[
-            AdjacencyRequirement(room_a_id="bed", room_b_id="bath", strength=AdjacencyStrength.SHOULD_BE_NEAR),
+            AdjacencyRequirement(
+                room_a_id="bed",
+                room_b_id="bath",
+                strength=AdjacencyStrength.SHOULD_BE_NEAR,
+            ),
         ],
     )
-    soft_scorer = SoftConstraintScorer(program.adjacency_requirements, GeometryAdjacencyGraphBuilder())
+    soft_scorer = SoftConstraintScorer(
+        program.adjacency_requirements, GeometryAdjacencyGraphBuilder()
+    )
     generator = BTreeLayoutGenerator(
-        constraint_validator=_ValidadorSiempreValido(), seed=7, max_iterations=200,
-        reference_stair=reference_stair, soft_constraint_scorer=soft_scorer,
+        constraint_validator=_ValidadorSiempreValido(),
+        seed=7,
+        max_iterations=200,
+        reference_stair=reference_stair,
+        soft_constraint_scorer=soft_scorer,
     )
     layout = generator.generate(program, _lot(), zones=[])
 
@@ -107,18 +169,26 @@ def test_stair_shape_stays_locked_even_after_many_mutations():
 
 
 def test_corner_penalty_is_smaller_in_a_corner_than_in_the_center():
-    generator = BTreeLayoutGenerator(constraint_validator=_ValidadorSiempreValido(), seed=1)
+    generator = BTreeLayoutGenerator(
+        constraint_validator=_ValidadorSiempreValido(), seed=1
+    )
     lot = _lot()  # box(0, 0, 20, 20) -- esquinas en (0,0),(0,20),(20,0),(20,20)
 
     stair_en_esquina = Room(
-        id="stair", name="Escalera", room_type=RoomType.STAIRCASE, dimensions=Dimensions(area_m2=4),
+        id="stair",
+        name="Escalera",
+        room_type=RoomType.STAIRCASE,
+        dimensions=Dimensions(area_m2=4),
     )
     stair_en_esquina.boundary = Boundary(polygon=box(0, 0, 2, 2))
     layout_esquina = Layout(lot=lot, rooms=[stair_en_esquina], zones=[])
     penalty_esquina = generator._stair_corner_penalty(layout_esquina)
 
     stair_centrada = Room(
-        id="stair", name="Escalera", room_type=RoomType.STAIRCASE, dimensions=Dimensions(area_m2=4),
+        id="stair",
+        name="Escalera",
+        room_type=RoomType.STAIRCASE,
+        dimensions=Dimensions(area_m2=4),
     )
     stair_centrada.boundary = Boundary(polygon=box(9, 9, 11, 11))
     layout_centro = Layout(lot=lot, rooms=[stair_centrada], zones=[])
@@ -133,10 +203,15 @@ def test_corner_penalty_is_inert_when_stair_is_already_anchored_to_a_reference()
     # que preferir.
     reference_stair = box(5, 5, 7, 7)
     generator = BTreeLayoutGenerator(
-        constraint_validator=_ValidadorSiempreValido(), seed=1, reference_stair=reference_stair,
+        constraint_validator=_ValidadorSiempreValido(),
+        seed=1,
+        reference_stair=reference_stair,
     )
     stair_centrada = Room(
-        id="stair", name="Escalera", room_type=RoomType.STAIRCASE, dimensions=Dimensions(area_m2=4),
+        id="stair",
+        name="Escalera",
+        room_type=RoomType.STAIRCASE,
+        dimensions=Dimensions(area_m2=4),
     )
     stair_centrada.boundary = Boundary(polygon=box(9, 9, 11, 11))
     layout_centro = Layout(lot=_lot(), rooms=[stair_centrada], zones=[])

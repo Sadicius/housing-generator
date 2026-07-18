@@ -1,7 +1,9 @@
 import json
 import pytest
 from shapely.geometry import box
-from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
+from housing_generator.infrastructure.persistence.json_layout_repository import (
+    JsonLayoutRepository,
+)
 from housing_generator.domain.entities.room import Room
 from housing_generator.domain.entities.lot import Lot
 from housing_generator.domain.entities.layout import Layout
@@ -15,7 +17,12 @@ def _dummy_lot() -> Lot:
 
 
 def test_save_writes_valid_json_with_expected_fields(tmp_path):
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=20),
+    )
     living.boundary = Boundary(polygon=box(0, 0, 4, 5))
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
     layout.metadata["violations"] = 0
@@ -35,7 +42,12 @@ def test_save_writes_valid_json_with_expected_fields(tmp_path):
 
 
 def test_save_handles_unplaced_room_bounds_as_none(tmp_path):
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=20),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
 
     path = tmp_path / "layout.json"
@@ -47,8 +59,18 @@ def test_save_handles_unplaced_room_bounds_as_none(tmp_path):
 
 def test_save_writes_multiple_rooms_in_order(tmp_path):
     rooms = [
-        Room(id="a", name="A", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=8)),
-        Room(id="b", name="B", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5)),
+        Room(
+            id="a",
+            name="A",
+            room_type=RoomType.KITCHEN,
+            dimensions=Dimensions(area_m2=8),
+        ),
+        Room(
+            id="b",
+            name="B",
+            room_type=RoomType.BATHROOM,
+            dimensions=Dimensions(area_m2=5),
+        ),
     ]
     layout = Layout(lot=_dummy_lot(), rooms=rooms, zones=[])
 
@@ -66,7 +88,12 @@ def test_load_raises_not_implemented():
 
 def test_save_without_adjacency_requirements_produces_empty_doors_list(tmp_path):
     # compatibilidad hacia atras: sin requisitos, "doors" existe pero vacio
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=20),
+    )
     living.boundary = Boundary(polygon=box(0, 0, 4, 5))
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
 
@@ -81,9 +108,19 @@ def test_save_with_adjacency_requirements_includes_real_doors(tmp_path):
     from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
     from housing_generator.domain.enums import AdjacencyStrength
 
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=20))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=20),
+    )
     living.boundary = Boundary(polygon=box(0, 0, 4, 5))
-    dining = Room(id="dining", name="Comedor", room_type=RoomType.DINING_ROOM, dimensions=Dimensions(area_m2=15))
+    dining = Room(
+        id="dining",
+        name="Comedor",
+        room_type=RoomType.DINING_ROOM,
+        dimensions=Dimensions(area_m2=15),
+    )
     dining.boundary = Boundary(polygon=box(4, 0, 8, 5))  # comparte 5m con living
 
     layout = Layout(lot=_dummy_lot(), rooms=[living, dining], zones=[])
@@ -103,7 +140,12 @@ def test_to_dict_matches_what_save_writes_to_disk(tmp_path):
     # bridge.py): to_dict() se extrajo de save() para poder usarse en
     # memoria, sin pasar por disco -- confirma que ambos caminos
     # producen exactamente el mismo resultado, no solo uno de ellos.
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25))
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=25),
+    )
     living.boundary = Boundary(polygon=box(0, 0, 5, 5))
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
 

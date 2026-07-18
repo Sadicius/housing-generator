@@ -361,8 +361,9 @@ async function manejarArchivoCatastro(file){
     statusEl.textContent = `✓ Parcela ${resultado.referencia_catastral} importada (${resultado.area_calculada_m2}m²)`;
     renderParcelaPreview();
   } catch(err){
+    console.error('manejarArchivoCatastro: fallo al importar el GML', err);
     statusEl.className = 'parcela-import-status error';
-    statusEl.textContent = '✗ No se pudo leer el archivo: ' + err.message;
+    statusEl.textContent = '✗ No se pudo leer el archivo: ' + (err && err.message ? err.message : err);
   }
 }
 
@@ -374,11 +375,27 @@ async function reanalizarZonaAfeccionSiHayImportada(){
   // -- mas simple que mantener el estado a medias.
   if(!PARCELA_IMPORTADA || !PARCELA_IMPORTADA._gmlOriginal) return;
   const retranqueoM = leerParcelaForm().retranqueoM;
-  const resultado = await analizarParcelaCatastroReal(PARCELA_IMPORTADA._gmlOriginal, retranqueoM, () => {});
+  let resultado;
+  try{
+    resultado = await analizarParcelaCatastroReal(PARCELA_IMPORTADA._gmlOriginal, retranqueoM, () => {});
+  } catch(err){
+    // fallo real (Pyodide/Python), no un resultado.ok=false controlado --
+    // sin este catch quedaba como una promesa rechazada sin manejar: la
+    // vista previa se quedaba con el retranqueo ANTERIOR sin ningun aviso.
+    console.error('reanalizarZonaAfeccionSiHayImportada: fallo al recalcular la zona de afeccion', err);
+    const statusEl = document.getElementById('parcela-import-status');
+    if(statusEl){
+      statusEl.className = 'parcela-import-status error';
+      statusEl.textContent = '✗ No se pudo recalcular la zona de afección: ' + (err && err.message ? err.message : err);
+    }
+    return;
+  }
   if(resultado.ok){
     resultado._gmlOriginal = PARCELA_IMPORTADA._gmlOriginal;
     PARCELA_IMPORTADA = resultado;
     renderParcelaPreview();
+  } else {
+    console.warn('reanalizarZonaAfeccionSiHayImportada:', resultado.error);
   }
 }
 

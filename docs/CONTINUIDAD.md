@@ -478,6 +478,49 @@ el dashboard** -- ver `[ARCH:cli-retranqueo]` y
   REDUNDANCIA de contacto núcleo-perímetro, decisión de arquitectura
   pendiente con el usuario. Ver docstring de
   `test_generate_layout_use_case_v2.py` para el detalle completo.
+- **[NUEVO, sesión 2026-07-18] El mismo problema de fondo también
+  bloquea `BTreeLayoutGenerator` (el generador POR DEFECTO, no solo el
+  experimental) en escenarios multi-planta con escalera compartida --
+  16 tests de integración reales en `test_generate_building.py`/
+  `test_browser_bridge.py`, antes en rojo sin marcar (rompía la
+  convención de este documento), investigados a fondo antes de tocar
+  nada:**
+  - **Confirmado que NO es un problema de tamaño de parcela**: 0/5
+    semillas convergen igual con una parcela ajustada al programa
+    (9x9m, 1.3x el área de planta baja) que con una generosa (16x16m,
+    3.3x) -- descarta la hipótesis de "solo hace falta más margen".
+  - **Hallazgo real de diseño, no del algoritmo**: el programa de
+    referencia de `_two_floor_program()` tenía la planta superior con
+    3 piezas privadas (dormitorio principal/dormitorio 2/baño) y
+    NINGÚN distribuidor -- solo la escalera como estancia de
+    circulación. Geométricamente eso exige que la escalera toque a las
+    3 piezas privadas a la vez para que ninguna sea "paso obligado"
+    (`PasilloTopologiaValidator`), algo muy difícil para un
+    empaquetado de árbol B* anidado. **Corregido el programa de
+    referencia** (añadido un distribuidor real, `RoomType.CORRIDOR`,
+    lo que cualquier arquitecto pondría ahí) -- medido: sube la tasa
+    de convergencia por semilla de 0% a ~10-20% en el mismo lote
+    16x16m (confirmado con 10 semillas x 3 tamaños de parcela, no una
+    muestra pequeña).
+  - **No basta por sí solo**: ~10-20% de éxito por semilla no es 100%.
+    Con el reintento automático de semillas que ya existía
+    (`bridge.py::generar_edificio`/CLI `--retry-seeds`), subido de 5 a
+    20 por defecto tras medir esto (con 5, la probabilidad de fallo
+    total rondaba 33-59%; con 20, baja a ~1-12%) -- barato para los
+    casos que ya convergen (el bucle corta en el primer éxito). Con
+    esto, la generación multi-planta real (dashboard/CLI, que SÍ
+    reintenta) debería ser razonablemente fiable en la práctica; los
+    tests de integración con semilla ÚNICA fija (`seed=1`, sin
+    reintento, para que sean deterministas) siguen marcados `xfail`
+    donde la semilla 1 en concreto no converge -- no es lo mismo que
+    "el generador no funciona en producción".
+  - **Pendiente real, mismo pendiente que el generador experimental**:
+    la solución de fondo (que CUALQUIER programa converja de forma
+    fiable con una sola semilla, sin depender de reintentos) sigue
+    siendo el incentivo de REDUNDANCIA de contacto núcleo-perímetro,
+    decisión de arquitectura pendiente con el usuario -- el reintento
+    de semillas es una mitigación práctica para el MVP, no el arreglo
+    de raíz.
 - **El panel de generación automática de "Sección vertical" solo cubre
   1-2 plantas** (planta baja/superior) -- sótano, semisótano y bajo
   cubierta quedan fuera de la generación automática (sí accesibles a

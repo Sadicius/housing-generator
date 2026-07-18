@@ -7,5 +7,4 @@ class ConstraintValidatorPort(ABC):
     """Valida un Layout contra restricciones duras/blandas."""
 
     @abstractmethod
-    def validate(self, layout: Layout) -> ValidationResult:
-        ...
+    def validate(self, layout: Layout) -> ValidationResult: ...

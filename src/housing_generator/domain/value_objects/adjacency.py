@@ -9,6 +9,7 @@ class AdjacencyRequirement:
     Es la unidad minima de datos de la clasica 'matriz de adyacencia' /
     'diagrama de burbujas' empleada en programacion arquitectonica.
     """
+
     room_a_id: str
     room_b_id: str
     strength: AdjacencyStrength

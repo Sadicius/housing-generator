@@ -18,7 +18,9 @@ estancia con menos área de la declarada. `move_to_side`/`swap_sides`
 son exactamente el mecanismo que permitiría a una búsqueda futura
 (Fase 3) escapar de ese caso.
 """
+
 import copy
+import logging
 import random
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
@@ -46,6 +48,14 @@ from housing_generator.infrastructure.algorithms.layout_generation.btree_partiti
     random_neighbor,
 )
 
+logger = logging.getLogger(__name__)
+
+# Piezas del residuo por debajo de este area (m2) se tratan como "sin
+# sitio real" -- rendijas de precision de punto flotante que puede
+# dejar `polygon.difference(...)`, no espacio util. Evita dividir por
+# un area ~0 en `_assign_core_rooms_to_pieces`.
+_MIN_PIECE_AREA_M2 = 1e-6
+
 
 @dataclass
 class PerimeterState:
@@ -54,6 +64,7 @@ class PerimeterState:
     esquina), más las proporciones perturbadas respecto a
     `TARGET_ASPECT_RATIO` (ausencia de clave = usa el valor por
     defecto). Ver [ARCH:perimeter-core-partition]."""
+
     assignment: Dict[str, List[str]]
     aspect_overrides: Dict[str, float] = field(default_factory=dict)
 
@@ -63,6 +74,7 @@ class PerimeterCoreState:
     """Estado combinado: tallado perimetral + árbol B* del núcleo
     (`None` si el programa no tiene ninguna estancia
     `min_exterior_sides==0`). Ver [ARCH:perimeter-core-partition]."""
+
     perimeter: PerimeterState
     core_tree: Optional[BStarNode]
 
@@ -70,11 +82,15 @@ class PerimeterCoreState:
 def find_entrance_hall_id(program: Program) -> Optional[str]:
     """Primera estancia ENTRANCE_HALL del programa, o `None` -- mismo
     patrón que `BTreeLayoutGenerator._stair_room_id`."""
-    return next((r.id for r in program.rooms if r.room_type == RoomType.ENTRANCE_HALL), None)
+    return next(
+        (r.id for r in program.rooms if r.room_type == RoomType.ENTRANCE_HALL), None
+    )
 
 
 def build_initial_perimeter_core_state(
-    program: Program, lot: Lot, rng: random.Random,
+    program: Program,
+    lot: Lot,
+    rng: random.Random,
 ) -> PerimeterCoreState:
     """Estado inicial: reparto perimetral vía `assign_rooms_to_sides`
     (Fase 1, sin cambios) + árbol B* aleatorio para las estancias de
@@ -90,7 +106,9 @@ def build_initial_perimeter_core_state(
     assignment = assign_rooms_to_sides(perimeter_rooms, tallable, lot.entrance_side)
     perimeter_state = PerimeterState(assignment=assignment, aspect_overrides={})
 
-    core_tree = build_random_tree([r.id for r in core_rooms], rng) if core_rooms else None
+    core_tree = (
+        build_random_tree([r.id for r in core_rooms], rng) if core_rooms else None
+    )
 
     return PerimeterCoreState(perimeter=perimeter_state, core_tree=core_tree)
 
@@ -115,7 +133,10 @@ def swap_sides(state: PerimeterState, id_a: str, id_b: str) -> PerimeterState:
 
 
 def move_to_side(
-    state: PerimeterState, room_id: str, rng: random.Random, available_sides: List[str],
+    state: PerimeterState,
+    room_id: str,
+    rng: random.Random,
+    available_sides: List[str],
 ) -> PerimeterState:
     """Espejo de `move_module` (núcleo): saca la estancia de su lado
     actual y la inserta en una posición aleatoria de OTRO lado --
@@ -137,7 +158,9 @@ def move_to_side(
     return nuevo
 
 
-def resize_room(state: PerimeterState, room_id: str, rng: random.Random, step: float = 0.15) -> PerimeterState:
+def resize_room(
+    state: PerimeterState, room_id: str, rng: random.Random, step: float = 0.15
+) -> PerimeterState:
     """Espejo de `resize_module` (núcleo): perturba la proporción
     objetivo de una estancia multiplicativamente (mismo `step` ±15%,
     mismo clamp `[0.05, 20]`)."""
@@ -157,7 +180,9 @@ def reset_room_aspect_ratio(state: PerimeterState, room_id: str) -> PerimeterSta
     return nuevo
 
 
-def reorder_within_side(state: PerimeterState, side: str, rng: random.Random) -> PerimeterState:
+def reorder_within_side(
+    state: PerimeterState, side: str, rng: random.Random
+) -> PerimeterState:
     """Espejo de `swap_children` (núcleo): intercambia dos posiciones
     dentro del mismo lado -- movimiento local, más barato que
     `move_to_side`. No-op si el lado tiene menos de 2 estancias."""
@@ -171,8 +196,10 @@ def reorder_within_side(state: PerimeterState, side: str, rng: random.Random) ->
 
 
 def random_neighbor_perimeter(
-    state: PerimeterState, rng: random.Random,
-    entrance_hall_id: Optional[str], available_sides: List[str],
+    state: PerimeterState,
+    rng: random.Random,
+    entrance_hall_id: Optional[str],
+    available_sides: List[str],
 ) -> PerimeterState:
     """Genera un estado perimetral vecino eligiendo uno de los 5
     movimientos al azar -- mismo patrón que `random_neighbor` del
@@ -205,8 +232,11 @@ def random_neighbor_perimeter(
 
 
 def random_neighbor_perimeter_core(
-    state: PerimeterCoreState, rng: random.Random, areas: Dict[str, float],
-    entrance_hall_id: Optional[str], available_sides: List[str],
+    state: PerimeterCoreState,
+    rng: random.Random,
+    areas: Dict[str, float],
+    entrance_hall_id: Optional[str],
+    available_sides: List[str],
     locked_room_ids: Optional[Set[str]] = None,
 ) -> PerimeterCoreState:
     """Combina las mutaciones de perímetro y núcleo: elige al azar
@@ -224,11 +254,16 @@ def random_neighbor_perimeter_core(
         core_locked = (locked_room_ids or set()) & core_ids
         nuevo_core = random_neighbor(state.core_tree, rng, areas, core_locked)
         return PerimeterCoreState(perimeter=state.perimeter, core_tree=nuevo_core)
-    nuevo_perimetro = random_neighbor_perimeter(state.perimeter, rng, entrance_hall_id, available_sides)
+    nuevo_perimetro = random_neighbor_perimeter(
+        state.perimeter, rng, entrance_hall_id, available_sides
+    )
     return PerimeterCoreState(perimeter=nuevo_perimetro, core_tree=state.core_tree)
 
 
-def _center_within(container_bounds: Tuple[float, float, float, float], content_bounds: Tuple[float, float, float, float]) -> Tuple[float, float]:
+def _center_within(
+    container_bounds: Tuple[float, float, float, float],
+    content_bounds: Tuple[float, float, float, float],
+) -> Tuple[float, float]:
     """Desplazamiento para centrar `content_bounds` dentro de
     `container_bounds` -- mismo cálculo de centrado que
     `BTreeLayoutGenerator._anchor_offset`, sin preferencia de lado (el
@@ -256,7 +291,9 @@ def _residual_pieces(residual: Polygon) -> List[Polygon]:
 
 
 def _assign_core_rooms_to_pieces(
-    ordered_room_ids: List[str], rooms_by_id: Dict, pieces: List[Polygon],
+    ordered_room_ids: List[str],
+    rooms_by_id: Dict,
+    pieces: List[Polygon],
 ) -> List[List[str]]:
     """Reparte las estancias de núcleo entre las piezas del residuo --
     NO como un solo bloque (hallazgo real de esta Fase 2: un bloque
@@ -271,9 +308,23 @@ def _assign_core_rooms_to_pieces(
     Ver [ARCH:perimeter-core-partition]."""
     groups: List[List[str]] = [[] for _ in pieces]
     load = [0.0] * len(pieces)
+    piece_areas = [p.area for p in pieces]
+    if all(a <= _MIN_PIECE_AREA_M2 for a in piece_areas):
+        logger.warning(
+            "_assign_core_rooms_to_pieces: las %d pieza(s) del residuo tienen "
+            "area ~0 -- el nucleo no tiene sitio real donde colocarse, se "
+            "reparte igual y quedara en manos de RoomOverlapValidator/"
+            "ParcelaRealValidator rechazarlo",
+            len(pieces),
+        )
+
+    def carga_relativa(i: int) -> float:
+        area = piece_areas[i]
+        return load[i] / area if area > _MIN_PIECE_AREA_M2 else float("inf")
+
     for room_id in ordered_room_ids:
         area = rooms_by_id[room_id].dimensions.area_m2
-        idx = min(range(len(pieces)), key=lambda i: load[i] / pieces[i].area)
+        idx = min(range(len(pieces)), key=carga_relativa)
         groups[idx].append(room_id)
         load[idx] += area
     return groups
@@ -288,16 +339,22 @@ def _chain_tree(room_ids: List[str], aspect_ratios: Dict[str, float]) -> BStarNo
     en cadena no importa aquí -- cada grupo se empaqueta y ancla de
     forma independiente, no hay relación geométrica entre grupos de
     piezas distintas. Ver [ARCH:perimeter-core-partition]."""
-    root = BStarNode(room_id=room_ids[0], aspect_ratio=aspect_ratios.get(room_ids[0], 1.0))
+    root = BStarNode(
+        room_id=room_ids[0], aspect_ratio=aspect_ratios.get(room_ids[0], 1.0)
+    )
     actual = root
     for room_id in room_ids[1:]:
-        siguiente = BStarNode(room_id=room_id, aspect_ratio=aspect_ratios.get(room_id, 1.0))
+        siguiente = BStarNode(
+            room_id=room_id, aspect_ratio=aspect_ratios.get(room_id, 1.0)
+        )
         actual.left = siguiente
         actual = siguiente
     return root
 
 
-def materialize_perimeter_core(state: PerimeterCoreState, program: Program, lot: Lot) -> Layout:
+def materialize_perimeter_core(
+    state: PerimeterCoreState, program: Program, lot: Lot
+) -> Layout:
     """Produce un `Layout` completo a partir de `state`: talla el
     perímetro (`carve_from_assignment`, Fase 1, sin cambios en su
     algoritmo) y reparte el núcleo entre las piezas del residuo
@@ -327,7 +384,10 @@ def materialize_perimeter_core(state: PerimeterCoreState, program: Program, lot:
     polygon = lot.area_edificable_real.polygon
 
     perimeter_bites, core_residual = carve_from_assignment(
-        polygon, rooms_by_id, state.perimeter.assignment, lot.entrance_side,
+        polygon,
+        rooms_by_id,
+        state.perimeter.assignment,
+        lot.entrance_side,
         state.perimeter.aspect_overrides,
     )
     placed_polygons: Dict[str, Polygon] = dict(perimeter_bites)
@@ -336,30 +396,39 @@ def materialize_perimeter_core(state: PerimeterCoreState, program: Program, lot:
         pieces = _residual_pieces(core_residual)
         if pieces:
             ordered_room_ids = [node.room_id for node in state.core_tree.nodes()]
-            aspect_ratios = {node.room_id: node.aspect_ratio for node in state.core_tree.nodes()}
+            aspect_ratios = {
+                node.room_id: node.aspect_ratio for node in state.core_tree.nodes()
+            }
             groups = _assign_core_rooms_to_pieces(ordered_room_ids, rooms_by_id, pieces)
 
             for piece, group_room_ids in zip(pieces, groups):
                 if not group_room_ids:
                     continue
                 group_tree = _chain_tree(group_room_ids, aspect_ratios)
-                group_areas = {rid: rooms_by_id[rid].dimensions.area_m2 for rid in group_room_ids}
+                group_areas = {
+                    rid: rooms_by_id[rid].dimensions.area_m2 for rid in group_room_ids
+                }
                 group_positions = compute_positions(group_tree, group_areas)
                 offset_x, offset_y = _center_within(
-                    piece.bounds, unary_union(list(group_positions.values())).bounds,
+                    piece.bounds,
+                    unary_union(list(group_positions.values())).bounds,
                 )
                 for room_id, poly in group_positions.items():
                     placed_polygons[room_id] = translate(poly, offset_x, offset_y)
 
     placed_rooms = []
     for room in program.rooms:
-        placed = copy.copy(room)  # copia superficial: no muta el Room del Program original
+        placed = copy.copy(
+            room
+        )  # copia superficial: no muta el Room del Program original
         placed.boundary = Boundary(polygon=placed_polygons[room.id])
         placed_rooms.append(placed)
 
     zones_map: Dict = {}
     for room in placed_rooms:
         zones_map.setdefault(room.zone, []).append(room.id)
-    built_zones = [Zone(zone_type=zone_type, room_ids=ids) for zone_type, ids in zones_map.items()]
+    built_zones = [
+        Zone(zone_type=zone_type, room_ids=ids) for zone_type, ids in zones_map.items()
+    ]
 
     return Layout(lot=lot, rooms=placed_rooms, zones=built_zones)

@@ -12,7 +12,14 @@ def _sample_payload():
     # los valores en minuscula.
     return {
         "levels": {
-            "PLANTA_BAJA": ["LIVING_ROOM", "KITCHEN", "ENTRANCE_HALL", "LAUNDRY", "DRYING_AREA", "STORAGE"],
+            "PLANTA_BAJA": [
+                "LIVING_ROOM",
+                "KITCHEN",
+                "ENTRANCE_HALL",
+                "LAUNDRY",
+                "DRYING_AREA",
+                "STORAGE",
+            ],
             "PLANTA_SUPERIOR": ["BEDROOM", "MASTER_BEDROOM", "BATHROOM"],
         },
         "nota": "texto de aviso del dashboard, se ignora al importar",
@@ -40,12 +47,16 @@ def test_default_areas_are_applied():
 
 
 def test_custom_areas_override_defaults():
-    program = import_seleccion_plantas(_sample_payload(), areas_m2={RoomType.LIVING_ROOM: 30.0}).program
+    program = import_seleccion_plantas(
+        _sample_payload(), areas_m2={RoomType.LIVING_ROOM: 30.0}
+    ).program
     living = next(r for r in program.rooms if r.room_type == RoomType.LIVING_ROOM)
     bath = next(r for r in program.rooms if r.room_type == RoomType.BATHROOM)
 
     assert living.dimensions.area_m2 == 30.0  # sobreescrita
-    assert bath.dimensions.area_m2 == AREAS_POR_DEFECTO_M2[RoomType.BATHROOM]  # sin tocar, sigue el default
+    assert (
+        bath.dimensions.area_m2 == AREAS_POR_DEFECTO_M2[RoomType.BATHROOM]
+    )  # sin tocar, sigue el default
 
 
 def test_adjacency_requirements_are_derived_automatically():
@@ -53,7 +64,9 @@ def test_adjacency_requirements_are_derived_automatically():
     # LIVING_ROOM-ENTRANCE_HALL es Obligatorio cerca en el catalogo
     living = next(r for r in program.rooms if r.room_type == RoomType.LIVING_ROOM)
     entrance = next(r for r in program.rooms if r.room_type == RoomType.ENTRANCE_HALL)
-    pairs = {frozenset((r.room_a_id, r.room_b_id)) for r in program.adjacency_requirements}
+    pairs = {
+        frozenset((r.room_a_id, r.room_b_id)) for r in program.adjacency_requirements
+    }
     assert frozenset((living.id, entrance.id)) in pairs
 
 
@@ -127,7 +140,14 @@ def test_old_and_new_format_can_coexist_in_the_same_payload():
     # robustez adicional: un archivo con algunas entradas en formato
     # antiguo (string) y otras en nuevo (dict) no debe fallar -- por si
     # alguien edita un JSON exportado antes a mano.
-    payload = {"levels": {"PLANTA_BAJA": ["LIVING_ROOM", {"type": "KITCHEN", "count": 2, "area_m2": 9}]}}
+    payload = {
+        "levels": {
+            "PLANTA_BAJA": [
+                "LIVING_ROOM",
+                {"type": "KITCHEN", "count": 2, "area_m2": 9},
+            ]
+        }
+    }
     program = import_seleccion_plantas(payload).program
     assert len([r for r in program.rooms if r.room_type == RoomType.LIVING_ROOM]) == 1
     assert len([r for r in program.rooms if r.room_type == RoomType.KITCHEN]) == 2
@@ -140,15 +160,21 @@ def test_rooms_get_readable_spanish_names_not_the_technical_id():
     # espanol ("Salon") -- se veia asi en el plano final generado, no
     # solo en datos intermedios. Ningun test anterior comprobaba
     # Room.name en absoluto, por eso paso desapercibido.
-    payload = {"levels": {"PLANTA_BAJA": [{"type": "LIVING_ROOM", "count": 1, "area_m2": 25}]}}
+    payload = {
+        "levels": {"PLANTA_BAJA": [{"type": "LIVING_ROOM", "count": 1, "area_m2": 25}]}
+    }
     program = import_seleccion_plantas(payload).program
     living = program.rooms[0]
     assert living.name == "Salón"
-    assert living.name != living.id  # el id tecnico y el nombre legible deben ser distintos
+    assert (
+        living.name != living.id
+    )  # el id tecnico y el nombre legible deben ser distintos
 
 
 def test_multiple_instances_get_numbered_readable_names():
-    payload = {"levels": {"PLANTA_SUPERIOR": [{"type": "BEDROOM", "count": 2, "area_m2": 12}]}}
+    payload = {
+        "levels": {"PLANTA_SUPERIOR": [{"type": "BEDROOM", "count": 2, "area_m2": 12}]}
+    }
     program = import_seleccion_plantas(payload).program
     names = sorted(r.name for r in program.rooms)
     assert names == ["Dormitorio 1", "Dormitorio 2"]
@@ -195,7 +221,10 @@ def test_medianera_sides_can_be_used_directly_with_lot():
     payload = {"levels": {"PLANTA_BAJA": ["LIVING_ROOM"]}, "tipo_vivienda": "adosada"}
     result = import_seleccion_plantas(payload)
 
-    lot = Lot(boundary=Boundary(polygon=box(0, 0, 10, 10)), medianera_sides=result.medianera_sides)
+    lot = Lot(
+        boundary=Boundary(polygon=box(0, 0, 10, 10)),
+        medianera_sides=result.medianera_sides,
+    )
     assert lot.medianera_sides == frozenset({"east", "west"})
     minx, miny, maxx, maxy = lot.buildable_area.polygon.bounds
     assert (minx, maxx) == (0.0, 10.0)  # sin retranqueo en los lados de medianera

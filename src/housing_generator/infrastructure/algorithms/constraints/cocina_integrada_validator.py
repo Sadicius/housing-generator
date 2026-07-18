@@ -1,5 +1,7 @@
 from typing import List, Optional, Tuple
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.entities.room import Room
@@ -28,24 +30,40 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
 
     def validate(self, layout: Layout) -> ValidationResult:
         cocina = next(
-            (r for r in layout.rooms if r.room_type == RoomType.KITCHEN and r.integrated_in_largest_room),
+            (
+                r
+                for r in layout.rooms
+                if r.room_type == RoomType.KITCHEN and r.integrated_in_largest_room
+            ),
             None,
         )
         if cocina is None:
             return ValidationResult()
 
-        mayor = next((r for r in layout.rooms if r.room_type == RoomType.LIVING_ROOM), None)
+        mayor = next(
+            (r for r in layout.rooms if r.room_type == RoomType.LIVING_ROOM), None
+        )
         if mayor is None:
             return ValidationResult(
-                warnings=["Cocina integrada declarada pero no hay salón (LIVING_ROOM) en el "
-                          "programa -- no se puede determinar la estancia mayor"]
+                warnings=[
+                    "Cocina integrada declarada pero no hay salón (LIVING_ROOM) en el "
+                    "programa -- no se puede determinar la estancia mayor"
+                ]
             )
 
-        local_count = sum(1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA)
-        num_estancias = self._total_override if self._total_override is not None else local_count
+        local_count = sum(
+            1 for r in layout.rooms if r.space_category == SpaceCategory.ESTANCIA
+        )
+        num_estancias = (
+            self._total_override if self._total_override is not None else local_count
+        )
 
-        area_violations, area_warnings = self._check_combined_area(mayor, cocina, num_estancias)
-        opening_violations, opening_warnings = self._check_vertical_opening(mayor, cocina)
+        area_violations, area_warnings = self._check_combined_area(
+            mayor, cocina, num_estancias
+        )
+        opening_violations, opening_warnings = self._check_vertical_opening(
+            mayor, cocina
+        )
 
         return ValidationResult(
             violations=area_violations + opening_violations,
@@ -53,7 +71,9 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
         )
 
     @staticmethod
-    def _check_combined_area(mayor: Room, cocina: Room, num_estancias: int) -> Tuple[List[str], List[str]]:
+    def _check_combined_area(
+        mayor: Room, cocina: Room, num_estancias: int
+    ) -> Tuple[List[str], List[str]]:
         """Superficie minima del CONJUNTO salon+cocina: suma de los
         minimos de cada pieza por separado (Tabla 1 + Tabla 2)."""
         violations: List[str] = []
@@ -80,7 +100,9 @@ class CocinaIntegradaValidator(ConstraintValidatorPort):
         return violations, warnings
 
     @staticmethod
-    def _check_vertical_opening(mayor: Room, cocina: Room) -> Tuple[List[str], List[str]]:
+    def _check_vertical_opening(
+        mayor: Room, cocina: Room
+    ) -> Tuple[List[str], List[str]]:
         """Apertura vertical minima de relacion entre cocina y salon."""
         violations: List[str] = []
         warnings: List[str] = []

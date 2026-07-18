@@ -1,4 +1,5 @@
 """Enumeraciones y mapeos base del dominio de zonificacion residencial."""
+
 from enum import Enum
 
 
@@ -8,9 +9,10 @@ class ZoneType(str, Enum):
     estancias que sirven a varias a la vez (CORRIDOR, ENTRANCE_HALL).
     Ver [ARCH:enums].
     """
-    DAY = "day"          # Social/publica: estar, comedor, cocina abierta, acceso
-    NIGHT = "night"       # Privada: dormitorios, banos privados
-    SERVICE = "service"   # Servicio: lavadero, trasteros, garaje, cuarto tecnico
+
+    DAY = "day"  # Social/publica: estar, comedor, cocina abierta, acceso
+    NIGHT = "night"  # Privada: dormitorios, banos privados
+    SERVICE = "service"  # Servicio: lavadero, trasteros, garaje, cuarto tecnico
     CIRCULATION = "circulation"  # Vestibulo/pasillo: sirve a varias zonas, no es una
 
 
@@ -21,23 +23,24 @@ class RoomType(str, Enum):
     BEDROOM = "bedroom"
     MASTER_BEDROOM = "master_bedroom"
     BATHROOM = "bathroom"
-    TOILET = "toilet"              # aseo: sin banera/ducha, min. distinto al de BATHROOM
+    TOILET = "toilet"  # aseo: sin banera/ducha, min. distinto al de BATHROOM
     ENTRANCE_HALL = "entrance_hall"
     STUDY = "study"
     LAUNDRY = "laundry"
-    DRYING_AREA = "drying_area"    # tendedero
-    STORAGE = "storage"            # almacenamiento general (Tabla 2: despensa, ropa de cama...)
+    DRYING_AREA = "drying_area"  # tendedero
+    STORAGE = "storage"  # almacenamiento general (Tabla 2: despensa, ropa de cama...)
     STORAGE_ROOM = "storage_room"  # trastero (B.2.5: regla fija, objetos/trastos, distinto de almacenamiento)
     GARAGE = "garage"
     TECHNICAL_ROOM = "technical_room"
     CORRIDOR = "corridor"
-    STAIRCASE = "staircase"        # escalera interior -- conecta dos plantas, huella debe alinearse entre ambas
+    STAIRCASE = "staircase"  # escalera interior -- conecta dos plantas, huella debe alinearse entre ambas
 
 
 class AdjacencyStrength(str, Enum):
     """Fuerza de un requisito de adyacencia: cerca/lejos obligatorio o
     preferente, o indiferente. SHOULD_BE_* usa una métrica distinta de
     MUST_BE_* -- ver [ARCH:enums] y `SoftConstraintScorer`."""
+
     MUST_BE_NEAR = "must_be_near"
     SHOULD_BE_NEAR = "should_be_near"
     INDIFFERENT = "indifferent"
@@ -81,6 +84,7 @@ class SpaceCategory(str, Enum):
     1), SERVICIO (Tabla 2, cocina/baño/aseo/lavadero/tendedero/
     almacenamiento), CIRCULACION (reglas de anchura), OTROS (fuera de
     Tabla 1/2). Ver [ARCH:enums]."""
+
     ESTANCIA = "estancia"
     SERVICIO = "servicio"
     CIRCULACION = "circulacion"
@@ -103,7 +107,7 @@ DEFAULT_SPACE_CATEGORY = {
     RoomType.ENTRANCE_HALL: SpaceCategory.CIRCULACION,
     RoomType.CORRIDOR: SpaceCategory.CIRCULACION,
     RoomType.STAIRCASE: SpaceCategory.CIRCULACION,
-    RoomType.GARAGE: SpaceCategory.OTROS,        # no es pieza vividera, fuera de Tabla 1/2
+    RoomType.GARAGE: SpaceCategory.OTROS,  # no es pieza vividera, fuera de Tabla 1/2
     RoomType.TECHNICAL_ROOM: SpaceCategory.OTROS,
 }
 

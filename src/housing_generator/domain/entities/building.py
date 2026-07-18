@@ -12,11 +12,14 @@ class Building:
     `Layout` para una sola planta -- `Building` es la composición de
     varias.
     """
+
     floors: Dict[NivelPlanta, Layout] = field(default_factory=dict)
 
     @property
     def is_complete(self) -> bool:
-        return bool(self.floors) and all(layout.is_complete for layout in self.floors.values())
+        return bool(self.floors) and all(
+            layout.is_complete for layout in self.floors.values()
+        )
 
     def ordered_levels(self) -> List[NivelPlanta]:
         """Niveles presentes, de abajo a arriba (subconjunto de

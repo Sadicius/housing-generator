@@ -1,9 +1,13 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
-from housing_generator.infrastructure.geometry.shapely_utils import evaluate_minimum_width
+from housing_generator.infrastructure.geometry.shapely_utils import (
+    evaluate_minimum_width,
+)
 
 # CTE DB-SUA 1, escalera de uso restringido (confirmado, ver
 # docs/fuentes/niveles_plantas.md) -- 0.80m, no el de uso general (1.00-1.20m).
@@ -23,7 +27,9 @@ class EscaleraAnchoLibreValidator(ConstraintValidatorPort):
             if room.room_type != RoomType.STAIRCASE or not room.is_placed:
                 continue
             v, w = evaluate_minimum_width(
-                room.id, room.boundary.polygon, ESCALERA_ANCHO_LIBRE_MIN_M,
+                room.id,
+                room.boundary.polygon,
+                ESCALERA_ANCHO_LIBRE_MIN_M,
                 violation_message=(
                     f"ancho libre por debajo del minimo de escalera de uso "
                     f"restringido ({ESCALERA_ANCHO_LIBRE_MIN_M:.2f}m, CTE DB-SUA 1)"

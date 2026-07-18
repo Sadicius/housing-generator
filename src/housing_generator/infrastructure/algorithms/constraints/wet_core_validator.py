@@ -1,4 +1,6 @@
-from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
+from housing_generator.application.ports.adjacency_graph_builder_port import (
+    AdjacencyGraphBuilderPort,
+)
 from housing_generator.infrastructure.algorithms.constraints.grouping_constraint_validator import (
     GroupingConstraintValidator,
 )
@@ -26,10 +28,16 @@ NUCLEO_HUMEDO_MAX_DISTANCE_TRES_O_MAS = 2
 
 
 def _nucleo_humedo_max_distance(num_humedas: int) -> int:
-    return NUCLEO_HUMEDO_MAX_DISTANCE_DOS if num_humedas <= 2 else NUCLEO_HUMEDO_MAX_DISTANCE_TRES_O_MAS
+    return (
+        NUCLEO_HUMEDO_MAX_DISTANCE_DOS
+        if num_humedas <= 2
+        else NUCLEO_HUMEDO_MAX_DISTANCE_TRES_O_MAS
+    )
 
 
-def build_wet_core_validator(graph_builder: AdjacencyGraphBuilderPort) -> GroupingConstraintValidator:
+def build_wet_core_validator(
+    graph_builder: AdjacencyGraphBuilderPort,
+) -> GroupingConstraintValidator:
     """Fabrica el validador de nucleo humedo: primer caso concreto del
     mecanismo generico GroupingConstraintValidator."""
     return GroupingConstraintValidator(

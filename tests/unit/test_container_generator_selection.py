@@ -6,6 +6,7 @@ explícita del usuario, tras confirmar en la práctica que el árbol B*
 converge mejor en todos los casos difíciles probados a lo largo de
 la sesión.
 """
+
 from housing_generator.config.container import (
     build_generate_building_use_case,
     build_generate_layout_use_case,

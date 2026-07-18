@@ -15,7 +15,12 @@ def _dummy_lot() -> Lot:
 
 
 def test_corridor_below_1_meter_fails():
-    corridor = Room(id="c", name="Pasillo", room_type=RoomType.CORRIDOR, dimensions=Dimensions(area_m2=3))
+    corridor = Room(
+        id="c",
+        name="Pasillo",
+        room_type=RoomType.CORRIDOR,
+        dimensions=Dimensions(area_m2=3),
+    )
     corridor.boundary = Boundary(polygon=box(0, 0, 0.85, 4.0))
 
     layout = Layout(lot=_dummy_lot(), rooms=[corridor], zones=[])
@@ -26,7 +31,12 @@ def test_corridor_below_1_meter_fails():
 
 
 def test_corridor_at_1_meter_passes():
-    corridor = Room(id="c", name="Pasillo", room_type=RoomType.CORRIDOR, dimensions=Dimensions(area_m2=4))
+    corridor = Room(
+        id="c",
+        name="Pasillo",
+        room_type=RoomType.CORRIDOR,
+        dimensions=Dimensions(area_m2=4),
+    )
     corridor.boundary = Boundary(polygon=box(0, 0, 1.00, 4.0))
 
     layout = Layout(lot=_dummy_lot(), rooms=[corridor], zones=[])
@@ -34,8 +44,15 @@ def test_corridor_at_1_meter_passes():
 
 
 def test_non_corridor_rooms_are_ignored():
-    bath = Room(id="b", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=3))
-    bath.boundary = Boundary(polygon=box(0, 0, 0.5, 6.0))  # estrecho, pero no es pasillo
+    bath = Room(
+        id="b",
+        name="Bano",
+        room_type=RoomType.BATHROOM,
+        dimensions=Dimensions(area_m2=3),
+    )
+    bath.boundary = Boundary(
+        polygon=box(0, 0, 0.5, 6.0)
+    )  # estrecho, pero no es pasillo
 
     layout = Layout(lot=_dummy_lot(), rooms=[bath], zones=[])
     assert AnchoLibrePasilloValidator().validate(layout).violations == []

@@ -1,6 +1,8 @@
 from typing import List
 import networkx as nx
-from housing_generator.application.ports.adjacency_graph_builder_port import AdjacencyGraphBuilderPort
+from housing_generator.application.ports.adjacency_graph_builder_port import (
+    AdjacencyGraphBuilderPort,
+)
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import AdjacencyStrength
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
@@ -23,8 +25,10 @@ class SoftConstraintScorer:
         graph_builder: AdjacencyGraphBuilderPort,
     ):
         self._soft_requirements = [
-            req for req in adjacency_requirements
-            if req.strength in (AdjacencyStrength.SHOULD_BE_NEAR, AdjacencyStrength.SHOULD_BE_AWAY)
+            req
+            for req in adjacency_requirements
+            if req.strength
+            in (AdjacencyStrength.SHOULD_BE_NEAR, AdjacencyStrength.SHOULD_BE_AWAY)
         ]
         self._graph_builder = graph_builder
 

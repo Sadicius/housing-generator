@@ -18,7 +18,13 @@ def _dummy_lot() -> Lot:
 
 
 def _placed(room_id, room_type, polygon, **kwargs) -> Room:
-    r = Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=polygon.area), **kwargs)
+    r = Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=polygon.area),
+        **kwargs,
+    )
     r.boundary = Boundary(polygon=polygon)
     return r
 
@@ -56,8 +62,12 @@ def test_single_bathroom_captured_in_bedroom_only_fails():
     # programa (en otro sitio, sin tocar el bano), para que el fallo
     # sea real ("capturado", no "no aplica por falta de circulacion").
     bed = _placed("bed", RoomType.BEDROOM, box(0, 0, 3, 4))
-    bath = _placed("bath", RoomType.BATHROOM, box(3, 0, 5, 4))  # comparte pared solo con bed
-    corridor = _placed("corridor", RoomType.CORRIDOR, box(0, 4, 3, 6))  # toca a bed, NO a bath
+    bath = _placed(
+        "bath", RoomType.BATHROOM, box(3, 0, 5, 4)
+    )  # comparte pared solo con bed
+    corridor = _placed(
+        "corridor", RoomType.CORRIDOR, box(0, 4, 3, 6)
+    )  # toca a bed, NO a bath
 
     layout = Layout(lot=_dummy_lot(), rooms=[bed, bath, corridor], zones=[])
     violations = _validator().validate(layout).violations
@@ -69,7 +79,9 @@ def test_single_bathroom_captured_in_bedroom_only_fails():
 def test_single_bathroom_with_corridor_access_passes():
     bed = _placed("bed", RoomType.BEDROOM, box(0, 0, 3, 4))
     bath = _placed("bath", RoomType.BATHROOM, box(3, 0, 5, 4))
-    corridor = _placed("corridor", RoomType.CORRIDOR, box(3, 4, 5, 6))  # toca al bano por arriba
+    corridor = _placed(
+        "corridor", RoomType.CORRIDOR, box(3, 4, 5, 6)
+    )  # toca al bano por arriba
 
     layout = Layout(lot=_dummy_lot(), rooms=[bed, bath, corridor], zones=[])
     result = _validator().validate(layout)
@@ -84,9 +96,13 @@ def test_two_bathrooms_one_ensuite_one_general_passes():
     master = _placed("master", RoomType.MASTER_BEDROOM, box(0, 0, 4, 4))
     ensuite = _placed("ensuite", RoomType.BATHROOM, box(4, 0, 6, 4))  # solo toca master
     corridor = _placed("corridor", RoomType.CORRIDOR, box(0, 4, 6, 5))
-    general_bath = _placed("general_bath", RoomType.BATHROOM, box(0, 5, 3, 7))  # toca corridor
+    general_bath = _placed(
+        "general_bath", RoomType.BATHROOM, box(0, 5, 3, 7)
+    )  # toca corridor
 
-    layout = Layout(lot=_dummy_lot(), rooms=[master, ensuite, corridor, general_bath], zones=[])
+    layout = Layout(
+        lot=_dummy_lot(), rooms=[master, ensuite, corridor, general_bath], zones=[]
+    )
     result = _validator().validate(layout)
 
     assert result.violations == []
@@ -97,9 +113,13 @@ def test_two_bathrooms_both_captured_fails():
     bath1 = _placed("bath1", RoomType.BATHROOM, box(3, 0, 5, 3))  # solo toca bed1
     bed2 = _placed("bed2", RoomType.BEDROOM, box(0, 3, 3, 6))
     bath2 = _placed("bath2", RoomType.BATHROOM, box(3, 3, 5, 6))  # solo toca bed2
-    corridor = _placed("corridor", RoomType.CORRIDOR, box(0, 6, 3, 8))  # toca solo a bed2, ningun bano
+    corridor = _placed(
+        "corridor", RoomType.CORRIDOR, box(0, 6, 3, 8)
+    )  # toca solo a bed2, ningun bano
 
-    layout = Layout(lot=_dummy_lot(), rooms=[bed1, bath1, bed2, bath2, corridor], zones=[])
+    layout = Layout(
+        lot=_dummy_lot(), rooms=[bed1, bath1, bed2, bath2, corridor], zones=[]
+    )
     violations = _validator().validate(layout).violations
 
     assert len(violations) == 1
@@ -117,7 +137,12 @@ def test_entrance_hall_also_counts_as_general_access():
 
 
 def test_unplaced_bathroom_is_ignored():
-    bath = Room(id="bath", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=5))
+    bath = Room(
+        id="bath",
+        name="Bano",
+        room_type=RoomType.BATHROOM,
+        dimensions=Dimensions(area_m2=5),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[bath], zones=[])
 
     result = _validator().validate(layout)

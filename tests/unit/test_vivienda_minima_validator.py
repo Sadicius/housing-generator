@@ -15,7 +15,12 @@ def _dummy_lot() -> Lot:
 
 
 def _room(room_id: str, room_type: RoomType, area_m2: float = 10) -> Room:
-    return Room(id=room_id, name=room_id, room_type=room_type, dimensions=Dimensions(area_m2=area_m2))
+    return Room(
+        id=room_id,
+        name=room_id,
+        room_type=room_type,
+        dimensions=Dimensions(area_m2=area_m2),
+    )
 
 
 def _complete_minimum_rooms():
@@ -58,7 +63,9 @@ def test_missing_laundry_only_reports_single_violation():
 
 
 def test_missing_drying_area_only_reports_single_violation():
-    rooms = [r for r in _complete_minimum_rooms() if r.room_type != RoomType.DRYING_AREA]
+    rooms = [
+        r for r in _complete_minimum_rooms() if r.room_type != RoomType.DRYING_AREA
+    ]
     layout = Layout(lot=_dummy_lot(), rooms=rooms, zones=[])
 
     violations = ViviendaMinimaValidator().validate(layout).violations
@@ -86,7 +93,9 @@ def test_toilet_alone_does_not_satisfy_bathroom_requirement():
 
 
 def test_bedroom_alone_does_not_satisfy_living_room_requirement():
-    rooms = [r for r in _complete_minimum_rooms() if r.room_type != RoomType.LIVING_ROOM]
+    rooms = [
+        r for r in _complete_minimum_rooms() if r.room_type != RoomType.LIVING_ROOM
+    ]
     rooms.append(_room("bed", RoomType.BEDROOM, 12))
     layout = Layout(lot=_dummy_lot(), rooms=rooms, zones=[])
 

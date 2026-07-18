@@ -5,6 +5,7 @@ from shapely.geometry import Polygon
 @dataclass(frozen=True)
 class Boundary:
     """Envuelve un Polygon de shapely: la huella de un solar o de una estancia."""
+
     polygon: Polygon
 
     @property

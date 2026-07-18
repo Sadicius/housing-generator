@@ -1,5 +1,7 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 from housing_generator.domain.enums import RoomType
@@ -37,7 +39,9 @@ class DormitorioArmarioValidator(ConstraintValidatorPort):
                 continue
 
             largo = armario_largo_minimo(room.dimensions.area_m2)
-            cabe = can_fit_rectangle(room.boundary.polygon, largo, ARMARIO_PROFUNDIDAD_MIN_M)
+            cabe = can_fit_rectangle(
+                room.boundary.polygon, largo, ARMARIO_PROFUNDIDAD_MIN_M
+            )
 
             if cabe is False:
                 violations.append(

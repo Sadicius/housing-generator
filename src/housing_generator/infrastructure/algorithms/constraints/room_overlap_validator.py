@@ -1,5 +1,7 @@
 from typing import List
-from housing_generator.application.ports.constraint_validator_port import ConstraintValidatorPort
+from housing_generator.application.ports.constraint_validator_port import (
+    ConstraintValidatorPort,
+)
 from housing_generator.application.dto.validation_result import ValidationResult
 from housing_generator.domain.entities.layout import Layout
 
@@ -24,8 +26,10 @@ class RoomOverlapValidator(ConstraintValidatorPort):
 
         placed = [room for room in layout.rooms if room.is_placed]
         for i, room_a in enumerate(placed):
-            for room_b in placed[i + 1:]:
-                overlap_area = room_a.boundary.polygon.intersection(room_b.boundary.polygon).area
+            for room_b in placed[i + 1 :]:
+                overlap_area = room_a.boundary.polygon.intersection(
+                    room_b.boundary.polygon
+                ).area
                 if overlap_area > ROOM_OVERLAP_TOLERANCE_M2:
                     violations.append(
                         f"'{room_a.id}' y '{room_b.id}' se solapan en "

@@ -1,9 +1,13 @@
 """Punto de entrada CLI: construye un Program + Lot de ejemplo y ejecuta
 el generador. Sirve como demostracion end-to-end de la arquitectura."""
+
 import argparse
 from shapely.geometry import box
 
-from housing_generator.config.container import build_generate_layout_use_case, build_generate_building_use_case
+from housing_generator.config.container import (
+    build_generate_layout_use_case,
+    build_generate_building_use_case,
+)
 from housing_generator.application.dto.generation_request import GenerationRequest
 from housing_generator.domain.entities.program import Program
 from housing_generator.domain.entities.room import Room
@@ -13,9 +17,15 @@ from housing_generator.domain.value_objects.boundary import Boundary
 from housing_generator.domain.value_objects.adjacency import AdjacencyRequirement
 from housing_generator.domain.enums import RoomType, AdjacencyStrength
 from housing_generator.domain.exceptions import LayoutGenerationError
-from housing_generator.domain.services.type_adjacency_catalog import build_adjacency_requirements
-from housing_generator.infrastructure.persistence.json_layout_repository import JsonLayoutRepository
-from housing_generator.infrastructure.persistence.seleccion_plantas_importer import import_seleccion_plantas
+from housing_generator.domain.services.type_adjacency_catalog import (
+    build_adjacency_requirements,
+)
+from housing_generator.infrastructure.persistence.json_layout_repository import (
+    JsonLayoutRepository,
+)
+from housing_generator.infrastructure.persistence.seleccion_plantas_importer import (
+    import_seleccion_plantas,
+)
 
 
 def build_sample_program(auto_adjacency: bool = False) -> Program:
@@ -39,12 +49,42 @@ def build_sample_program(auto_adjacency: bool = False) -> Program:
     el usuario declare, esto solo afecta a la demo por defecto.
     """
     rooms = [
-        Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=25)),
-        Room(id="kitchen", name="Cocina", room_type=RoomType.KITCHEN, dimensions=Dimensions(area_m2=12)),
-        Room(id="bath1", name="Bano", room_type=RoomType.BATHROOM, dimensions=Dimensions(area_m2=6)),
-        Room(id="laundry", name="Lavadero", room_type=RoomType.LAUNDRY, dimensions=Dimensions(area_m2=6)),
-        Room(id="drying", name="Tendedero", room_type=RoomType.DRYING_AREA, dimensions=Dimensions(area_m2=2)),
-        Room(id="storage", name="Almacen", room_type=RoomType.STORAGE, dimensions=Dimensions(area_m2=4)),
+        Room(
+            id="living",
+            name="Estar",
+            room_type=RoomType.LIVING_ROOM,
+            dimensions=Dimensions(area_m2=25),
+        ),
+        Room(
+            id="kitchen",
+            name="Cocina",
+            room_type=RoomType.KITCHEN,
+            dimensions=Dimensions(area_m2=12),
+        ),
+        Room(
+            id="bath1",
+            name="Bano",
+            room_type=RoomType.BATHROOM,
+            dimensions=Dimensions(area_m2=6),
+        ),
+        Room(
+            id="laundry",
+            name="Lavadero",
+            room_type=RoomType.LAUNDRY,
+            dimensions=Dimensions(area_m2=6),
+        ),
+        Room(
+            id="drying",
+            name="Tendedero",
+            room_type=RoomType.DRYING_AREA,
+            dimensions=Dimensions(area_m2=2),
+        ),
+        Room(
+            id="storage",
+            name="Almacen",
+            room_type=RoomType.STORAGE,
+            dimensions=Dimensions(area_m2=4),
+        ),
     ]
     if auto_adjacency:
         adjacency = build_adjacency_requirements(rooms)
@@ -70,9 +110,9 @@ def build_sample_lot() -> Lot:
 
 def _parse_lot_size(lot_size_str: str) -> tuple[float, float]:
     """Parsea y valida formato 'ANCHOxFONDO'.
-    
+
     Guard clause: early return si inválido.
-    
+
     Raises:
         SystemExit: Si formato inválido o dimensiones <= 0.
     """
@@ -91,7 +131,7 @@ def _parse_lot_size(lot_size_str: str) -> tuple[float, float]:
 
 def _validate_arguments(args) -> None:
     """Valida coherencia global de argumentos CLI.
-    
+
     Guard clauses tempranas: retorna si válido, lanza SystemExit si inválido.
     """
     # Guard clause 1: --retranqueo-incremento requiere --retranqueo
@@ -124,24 +164,33 @@ def _build_lot_from_args(
     boundary: Boundary,
     medianera_sides: set[str] | None = None,
     entrance_side: str | None = None,
-    **kwargs
+    **kwargs,
 ) -> Lot:
     """Construye Lot desde argumentos opcionales.
-    
+
     Elimina duplicidad: ambas ramas (--import-seleccion y default) usan esto.
-    
+
     Args:
         boundary: Frontera de la parcela.
         medianera_sides: Lados con medianería (aislada/pareada/adosada).
         entrance_side: Lado de entrada.
         **kwargs: Valores opcionales (retranqueo, edificabilidad, etc.).
-    
+
     Returns:
         Lot configurado.
     """
+    # BUG REAL encontrado probando el modo por defecto + --retranqueo:
+    # `Lot.medianera_sides` tiene un default de dataclass (frozenset()),
+    # pero pasar `medianera_sides=None` explicitamente (lo que hacia
+    # _handle_default_mode, que nunca especifica este parametro) lo
+    # SOBRESCRIBE con None -- TypeError mas tarde ("'west' in None") en
+    # cualquier calculo que itere medianera_sides (buildable_area,
+    # count_exterior_sides, etc.), no en la construccion del Lot en si,
+    # dificil de rastrear hasta aqui. Normalizado explicitamente en vez
+    # de confiar en el default de Lot, que este `None` ya evita.
     return Lot(
         boundary=boundary,
-        medianera_sides=medianera_sides,
+        medianera_sides=medianera_sides if medianera_sides is not None else frozenset(),
         entrance_side=entrance_side,
         retranqueo_m=kwargs.get("retranqueo"),
         retranqueo_incremento_por_planta_m=kwargs.get("retranqueo_incremento"),
@@ -154,12 +203,14 @@ def _build_lot_from_args(
 
 def _print_room_details(layout) -> None:
     """Imprime detalles de estancias (coordenadas, zona).
-    
+
     Responsabilidad única: formatear salida de room bounds.
     """
     for room in layout.rooms:
         b = room.boundary.polygon.bounds
-        print(f"  - {room.name:22s} zona={room.zone.value:8s} bounds=({b[0]:.1f}, {b[1]:.1f}, {b[2]:.1f}, {b[3]:.1f})")
+        print(
+            f"  - {room.name:22s} zona={room.zone.value:8s} bounds=({b[0]:.1f}, {b[1]:.1f}, {b[2]:.1f}, {b[3]:.1f})"
+        )
 
 
 def _retry_generation_with_seeds(
@@ -169,15 +220,15 @@ def _retry_generation_with_seeds(
     is_building: bool = False,
 ):
     """Centraliza lógica de reintento con distintas semillas.
-    
+
     Elimina duplicidad: antes había dos bucles idénticos (building vs layout).
-    
+
     Args:
         program: Programa de estancias.
         lot: Parcela.
         args: Argumentos CLI (seed, retry_seeds, max_iterations, etc.).
         is_building: Si True, genera building (multi-planta); si False, layout (mono-planta).
-    
+
     Returns:
         Building o Layout generado, o None si falla tras todos los reintentos.
     """
@@ -226,9 +277,9 @@ def _retry_generation_with_seeds(
 
 def _handle_import_seleccion_mode(args) -> None:
     """Modo --import-seleccion: genera edificio multi-planta desde JSON.
-    
+
     Responsabilidad única: orquestar flujo de importación + generación.
-    
+
     Guard clauses tempranas para early return/exit.
     """
     # Parsea selección e importa programa
@@ -256,7 +307,9 @@ def _handle_import_seleccion_mode(args) -> None:
 
     # Guard clause: informa sobre medianería si aplica
     if seleccion.medianera_sides:
-        print(f"(tipo_vivienda del JSON -> medianera en: {', '.join(sorted(seleccion.medianera_sides))})")
+        print(
+            f"(tipo_vivienda del JSON -> medianera en: {', '.join(sorted(seleccion.medianera_sides))})"
+        )
 
     # Genera edificio multi-planta con reintentos automáticos
     building = _retry_generation_with_seeds(program, lot, args, is_building=True)
@@ -264,16 +317,18 @@ def _handle_import_seleccion_mode(args) -> None:
     # Imprime y guarda cada planta
     for level, layout in building.floors.items():
         output_path = args.output.replace(".json", f"_{level.value}.json")
-        JsonLayoutRepository().save(layout, output_path, adjacency_requirements=program.adjacency_requirements)
+        JsonLayoutRepository().save(
+            layout, output_path, adjacency_requirements=program.adjacency_requirements
+        )
         print(f"Planta '{level.value}' generada y guardada en {output_path}")
         _print_room_details(layout)
 
 
 def _handle_default_mode(args) -> None:
     """Modo por defecto: genera layout mono-planta con programa de ejemplo.
-    
+
     Responsabilidad única: orquestar flujo por defecto.
-    
+
     Guard clauses tempranas para early return/exit.
     """
     # Construye programa de ejemplo (6 estancias)
@@ -281,14 +336,16 @@ def _handle_default_mode(args) -> None:
     lot = build_sample_lot()
 
     # Guard clause: reconstruye lot solo si hay opciones de modificación
-    has_lot_options = any([
-        args.retranqueo,
-        args.retranqueo_incremento,
-        args.edificabilidad,
-        args.ocupacion_maxima,
-        args.altura_maxima_plantas,
-        args.frente_minimo,
-    ])
+    has_lot_options = any(
+        [
+            args.retranqueo,
+            args.retranqueo_incremento,
+            args.edificabilidad,
+            args.ocupacion_maxima,
+            args.altura_maxima_plantas,
+            args.frente_minimo,
+        ]
+    )
     if has_lot_options:
         lot = _build_lot_from_args(
             boundary=lot.boundary,
@@ -305,109 +362,145 @@ def _handle_default_mode(args) -> None:
     layout = _retry_generation_with_seeds(program, lot, args, is_building=False)
 
     # Imprime y guarda resultado
-    JsonLayoutRepository().save(layout, args.output, adjacency_requirements=program.adjacency_requirements)
+    JsonLayoutRepository().save(
+        layout, args.output, adjacency_requirements=program.adjacency_requirements
+    )
     print(f"Layout generado y guardado en {args.output}\n")
     _print_room_details(layout)
 
 
 def main():
     """Punto de entrada: parsea CLI y despacha a handlers específicos.
-    
+
     Complejidad ciclomática: 3 (antes: 12).
     Líneas: ~45 (antes: 211).
     Duplicidad: 0 (antes: 48%).
     """
-    parser = argparse.ArgumentParser(description="Generador de viviendas por zonificacion dia/noche/servicio")
-    parser.add_argument("--output", default="layout.json", help="Ruta de salida del layout generado")
+    parser = argparse.ArgumentParser(
+        description="Generador de viviendas por zonificacion dia/noche/servicio"
+    )
     parser.add_argument(
-        "--seed", type=int, default=4,
+        "--output", default="layout.json", help="Ruta de salida del layout generado"
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=4,
         help="Semilla del recocido simulado (por defecto 4, fija -- determinista). "
-             "Usa otro valor para explorar variantes distintas.",
+        "Usa otro valor para explorar variantes distintas.",
     )
-    parser.add_argument("--max-iterations", type=int, default=3000, help="Iteraciones del recocido simulado")
     parser.add_argument(
-        "--auto-adjacency", action="store_true",
+        "--max-iterations",
+        type=int,
+        default=3000,
+        help="Iteraciones del recocido simulado",
+    )
+    parser.add_argument(
+        "--auto-adjacency",
+        action="store_true",
         help="Derivar Obligatorio/Preferencia automaticamente del catalogo formalizado "
-             "de 120 pares (build_adjacency_requirements) en vez de la declaracion "
-             "manual del programa de ejemplo -- genera bastantes mas requisitos "
-             "(44 en vez de 6 para las mismas 11 estancias), busqueda mas dificil, "
-             "puede necesitar --max-iterations mayor o probar otra --seed.",
+        "de 120 pares (build_adjacency_requirements) en vez de la declaracion "
+        "manual del programa de ejemplo -- genera bastantes mas requisitos "
+        "(44 en vez de 6 para las mismas 11 estancias), busqueda mas dificil, "
+        "puede necesitar --max-iterations mayor o probar otra --seed.",
     )
     parser.add_argument(
-        "--vivienda-accesible", action="store_true",
+        "--vivienda-accesible",
+        action="store_true",
         help="Exigir circulo de giro Ø1.50m en estancias habitables + bano, y pasillo "
-             "≥1.20m (mas exigente que el general 1.00m) -- DB-SUA Anejo A + Base 5.4 "
-             "Galicia (vivienda adaptada para usuarios de silla de ruedas). OPT-IN: la "
-             "gran mayoria de viviendas NO estan obligadas a esto. Retomado de un modulo "
-             "Lua de un proyecto anterior del usuario (accesibilidad.lua) -- solo cubre "
-             "lo geometricamente verificable con este proyecto (circulo/ancho), no "
-             "mobiliario (altura de encimera, aproximacion a la cama...), que no se "
-             "modela aqui.",
+        "≥1.20m (mas exigente que el general 1.00m) -- DB-SUA Anejo A + Base 5.4 "
+        "Galicia (vivienda adaptada para usuarios de silla de ruedas). OPT-IN: la "
+        "gran mayoria de viviendas NO estan obligadas a esto. Retomado de un modulo "
+        "Lua de un proyecto anterior del usuario (accesibilidad.lua) -- solo cubre "
+        "lo geometricamente verificable con este proyecto (circulo/ancho), no "
+        "mobiliario (altura de encimera, aproximacion a la cama...), que no se "
+        "modela aqui.",
     )
     parser.add_argument(
-        "--import-seleccion", metavar="RUTA", default=None,
+        "--import-seleccion",
+        metavar="RUTA",
+        default=None,
         help="Importar 'seleccion_plantas.json' (exportacion del dashboard) en vez del "
-             "programa de ejemplo -- genera un edificio multi-planta real. Con el formato "
-             "nuevo (version 2) usa la cantidad y area reales declaradas en el dashboard; "
-             "con el formato antiguo (solo nombres de tipo), usa AREAS_POR_DEFECTO_M2 como "
-             "aproximacion generica -- revisar antes de un proyecto real en ese caso. "
-             "'tipo_vivienda' del JSON (aislada/pareada/adosada) se traduce automaticamente "
-             "a Lot.medianera_sides. Ignora --auto-adjacency (las adyacencias siempre se "
-             "derivan del catalogo aqui).",
+        "programa de ejemplo -- genera un edificio multi-planta real. Con el formato "
+        "nuevo (version 2) usa la cantidad y area reales declaradas en el dashboard; "
+        "con el formato antiguo (solo nombres de tipo), usa AREAS_POR_DEFECTO_M2 como "
+        "aproximacion generica -- revisar antes de un proyecto real en ese caso. "
+        "'tipo_vivienda' del JSON (aislada/pareada/adosada) se traduce automaticamente "
+        "a Lot.medianera_sides. Ignora --auto-adjacency (las adyacencias siempre se "
+        "derivan del catalogo aqui).",
     )
     parser.add_argument(
-        "--retry-seeds", type=int, default=5,
+        "--retry-seeds",
+        type=int,
+        default=20,
         help="Con --import-seleccion, cuantas semillas distintas probar automaticamente "
-             "(empezando en --seed, incrementando de 1 en 1) antes de rendirse -- "
-             "retomado de un caso real: la primera semilla de un programa concreto no "
-             "convergio, la 4a si. Los programas que salen de --import-seleccion no estan "
-             "curados a mano (a diferencia del ejemplo del CLI), asi que necesitan mas "
-             "margen de busqueda de forma habitual, no como excepcion. Poner a 1 para "
-             "desactivar el reintento y usar solo --seed tal cual.",
+        "(empezando en --seed, incrementando de 1 en 1) antes de rendirse -- "
+        "retomado de un caso real: la primera semilla de un programa concreto no "
+        "convergio, la 4a si. Los programas que salen de --import-seleccion no estan "
+        "curados a mano (a diferencia del ejemplo del CLI), asi que necesitan mas "
+        "margen de busqueda de forma habitual, no como excepcion. Subido de 5 a 20: "
+        "medido en multi-planta con escalera compartida que la tasa de exito por "
+        "semilla puede rondar el 10-20%%, no basta con 5 intentos para una "
+        "confianza razonable. Poner a 1 para desactivar el reintento y usar solo "
+        "--seed tal cual.",
     )
     parser.add_argument(
-        "--lot-size", metavar="ANCHOxFONDO", default=None,
+        "--lot-size",
+        metavar="ANCHOxFONDO",
+        default=None,
         help="Con --import-seleccion, tamano de parcela en metros (p.ej. '14x16') en vez "
-             "del tamano de ejemplo por defecto (14x16, el mismo valor) -- util para "
-             "acercarse al tamano real de tu parcela, o para dar mas margen si el "
-             "programa importado es grande.",
+        "del tamano de ejemplo por defecto (14x16, el mismo valor) -- util para "
+        "acercarse al tamano real de tu parcela, o para dar mas margen si el "
+        "programa importado es grande.",
     )
     parser.add_argument(
-        "--retranqueo", type=float, default=None,
+        "--retranqueo",
+        type=float,
+        default=None,
         help="Separacion minima a los lindes de parcela, en metros (vivienda AISLADA) -- "
-             "concepto ya implementado y probado (Lot.retranqueo_m), sin forma de "
-             "activarlo desde el CLI hasta ahora. Por defecto, sin retranqueo (area "
-             "edificable = parcela completa), igual que antes de anadir este flag.",
+        "concepto ya implementado y probado (Lot.retranqueo_m), sin forma de "
+        "activarlo desde el CLI hasta ahora. Por defecto, sin retranqueo (area "
+        "edificable = parcela completa), igual que antes de anadir este flag.",
     )
     parser.add_argument(
-        "--retranqueo-incremento", type=float, default=None,
+        "--retranqueo-incremento",
+        type=float,
+        default=None,
         help="Cuanto se reduce el contorno edificable, en metros, de cada planta "
-             "respecto a la de abajo (vivienda multi-planta) -- concepto ya implementado "
-             "y probado (Lot.retranqueo_incremento_por_planta_m), sin forma de activarlo "
-             "desde el CLI hasta ahora. Requiere --retranqueo tambien (no tiene sentido "
-             "incrementar un retranqueo que no existe). Por defecto, mismo contorno para "
-             "todas las plantas, igual que antes de anadir este flag.",
+        "respecto a la de abajo (vivienda multi-planta) -- concepto ya implementado "
+        "y probado (Lot.retranqueo_incremento_por_planta_m), sin forma de activarlo "
+        "desde el CLI hasta ahora. Requiere --retranqueo tambien (no tiene sentido "
+        "incrementar un retranqueo que no existe). Por defecto, mismo contorno para "
+        "todas las plantas, igual que antes de anadir este flag.",
     )
     parser.add_argument(
-        "--edificabilidad", type=float, default=None,
+        "--edificabilidad",
+        type=float,
+        default=None,
         help="Coeficiente de edificabilidad (m2techo/m2suelo) de la ficha urbanistica "
-             "real -- comprobacion de viabilidad ANTES de generar, no un valor inventado "
-             "aqui. Por defecto, sin restriccion de edificabilidad.",
+        "real -- comprobacion de viabilidad ANTES de generar, no un valor inventado "
+        "aqui. Por defecto, sin restriccion de edificabilidad.",
     )
     parser.add_argument(
-        "--ocupacion-maxima", type=float, default=None,
+        "--ocupacion-maxima",
+        type=float,
+        default=None,
         help="Porcentaje maximo de ocupacion de parcela (0-100) de la ficha urbanistica "
-             "real. Por defecto, sin restriccion de ocupacion.",
+        "real. Por defecto, sin restriccion de ocupacion.",
     )
     parser.add_argument(
-        "--altura-maxima-plantas", type=int, default=None,
+        "--altura-maxima-plantas",
+        type=int,
+        default=None,
         help="Numero maximo de plantas permitido por la ficha urbanistica real. Por "
-             "defecto, sin restriccion de altura.",
+        "defecto, sin restriccion de altura.",
     )
     parser.add_argument(
-        "--frente-minimo", type=float, default=None,
+        "--frente-minimo",
+        type=float,
+        default=None,
         help="Ancho minimo de fachada al vial (metros), en el lado sur de la parcela "
-             "(por defecto, street_side='south'). Por defecto, sin restriccion de frente.",
+        "(por defecto, street_side='south'). Por defecto, sin restriccion de frente.",
     )
     args = parser.parse_args()
 

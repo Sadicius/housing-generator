@@ -22,7 +22,12 @@ def test_armario_largo_minimo_thresholds():
 
 
 def test_bedroom_with_enough_space_passes():
-    bed = Room(id="bed", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=9))
+    bed = Room(
+        id="bed",
+        name="Dorm",
+        room_type=RoomType.BEDROOM,
+        dimensions=Dimensions(area_m2=9),
+    )
     bed.boundary = Boundary(polygon=box(0, 0, 3, 3))  # 3x3, cabe 1.5x0.6 de sobra
 
     layout = Layout(lot=_dummy_lot(), rooms=[bed], zones=[])
@@ -32,8 +37,15 @@ def test_bedroom_with_enough_space_passes():
 
 
 def test_bedroom_too_narrow_for_wardrobe_fails():
-    bed = Room(id="bed", name="Dorm", room_type=RoomType.MASTER_BEDROOM, dimensions=Dimensions(area_m2=9))
-    bed.boundary = Boundary(polygon=box(0, 0, 0.4, 22.5))  # muy estrecho: 0.4m de ancho, no cabe 0.6m de fondo
+    bed = Room(
+        id="bed",
+        name="Dorm",
+        room_type=RoomType.MASTER_BEDROOM,
+        dimensions=Dimensions(area_m2=9),
+    )
+    bed.boundary = Boundary(
+        polygon=box(0, 0, 0.4, 22.5)
+    )  # muy estrecho: 0.4m de ancho, no cabe 0.6m de fondo
 
     layout = Layout(lot=_dummy_lot(), rooms=[bed], zones=[])
     result = DormitorioArmarioValidator().validate(layout)
@@ -43,8 +55,15 @@ def test_bedroom_too_narrow_for_wardrobe_fails():
 
 
 def test_non_bedroom_rooms_are_ignored():
-    living = Room(id="living", name="Estar", room_type=RoomType.LIVING_ROOM, dimensions=Dimensions(area_m2=9))
-    living.boundary = Boundary(polygon=box(0, 0, 0.4, 22.5))  # tan estrecho como el caso anterior
+    living = Room(
+        id="living",
+        name="Estar",
+        room_type=RoomType.LIVING_ROOM,
+        dimensions=Dimensions(area_m2=9),
+    )
+    living.boundary = Boundary(
+        polygon=box(0, 0, 0.4, 22.5)
+    )  # tan estrecho como el caso anterior
 
     layout = Layout(lot=_dummy_lot(), rooms=[living], zones=[])
     result = DormitorioArmarioValidator().validate(layout)
@@ -54,7 +73,12 @@ def test_non_bedroom_rooms_are_ignored():
 
 def test_non_rectangular_bedroom_is_unverifiable_not_violated():
     l_shape = Polygon([(0, 0), (4, 0), (4, 2), (2, 2), (2, 4), (0, 4)])
-    bed = Room(id="bed", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=l_shape.area))
+    bed = Room(
+        id="bed",
+        name="Dorm",
+        room_type=RoomType.BEDROOM,
+        dimensions=Dimensions(area_m2=l_shape.area),
+    )
     bed.boundary = Boundary(polygon=l_shape)
 
     layout = Layout(lot=_dummy_lot(), rooms=[bed], zones=[])
@@ -65,7 +89,12 @@ def test_non_rectangular_bedroom_is_unverifiable_not_violated():
 
 
 def test_unplaced_bedroom_is_skipped():
-    bed = Room(id="bed", name="Dorm", room_type=RoomType.BEDROOM, dimensions=Dimensions(area_m2=9))
+    bed = Room(
+        id="bed",
+        name="Dorm",
+        room_type=RoomType.BEDROOM,
+        dimensions=Dimensions(area_m2=9),
+    )
     layout = Layout(lot=_dummy_lot(), rooms=[bed], zones=[])
 
     result = DormitorioArmarioValidator().validate(layout)
